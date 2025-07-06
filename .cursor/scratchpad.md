@@ -17,51 +17,57 @@ Cross-reference with @memories.md and @lessons-learned.md for context and best p
 
 # Mode: AGENT ⚡
 
-Current Task: Implement llm_runner.py LLM utilities toolkit
+Current Task: Implement structured output schema enforcement for llm_runner.py
 
-Implementation Status: 
-- **Phase**: Implementation of llm_runner.py core script
-- **Confidence**: 95% (All requirements clarified, research complete)
-- **Mode**: AGENT MODE ACTIVATED - Building solution
+**NEW RESEARCH COMPLETE**: Schema enforcement with Microsoft Semantic Kernel and Pydantic models
 
-Active Implementation:
-- ✅ Create llm_runner.py with core functionality (552 lines)
-- ✅ Implement JSON input parsing (whole object format)
-- ✅ Setup Azure authentication with DefaultAzureCredential
-- ✅ Integrate Rich logging with configurable levels
-- ✅ Add structured output support with Pydantic
-- ✅ Implement error handling with stderr logging
-- ✅ Create CLI interface with argparse
-- ✅ Migrate to UV with pyproject.toml (removed requirements.txt)
-- ✅ Configure UV for system Python usage
-- ✅ Add script entry points and development dependencies
-- ✅ Update all documentation for UV usage
-- ✅ Update test_runner.py for UV compatibility
+## Schema Enforcement Implementation Plan
+
+### Understanding:
+- Microsoft Semantic Kernel supports structured outputs with Pydantic models
+- Two approaches: Direct Pydantic model usage vs JSON schema strings
+- Schema can be serialized/deserialized for CI/CD file storage
+- Semantic Kernel automatically generates JSON schema from Pydantic models
+
+### Implementation Strategy:
+
+#### 1. Direct Pydantic Model Approach (Recommended)
+```python
+# In execution settings
+req_settings.response_format = MyPydanticModel
+```
+
+#### 2. JSON Schema File Approach (CI/CD Friendly)
+```python
+# Load schema from external file
+ChatResponseFormat.CreateJsonSchemaFormat(
+    jsonSchemaFormatName="my_schema",
+    jsonSchema=BinaryData.FromString(schema_json),
+    jsonSchemaIsStrict=True
+)
+```
+
+### Key Implementation Points:
+- ✅ Pydantic models with Field descriptions and examples
+- ✅ Schema serialization to JSON for external storage
+- ✅ Dynamic schema loading from --schema-file parameter
+- ✅ Validation and error handling
+- ✅ CI/CD pipeline integration
+
+### Next Steps:
+1. Create example Pydantic models with comprehensive Field definitions
+2. Implement schema serialization/deserialization functions
+3. Update llm_runner.py to support both approaches
+4. Create example schema files for common use cases
+5. Update documentation with schema enforcement examples
+
+**Status**: Research complete, ready for implementation
 
 Progress:
-- [✅] Core script structure
-- [✅] Logging setup with Rich
-- [✅] CLI argument parsing
-- [✅] JSON input processing
-- [✅] Azure authentication
-- [✅] ChatHistory creation
-- [✅] Kernel execution with structured output
-- [✅] Output file writing
-- [✅] Error handling and validation
-- [✅] Dependencies and setup
-- [✅] Example files and documentation
-- [✅] Test validation script
-- [✅] UV migration and configuration
-
-Status: **PROJECT COMPLETE + UV MIGRATION** 🎉
-
-Deliverables:
-1. ✅ llm_runner.py - Main script (552 lines)
-2. ✅ pyproject.toml - UV configuration with system Python
-3. ✅ README.md - Updated for UV usage
-4. ✅ examples/simple-example.json - Basic usage
-5. ✅ examples/pr-review-example.json - Complex PR review
-6. ✅ examples/minimal-example.json - Minimal input
-7. ✅ test_runner.py - Updated for UV validation
-
-Ready for deployment with `uv run` in CI/CD pipelines.
+- [✅] Research Microsoft Semantic Kernel structured output capabilities
+- [✅] Research Pydantic model serialization/deserialization
+- [✅] Understand CI/CD integration requirements
+- [ ] Implement schema enforcement in llm_runner.py
+- [ ] Create example schema files
+- [ ] Update documentation
+- [ ] Test with various schema types

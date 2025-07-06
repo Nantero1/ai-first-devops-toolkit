@@ -60,7 +60,6 @@ from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import
     AzureChatCompletion,
 )
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
-from semantic_kernel.kernel_pydantic import KernelBaseModel
 
 # Azure authentication
 from azure.identity.aio import DefaultAzureCredential
@@ -69,8 +68,9 @@ from azure.core.exceptions import ClientAuthenticationError
 # Install rich traceback for better error display
 install_rich_traceback()
 
-# Global console for rich output
-console = Console()
+# Global CONSOLE for rich output
+CONSOLE = Console()
+LOGGER = logging.getLogger("llm_runner")
 
 
 class LLMRunnerError(Exception):
@@ -100,12 +100,12 @@ class LLMExecutionError(LLMRunnerError):
 def setup_logging(log_level: str) -> logging.Logger:
     """
     Setup Rich logging with configurable levels, timestamps, and beautiful colors.
-    
+
     RichHandler automatically routes log messages to appropriate streams:
-    - INFO and DEBUG: stdout  
+    - INFO and DEBUG: stdout
     - WARNING, ERROR, CRITICAL: stderr
-    
-    This means we don't need separate console.print() calls for errors - 
+
+    This means we don't need separate console.print() calls for errors -
     the logger handles proper stdout/stderr routing with Rich formatting.
 
     Args:
@@ -121,7 +121,7 @@ def setup_logging(log_level: str) -> logging.Logger:
         datefmt="[%X]",
         handlers=[
             RichHandler(
-                console=console,
+                console=CONSOLE,
                 show_time=True,
                 show_level=True,
                 show_path=True,
@@ -131,11 +131,10 @@ def setup_logging(log_level: str) -> logging.Logger:
         ],
     )
 
-    logger = logging.getLogger("llm_runner")
-    logger.info(
+    LOGGER.info(
         f"[bold green]🚀 LLM Runner initialized with log level: {log_level.upper()}[/bold green]"
     )
-    return logger
+    return LOGGER
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -183,7 +182,7 @@ Environment Variables:
     parser.add_argument(
         "--schema-file",
         type=Path,
-        help="Optional Pydantic model schema file for structured output",
+        help="Optional JSON schema file for structured output",
     )
 
     parser.add_argument(
@@ -196,13 +195,12 @@ Environment Variables:
     return parser.parse_args()
 
 
-def load_input_json(input_file: Path, logger: logging.Logger) -> Dict[str, Any]:
+def load_input_json(input_file: Path) -> Dict[str, Any]:
     """
     Load and parse input JSON file containing messages and optional context.
 
     Args:
         input_file: Path to input JSON file
-        logger: Logger instance
 
     Returns:
         Parsed JSON data
@@ -210,7 +208,7 @@ def load_input_json(input_file: Path, logger: logging.Logger) -> Dict[str, Any]:
     Raises:
         InputValidationError: If file doesn't exist or JSON is invalid
     """
-    logger.debug(f"📂 Loading input file: {input_file}")
+    LOGGER.debug(f"📂 Loading input file: {input_file}")
 
     if not input_file.exists():
         raise InputValidationError(f"Input file not found: {input_file}")
@@ -226,9 +224,9 @@ def load_input_json(input_file: Path, logger: logging.Logger) -> Dict[str, Any]:
         if not isinstance(data["messages"], list) or len(data["messages"]) == 0:
             raise InputValidationError("'messages' must be a non-empty array")
 
-        logger.debug(f"✅ Loaded {len(data['messages'])} messages")
+        LOGGER.debug(f"✅ Loaded {len(data['messages'])} messages")
         if "context" in data:
-            logger.debug(
+            LOGGER.debug(
                 f"📋 Additional context provided: {list(data['context'].keys())}"
             )
 
@@ -240,15 +238,12 @@ def load_input_json(input_file: Path, logger: logging.Logger) -> Dict[str, Any]:
         raise InputValidationError(f"Error reading input file: {e}")
 
 
-def create_chat_history(
-    messages: List[Dict[str, Any]], logger: logging.Logger
-) -> ChatHistory:
+def create_chat_history(messages: List[Dict[str, Any]]) -> ChatHistory:
     """
     Create Semantic Kernel ChatHistory from messages array.
 
     Args:
         messages: List of message dictionaries with role, content, and optional name
-        logger: Logger instance
 
     Returns:
         ChatHistory object ready for Semantic Kernel
@@ -256,7 +251,7 @@ def create_chat_history(
     Raises:
         InputValidationError: If message format is invalid
     """
-    logger.debug("🔄 Converting messages to ChatHistory")
+    LOGGER.debug("🔄 Converting messages to ChatHistory")
 
     chat_history = ChatHistory()
 
@@ -276,7 +271,7 @@ def create_chat_history(
             )
 
             chat_history.add_message(chat_message)
-            logger.debug(
+            LOGGER.debug(
                 f"  ➕ Added {msg['role']} message ({len(msg['content'])} chars)"
             )
 
@@ -287,11 +282,11 @@ def create_chat_history(
         except Exception as e:
             raise InputValidationError(f"Error processing message {i}: {e}")
 
-    logger.info(f"✅ Created ChatHistory with {len(chat_history)} messages")
+    LOGGER.info(f"✅ Created ChatHistory with {len(chat_history)} messages")
     return chat_history
 
 
-async def setup_azure_service(logger: logging.Logger) -> AzureChatCompletion:
+async def setup_azure_service() -> AzureChatCompletion:
     """
     Setup Azure OpenAI service with dual authentication support.
 
@@ -311,7 +306,7 @@ async def setup_azure_service(logger: logging.Logger) -> AzureChatCompletion:
     Raises:
         AuthenticationError: If Azure authentication fails
     """
-    logger.debug("🔐 Setting up Azure OpenAI authentication")
+    LOGGER.debug("🔐 Setting up Azure OpenAI authentication")
 
     # Get environment variables
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -324,25 +319,25 @@ async def setup_azure_service(logger: logging.Logger) -> AzureChatCompletion:
     if not model:
         raise AuthenticationError("AZURE_OPENAI_MODEL environment variable not set")
 
-    logger.debug(f"  🌐 Endpoint: {endpoint}")
-    logger.debug(f"  🤖 Model: {model}")
-    logger.debug(f"  📅 API Version: {api_version}")
+    LOGGER.debug(f"  🌐 Endpoint: {endpoint}")
+    LOGGER.debug(f"  🤖 Model: {model}")
+    LOGGER.debug(f"  📅 API Version: {api_version}")
 
     try:
         # Try API key authentication first if available
         if api_key:
-            logger.info("🔑 Using API Key authentication")
+            LOGGER.info("🔑 Using API Key authentication")
             service = AzureChatCompletion(
                 deployment_name=model,
                 endpoint=endpoint,
                 api_key=api_key,
                 api_version=api_version,
             )
-            logger.info("✅ Azure OpenAI service configured successfully (API Key)")
+            LOGGER.info("✅ Azure OpenAI service configured successfully (API Key)")
             return service
 
         # Fallback to RBAC authentication
-        logger.info("🔐 Using Azure RBAC authentication")
+        LOGGER.info("🔐 Using Azure RBAC authentication")
         # Setup async Azure credential
         credential = DefaultAzureCredential()
 
@@ -354,7 +349,7 @@ async def setup_azure_service(logger: logging.Logger) -> AzureChatCompletion:
             api_version=api_version,
         )
 
-        logger.info("✅ Azure OpenAI service configured successfully")
+        LOGGER.info("✅ Azure OpenAI service configured successfully")
         return service
 
     except ClientAuthenticationError as e:
@@ -363,45 +358,52 @@ async def setup_azure_service(logger: logging.Logger) -> AzureChatCompletion:
         raise AuthenticationError(f"Error setting up Azure service: {e}")
 
 
-def load_schema_model(
-    schema_file: Optional[Path], logger: logging.Logger
-) -> Optional[type]:
+def load_json_schema(schema_file: Optional[Path]) -> Optional[str]:
     """
-    Load Pydantic model from schema file for structured output.
+    Load JSON schema from file for structured output.
 
     Args:
-        schema_file: Optional path to schema file
-        logger: Logger instance
+        schema_file: Optional path to JSON schema file
 
     Returns:
-        Pydantic model class or None if no schema
+        JSON schema string or None if no schema
 
-    Note:
-        This is a placeholder for schema loading. In practice, you would
-        either import predefined models or dynamically create them from JSON schema.
+    Raises:
+        InputValidationError: If schema file cannot be loaded or is invalid JSON
     """
     if not schema_file:
-        logger.debug("📋 No schema file provided - using text output")
+        LOGGER.debug("📋 No schema file provided - using text output")
         return None
 
-    logger.debug(f"📋 Schema file provided: {schema_file}")
-    logger.warning("⚠️  Schema loading not yet implemented - using text output")
+    LOGGER.debug(f"📋 Loading JSON schema from: {schema_file}")
 
-    # TODO: Implement schema loading
-    # This could either:
-    # 1. Import from a Python module
-    # 2. Dynamically create Pydantic model from JSON schema
-    # 3. Use predefined models
+    try:
+        if not schema_file.exists():
+            raise InputValidationError(f"Schema file not found: {schema_file}")
 
-    return None
+        with open(schema_file, "r", encoding="utf-8") as f:
+            schema_content = f.read().strip()
+
+        # Validate it's valid JSON
+        try:
+            json.loads(schema_content)
+        except json.JSONDecodeError as e:
+            raise InputValidationError(f"Invalid JSON in schema file: {e}")
+
+        LOGGER.info(f"✅ JSON schema loaded successfully from: {schema_file}")
+        return schema_content
+
+    except InputValidationError:
+        raise
+    except Exception as e:
+        raise InputValidationError(f"Error loading schema file: {e}")
 
 
 async def execute_llm_task(
     service: AzureChatCompletion,
     chat_history: ChatHistory,
     context: Optional[Dict[str, Any]],
-    schema_model: Optional[type],
-    logger: logging.Logger,
+    json_schema: Optional[str],
 ) -> Union[str, Dict[str, Any]]:
     """
     Execute LLM task using Semantic Kernel with optional structured output.
@@ -410,7 +412,7 @@ async def execute_llm_task(
         service: Azure ChatCompletion service
         chat_history: ChatHistory with messages
         context: Optional context for KernelArguments
-        schema_model: Optional Pydantic model for structured output
+        json_schema: Optional JSON schema string for structured output
         logger: Logger instance
 
     Returns:
@@ -419,7 +421,7 @@ async def execute_llm_task(
     Raises:
         LLMExecutionError: If LLM execution fails
     """
-    logger.debug("🤖 Executing LLM task")
+    LOGGER.debug("🤖 Executing LLM task")
 
     try:
         # Create kernel and add service
@@ -428,9 +430,11 @@ async def execute_llm_task(
 
         # Setup execution settings
         settings = OpenAIChatPromptExecutionSettings()
-        if schema_model:
-            settings.response_format = schema_model
-            logger.debug("📋 Using structured output with Pydantic model")
+
+        if json_schema:
+            # Use basic JSON mode - schema will guide the prompt
+            settings.response_format = {"type": "json_object"}
+            LOGGER.debug("📋 Using JSON output mode with schema guidance")
 
         # Create kernel arguments
         args = KernelArguments(settings=settings)
@@ -439,13 +443,31 @@ async def execute_llm_task(
         if context:
             for key, value in context.items():
                 args[key] = value
-            logger.debug(f"📋 Added context: {list(context.keys())}")
+            LOGGER.debug(f"📋 Added context: {list(context.keys())}")
 
-        # Execute LLM with simple prompt template
-        logger.info("🚀 Sending request to LLM...")
+        # Build prompt template based on whether schema is provided
+        if json_schema:
+            prompt_template = (
+                """{{$chat_history}}
+
+IMPORTANT: You must respond with valid JSON that follows this exact schema:
+
+```json
+"""
+                + json_schema
+                + """
+```
+
+Respond ONLY with valid JSON that matches this schema. Do not include any other text."""
+            )
+        else:
+            prompt_template = "{{$chat_history}}"
+
+        # Execute LLM with prompt template
+        LOGGER.info("🚀 Sending request to LLM...")
 
         result = await kernel.invoke_prompt(
-            prompt_template="{{$chat_history}}",
+            prompt=prompt_template,
             arguments=args,
             chat_history=chat_history,
         )
@@ -460,8 +482,20 @@ async def execute_llm_task(
         else:
             response = str(result)
 
-        logger.info("✅ LLM task completed successfully")
-        logger.debug(f"📄 Response length: {len(response)} characters")
+        # If we used structured output, try to parse as JSON
+        if json_schema and response:
+            try:
+                parsed_response = json.loads(response)
+                LOGGER.info("✅ LLM task completed with structured output")
+                LOGGER.debug(
+                    f"📄 Structured response with {len(parsed_response)} fields"
+                )
+                return parsed_response
+            except json.JSONDecodeError:
+                LOGGER.warning("⚠️  Response was not valid JSON, returning as text")
+
+        LOGGER.info("✅ LLM task completed successfully")
+        LOGGER.debug(f"📄 Response length: {len(response)} characters")
 
         return response
 
@@ -469,9 +503,7 @@ async def execute_llm_task(
         raise LLMExecutionError(f"LLM execution failed: {e}")
 
 
-def write_output_file(
-    output_file: Path, response: Union[str, Dict[str, Any]], logger: logging.Logger
-) -> None:
+def write_output_file(output_file: Path, response: Union[str, Dict[str, Any]]) -> None:
     """
     Write LLM response to output file in JSON format.
 
@@ -483,7 +515,7 @@ def write_output_file(
     Raises:
         LLMRunnerError: If file writing fails
     """
-    logger.debug(f"💾 Writing output to: {output_file}")
+    LOGGER.debug(f"💾 Writing output to: {output_file}")
 
     try:
         # Ensure output directory exists
@@ -503,7 +535,7 @@ def write_output_file(
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
 
-        logger.info(f"✅ Output written to: {output_file}")
+        LOGGER.info(f"✅ Output written to: {output_file}")
 
     except Exception as e:
         raise LLMRunnerError(f"Error writing output file: {e}")
@@ -520,54 +552,53 @@ async def main() -> None:
         args = parse_arguments()
 
         # Setup logging with Rich
-        logger = setup_logging(args.log_level)
+        setup_logging(args.log_level)
 
         # Load and validate input JSON
-        logger.info("📥 Loading input data...")
-        input_data = load_input_json(args.input_file, logger)
+        LOGGER.info("📥 Loading input data...")
+        input_data = load_input_json(args.input_file)
 
         # Create ChatHistory from messages
-        chat_history = create_chat_history(input_data["messages"], logger)
+        chat_history = create_chat_history(input_data["messages"])
 
         # Setup Azure OpenAI service
-        logger.info("🔐 Authenticating with Azure...")
-        service = await setup_azure_service(logger)
+        LOGGER.info("🔐 Authenticating with Azure...")
+        service = await setup_azure_service()
 
-        # Load schema model if provided
-        schema_model = load_schema_model(args.schema_file, logger)
+        # Load JSON schema if provided
+        json_schema = load_json_schema(args.schema_file)
 
         # Execute LLM task
-        logger.info("🤖 Processing with LLM...")
+        LOGGER.info("🤖 Processing with LLM...")
         response = await execute_llm_task(
             service=service,
             chat_history=chat_history,
             context=input_data.get("context"),
-            schema_model=schema_model,
-            logger=logger,
+            json_schema=json_schema,
         )
 
         # Write output file
-        logger.info("💾 Saving results...")
-        write_output_file(args.output_file, response, logger)
+        LOGGER.info("💾 Saving results...")
+        write_output_file(args.output_file, response)
 
         # Success message
-        console.print(
+        CONSOLE.print(
             "\n[bold green]🎉 LLM Runner completed successfully![/bold green]"
         )
-        console.print(f"[dim]📁 Output saved to: {args.output_file}[/dim]")
+        CONSOLE.print(f"[dim]📁 Output saved to: {args.output_file}[/dim]")
 
     except LLMRunnerError as e:
-        logger.error(f"❌ {e}")
+        LOGGER.error(f"❌ {e}")
         sys.exit(1)
 
     except KeyboardInterrupt:
-        logger.warning("⚠️  Operation cancelled by user")
-        console.print("\n[yellow]⚠️  Operation cancelled[/yellow]")
+        LOGGER.warning("⚠️  Operation cancelled by user")
+        CONSOLE.print("\n[yellow]⚠️  Operation cancelled[/yellow]")
         sys.exit(1)
 
     except Exception as e:
         # Unexpected error - log with full traceback
-        logger.critical(f"💥 Unexpected error: {e}", exc_info=True)
+        LOGGER.critical(f"💥 Unexpected error: {e}", exc_info=True)
         sys.exit(1)
 
 

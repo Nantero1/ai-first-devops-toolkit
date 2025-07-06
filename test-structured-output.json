@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "response": {
+    "sentiment": "neutral",
+    "confidence": 0.85,
+    "key_points": [
+      "Recent company earnings report",
+      "Market performance insights",
+      "Upcoming product launches"
+    ],
+    "summary": "The company reported steady earnings, highlighting stable market performance and future product plans."
+  },
+  "metadata": {
+    "runner": "llm_runner.py",
+    "timestamp": "auto-generated"
+  }
+}
