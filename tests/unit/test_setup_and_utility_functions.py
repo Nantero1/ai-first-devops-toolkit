@@ -5,10 +5,11 @@ Tests setup_logging function and other utility functions
 with heavy mocking following the Given-When-Then pattern.
 """
 
-import pytest
 import logging
-from unittest.mock import Mock, patch
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
 
 from llm_runner import setup_logging
 
@@ -102,9 +103,7 @@ class TestSetupLogging:
         call_args = mock_logger.info.call_args[0]
         assert "INFO" in call_args[0]
 
-    def test_setup_logging_with_invalid_level_uses_debug_as_fallback(
-        self, mock_console
-    ):
+    def test_setup_logging_with_invalid_level_uses_debug_as_fallback(self, mock_console):
         """Test that invalid log level falls back to DEBUG level."""
         # given
         log_level = "INVALID_LEVEL"
@@ -166,7 +165,6 @@ class TestMainFunction:
             patch("llm_runner.setup_logging") as mock_setup_log,
             patch("llm_runner.load_input_json", side_effect=KeyboardInterrupt()),
         ):
-
             from llm_runner import main
 
             with pytest.raises(SystemExit) as exc_info:
@@ -184,11 +182,8 @@ class TestMainFunction:
         with (
             patch("llm_runner.parse_arguments") as mock_parse,
             patch("llm_runner.setup_logging") as mock_setup_log,
-            patch(
-                "llm_runner.load_input_json", side_effect=LLMRunnerError("Test error")
-            ),
+            patch("llm_runner.load_input_json", side_effect=LLMRunnerError("Test error")),
         ):
-
             with pytest.raises(SystemExit) as exc_info:
                 await main()
 
@@ -204,11 +199,8 @@ class TestMainFunction:
         with (
             patch("llm_runner.parse_arguments") as mock_parse,
             patch("llm_runner.setup_logging") as mock_setup_log,
-            patch(
-                "llm_runner.load_input_json", side_effect=Exception("Unexpected error")
-            ),
+            patch("llm_runner.load_input_json", side_effect=Exception("Unexpected error")),
         ):
-
             with pytest.raises(SystemExit) as exc_info:
                 await main()
 
@@ -231,7 +223,6 @@ class TestMainFunction:
             patch("llm_runner.execute_llm_task") as mock_execute,
             patch("llm_runner.write_output_file") as mock_write_output,
         ):
-
             # Setup mocks
             mock_args = Mock()
             mock_args.input_file = Path("input.json")
@@ -240,9 +231,7 @@ class TestMainFunction:
             mock_args.log_level = "INFO"
             mock_parse.return_value = mock_args
 
-            mock_load_input.return_value = {
-                "messages": [{"role": "user", "content": "test"}]
-            }
+            mock_load_input.return_value = {"messages": [{"role": "user", "content": "test"}]}
             mock_create_history.return_value = Mock()
             mock_setup_azure.return_value = Mock()
             mock_load_schema.return_value = None

@@ -6,9 +6,10 @@ These tests focus on testing the interactions between components with
 mocked external services (Azure OpenAI) but real internal logic.
 """
 
-import pytest
-from unittest.mock import AsyncMock, Mock
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 
 @pytest.fixture

@@ -5,17 +5,16 @@ Tests create_dynamic_model_from_schema and load_json_schema functions
 with heavy mocking following the Given-When-Then pattern.
 """
 
-import pytest
-import json
-from unittest.mock import Mock, patch, mock_open
 from pathlib import Path
+from unittest.mock import Mock, patch
 
-import llm_runner
+import pytest
+
 from llm_runner import (
+    InputValidationError,
+    SchemaValidationError,
     create_dynamic_model_from_schema,
     load_json_schema,
-    SchemaValidationError,
-    InputValidationError,
 )
 
 
@@ -126,9 +125,7 @@ class TestCreateDynamicModelFromSchema:
         schema_dict = "not a dictionary"
 
         # when & then
-        with pytest.raises(
-            SchemaValidationError, match="Failed to create dynamic model"
-        ):
+        with pytest.raises(SchemaValidationError, match="Failed to create dynamic model"):
             create_dynamic_model_from_schema(schema_dict)
 
     def test_create_model_with_library_exception_raises_schema_error(self):
@@ -159,9 +156,7 @@ class TestCreateDynamicModelFromSchema:
         ],
     )
     @patch("llm_runner.create_model_from_schema")
-    def test_required_field_handling(
-        self, mock_create_model, required_fields, field_name, expected_required
-    ):
+    def test_required_field_handling(self, mock_create_model, required_fields, field_name, expected_required):
         """Test that required fields are handled correctly."""
         # given
         schema_dict = {
@@ -178,9 +173,7 @@ class TestCreateDynamicModelFromSchema:
 
         # Dynamically add the field to the mock model
         setattr(MockRequiredModel, field_name, "")
-        MockRequiredModel.model_fields = {
-            field_name: Mock(is_required=lambda: expected_required)
-        }
+        MockRequiredModel.model_fields = {field_name: Mock(is_required=lambda: expected_required)}
         mock_create_model.return_value = MockRequiredModel
 
         # when
@@ -242,9 +235,7 @@ class TestLoadJsonSchema:
         with pytest.raises(InputValidationError, match="Invalid JSON in schema file"):
             load_json_schema(invalid_json_file)
 
-    def test_load_schema_with_create_model_error_raises_schema_error(
-        self, temp_schema_file
-    ):
+    def test_load_schema_with_create_model_error_raises_schema_error(self, temp_schema_file):
         """Test that model creation errors are wrapped in InputValidationError."""
         # given
         schema_file = temp_schema_file
@@ -264,8 +255,7 @@ class TestLoadJsonSchema:
         # when & then
         with (
             patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.open", side_effect=IOError("Permission denied")),
+            patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
-
             with pytest.raises(InputValidationError, match="Error loading schema file"):
                 load_json_schema(schema_file)

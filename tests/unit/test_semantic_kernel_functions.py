@@ -5,39 +5,34 @@ Tests create_chat_history, setup_azure_service, and execute_llm_task functions
 with heavy mocking following the Given-When-Then pattern.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
 
 from llm_runner import (
-    create_chat_history,
-    setup_azure_service,
-    execute_llm_task,
-    InputValidationError,
     AuthenticationError,
+    InputValidationError,
     LLMExecutionError,
+    create_chat_history,
+    execute_llm_task,
+    setup_azure_service,
 )
 from tests.mock_factory import (
     create_structured_output_mock,
     create_text_output_mock,
-    create_error_response_mock,
 )
 
 
 class TestCreateChatHistory:
     """Tests for create_chat_history function."""
 
-    def test_create_chat_history_with_valid_messages(
-        self, sample_input_messages, mock_semantic_kernel_imports
-    ):
+    def test_create_chat_history_with_valid_messages(self, sample_input_messages, mock_semantic_kernel_imports):
         """Test creating ChatHistory with valid message structure."""
         # given
         messages = sample_input_messages
         mock_chat_history_instance = Mock()
         mock_chat_history_instance.__len__ = Mock(return_value=len(messages))
-        mock_semantic_kernel_imports["chat_history"].return_value = (
-            mock_chat_history_instance
-        )
+        mock_semantic_kernel_imports["chat_history"].return_value = mock_chat_history_instance
 
         # when
         result = create_chat_history(messages)
@@ -48,14 +43,10 @@ class TestCreateChatHistory:
         # Verify messages were added (2 calls for 2 messages)
         assert mock_chat_history_instance.add_message.call_count == 2
 
-    def test_create_chat_history_with_named_user_message(
-        self, mock_semantic_kernel_imports
-    ):
+    def test_create_chat_history_with_named_user_message(self, mock_semantic_kernel_imports):
         """Test creating ChatHistory with named user message."""
         # given
-        messages = [
-            {"role": "user", "content": "Hello, assistant!", "name": "test_user"}
-        ]
+        messages = [{"role": "user", "content": "Hello, assistant!", "name": "test_user"}]
         mock_chat_history = mock_semantic_kernel_imports["chat_history"]()
 
         # when
@@ -67,9 +58,7 @@ class TestCreateChatHistory:
         call_args = mock_semantic_kernel_imports["chat_content"].call_args
         assert call_args[1]["name"] == "test_user"
 
-    def test_create_chat_history_with_missing_role_raises_error(
-        self, mock_semantic_kernel_imports
-    ):
+    def test_create_chat_history_with_missing_role_raises_error(self, mock_semantic_kernel_imports):
         """Test that message without role raises InputValidationError."""
         # given
         messages = [
@@ -86,9 +75,7 @@ class TestCreateChatHistory:
         ):
             create_chat_history(messages)
 
-    def test_create_chat_history_with_missing_content_raises_error(
-        self, mock_semantic_kernel_imports
-    ):
+    def test_create_chat_history_with_missing_content_raises_error(self, mock_semantic_kernel_imports):
         """Test that message without content raises InputValidationError."""
         # given
         messages = [
@@ -105,33 +92,23 @@ class TestCreateChatHistory:
         ):
             create_chat_history(messages)
 
-    def test_create_chat_history_with_invalid_role_raises_error(
-        self, mock_semantic_kernel_imports
-    ):
+    def test_create_chat_history_with_invalid_role_raises_error(self, mock_semantic_kernel_imports):
         """Test that invalid role raises InputValidationError."""
         # given
         messages = [{"role": "invalid_role", "content": "Hello, assistant!"}]
         # Mock AuthorRole to raise ValueError for invalid role
-        mock_semantic_kernel_imports["author_role"].side_effect = ValueError(
-            "Invalid role"
-        )
+        mock_semantic_kernel_imports["author_role"].side_effect = ValueError("Invalid role")
 
         # when & then
-        with pytest.raises(
-            InputValidationError, match="Invalid role 'invalid_role' in message 0"
-        ):
+        with pytest.raises(InputValidationError, match="Invalid role 'invalid_role' in message 0"):
             create_chat_history(messages)
 
-    def test_create_chat_history_with_chat_content_error_raises_input_error(
-        self, mock_semantic_kernel_imports
-    ):
+    def test_create_chat_history_with_chat_content_error_raises_input_error(self, mock_semantic_kernel_imports):
         """Test that ChatMessageContent creation errors are wrapped in InputValidationError."""
         # given
         messages = [{"role": "user", "content": "Hello, assistant!"}]
         # Mock ChatMessageContent to raise an exception
-        mock_semantic_kernel_imports["chat_content"].side_effect = Exception(
-            "ChatContent error"
-        )
+        mock_semantic_kernel_imports["chat_content"].side_effect = Exception("ChatContent error")
 
         # when & then
         with pytest.raises(InputValidationError, match="Error processing message 0"):
@@ -142,9 +119,7 @@ class TestSetupAzureService:
     """Tests for setup_azure_service function."""
 
     @pytest.mark.asyncio
-    async def test_setup_azure_service_with_api_key(
-        self, mock_environment_variables, mock_azure_chat_completion
-    ):
+    async def test_setup_azure_service_with_api_key(self, mock_environment_variables, mock_azure_chat_completion):
         """Test setting up Azure service with API key authentication."""
         # given
         # Environment variables are already set by fixture
@@ -172,7 +147,6 @@ class TestSetupAzureService:
             },
             clear=True,
         ):
-
             # when
             with patch("llm_runner.DefaultAzureCredential") as mock_credential:
                 result = await setup_azure_service()
@@ -187,7 +161,6 @@ class TestSetupAzureService:
         """Test that missing endpoint raises AuthenticationError."""
         # given
         with patch.dict("os.environ", {}, clear=True):
-
             # when & then
             with pytest.raises(
                 AuthenticationError,
@@ -204,7 +177,6 @@ class TestSetupAzureService:
             {"AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/"},
             clear=True,
         ):
-
             # when & then
             with pytest.raises(
                 AuthenticationError,
@@ -213,9 +185,7 @@ class TestSetupAzureService:
                 await setup_azure_service()
 
     @pytest.mark.asyncio
-    async def test_setup_azure_service_with_auth_error_raises_auth_error(
-        self, mock_environment_variables
-    ):
+    async def test_setup_azure_service_with_auth_error_raises_auth_error(self, mock_environment_variables):
         """Test that Azure authentication errors are wrapped in AuthenticationError."""
         # given
         from azure.core.exceptions import ClientAuthenticationError
@@ -225,24 +195,16 @@ class TestSetupAzureService:
             "llm_runner.AzureChatCompletion",
             side_effect=ClientAuthenticationError("Auth failed"),
         ):
-            with pytest.raises(
-                AuthenticationError, match="Azure authentication failed"
-            ):
+            with pytest.raises(AuthenticationError, match="Azure authentication failed"):
                 await setup_azure_service()
 
     @pytest.mark.asyncio
-    async def test_setup_azure_service_with_generic_error_raises_auth_error(
-        self, mock_environment_variables
-    ):
+    async def test_setup_azure_service_with_generic_error_raises_auth_error(self, mock_environment_variables):
         """Test that generic errors are wrapped in AuthenticationError."""
         # given
         # when & then
-        with patch(
-            "llm_runner.AzureChatCompletion", side_effect=Exception("Generic error")
-        ):
-            with pytest.raises(
-                AuthenticationError, match="Error setting up Azure service"
-            ):
+        with patch("llm_runner.AzureChatCompletion", side_effect=Exception("Generic error")):
+            with pytest.raises(AuthenticationError, match="Error setting up Azure service"):
                 await setup_azure_service()
 
 
@@ -250,9 +212,7 @@ class TestExecuteLlmTask:
     """Tests for execute_llm_task function."""
 
     @pytest.mark.asyncio
-    async def test_execute_llm_task_with_structured_output(
-        self, mock_azure_service, mock_chat_history, mock_kernel
-    ):
+    async def test_execute_llm_task_with_structured_output(self, mock_azure_service, mock_chat_history, mock_kernel):
         """Test executing LLM task with structured output schema."""
         # given
         service = mock_azure_service
@@ -281,9 +241,7 @@ class TestExecuteLlmTask:
         service.get_chat_message_contents.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_execute_llm_task_with_text_output(
-        self, mock_azure_service, mock_chat_history, mock_kernel
-    ):
+    async def test_execute_llm_task_with_text_output(self, mock_azure_service, mock_chat_history, mock_kernel):
         """Test executing LLM task with text output."""
         # given
         service = mock_azure_service
@@ -318,9 +276,7 @@ class TestExecuteLlmTask:
         service.get_chat_message_contents.side_effect = Exception("Service error")
 
         # when & then
-        with pytest.raises(
-            LLMExecutionError, match="LLM execution failed: Service error"
-        ):
+        with pytest.raises(LLMExecutionError, match="LLM execution failed: Service error"):
             await execute_llm_task(service, chat_history, context, schema_model)
 
     @pytest.mark.asyncio
@@ -389,9 +345,7 @@ class TestExecuteLlmTask:
         service.get_chat_message_contents.side_effect = ConnectionError("Network error")
 
         # when & then
-        with pytest.raises(
-            LLMExecutionError, match="LLM execution failed: Network error"
-        ):
+        with pytest.raises(LLMExecutionError, match="LLM execution failed: Network error"):
             await execute_llm_task(service, chat_history, context, schema_model)
 
         # Verify that the service was called (retry behavior depends on decorator implementation)

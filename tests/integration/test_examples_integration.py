@@ -6,17 +6,18 @@ but mocked LLM service calls. Uses minimal mocking following the
 Given-When-Then pattern.
 """
 
-import pytest
 import json
-from unittest.mock import AsyncMock, patch
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from llm_runner import main
 from tests.mock_factory import (
+    create_minimal_response_mock,
+    create_pr_review_mock,
     create_structured_output_mock,
     create_text_output_mock,
-    create_pr_review_mock,
-    create_minimal_response_mock,
 )
 
 
@@ -24,9 +25,7 @@ class TestSimpleExampleIntegration:
     """Integration tests for simple-example.json."""
 
     @pytest.mark.asyncio
-    async def test_simple_example_with_text_output(
-        self, temp_integration_workspace, integration_mock_azure_service
-    ):
+    async def test_simple_example_with_text_output(self, temp_integration_workspace, integration_mock_azure_service):
         """Test simple example with text output (no schema)."""
         # given
         input_file = Path("examples/simple-example.json")
@@ -34,9 +33,7 @@ class TestSimpleExampleIntegration:
 
         # Mock the Azure service response
         mock_response = create_text_output_mock()
-        integration_mock_azure_service.get_chat_message_contents.return_value = (
-            mock_response
-        )
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
         # when
         with patch(
@@ -58,7 +55,7 @@ class TestSimpleExampleIntegration:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result["success"] is True
@@ -75,15 +72,11 @@ class TestSimpleExampleIntegration:
         # given
         input_file = Path("examples/simple-example.json")
         schema_file = Path("examples/structured-output-example.json")
-        output_file = (
-            temp_integration_workspace / "output" / "simple_structured_output.json"
-        )
+        output_file = temp_integration_workspace / "output" / "simple_structured_output.json"
 
         # Mock the Azure service response
         mock_response = create_structured_output_mock()
-        integration_mock_azure_service.get_chat_message_contents.return_value = (
-            mock_response
-        )
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
         # when
         with patch(
@@ -107,7 +100,7 @@ class TestSimpleExampleIntegration:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result["success"] is True
@@ -123,9 +116,7 @@ class TestPRReviewExampleIntegration:
     """Integration tests for pr-review-example.json."""
 
     @pytest.mark.asyncio
-    async def test_pr_review_example_with_text_output(
-        self, temp_integration_workspace, integration_mock_azure_service
-    ):
+    async def test_pr_review_example_with_text_output(self, temp_integration_workspace, integration_mock_azure_service):
         """Test PR review example with text output."""
         # given
         input_file = Path("examples/pr-review-example.json")
@@ -133,9 +124,7 @@ class TestPRReviewExampleIntegration:
 
         # Mock the Azure service response
         mock_response = create_pr_review_mock()
-        integration_mock_azure_service.get_chat_message_contents.return_value = (
-            mock_response
-        )
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
         # when
         with patch(
@@ -157,7 +146,7 @@ class TestPRReviewExampleIntegration:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result["success"] is True
@@ -175,9 +164,7 @@ class TestPRReviewExampleIntegration:
         # given
         input_file = Path("examples/pr-review-example.json")
         schema_file = Path("examples/code_review_schema.json")
-        output_file = (
-            temp_integration_workspace / "output" / "pr_review_structured_output.json"
-        )
+        output_file = temp_integration_workspace / "output" / "pr_review_structured_output.json"
 
         # Create a mock structured response that matches the code review schema
         mock_response = [create_text_output_mock()[0]]
@@ -210,9 +197,7 @@ class TestPRReviewExampleIntegration:
             }
         )
         mock_response[0].content = structured_pr_response
-        integration_mock_azure_service.get_chat_message_contents.return_value = (
-            mock_response
-        )
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
         # when
         with patch(
@@ -236,7 +221,7 @@ class TestPRReviewExampleIntegration:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result["success"] is True
@@ -251,9 +236,7 @@ class TestMinimalExampleIntegration:
     """Integration tests for minimal-example.json."""
 
     @pytest.mark.asyncio
-    async def test_minimal_example_with_text_output(
-        self, temp_integration_workspace, integration_mock_azure_service
-    ):
+    async def test_minimal_example_with_text_output(self, temp_integration_workspace, integration_mock_azure_service):
         """Test minimal example with simple greeting."""
         # given
         input_file = Path("examples/minimal-example.json")
@@ -261,9 +244,7 @@ class TestMinimalExampleIntegration:
 
         # Mock the Azure service response
         mock_response = create_minimal_response_mock()
-        integration_mock_azure_service.get_chat_message_contents.return_value = (
-            mock_response
-        )
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
         # when
         with patch(
@@ -285,7 +266,7 @@ class TestMinimalExampleIntegration:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result["success"] is True
@@ -298,9 +279,7 @@ class TestAllExamplesEndToEnd:
     """End-to-end tests for all examples together."""
 
     @pytest.mark.asyncio
-    async def test_all_examples_process_successfully(
-        self, temp_integration_workspace, integration_mock_azure_service
-    ):
+    async def test_all_examples_process_successfully(self, temp_integration_workspace, integration_mock_azure_service):
         """Test that all examples can be processed successfully."""
         # given
         examples = [
@@ -313,13 +292,9 @@ class TestAllExamplesEndToEnd:
 
         # when
         for i, (input_file, mock_factory) in enumerate(examples):
-            output_file = (
-                temp_integration_workspace / "output" / f"test_{i}_output.json"
-            )
+            output_file = temp_integration_workspace / "output" / f"test_{i}_output.json"
             mock_response = mock_factory()
-            integration_mock_azure_service.get_chat_message_contents.return_value = (
-                mock_response
-            )
+            integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
             with patch(
                 "llm_runner.setup_azure_service",
@@ -340,7 +315,7 @@ class TestAllExamplesEndToEnd:
 
             # Verify output
             assert output_file.exists()
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 result = json.load(f)
             results.append(result)
 
@@ -463,9 +438,7 @@ class TestFullPipelineIntegration:
 
         # Mock the Azure service response
         mock_response = create_text_output_mock()
-        integration_mock_azure_service.get_chat_message_contents.return_value = (
-            mock_response
-        )
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
         # when
         with patch(
@@ -487,7 +460,7 @@ class TestFullPipelineIntegration:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result["success"] is True
@@ -496,7 +469,5 @@ class TestFullPipelineIntegration:
 
         # Verify the service was called with the context
         integration_mock_azure_service.get_chat_message_contents.assert_called_once()
-        call_kwargs = (
-            integration_mock_azure_service.get_chat_message_contents.call_args[1]
-        )
+        call_kwargs = integration_mock_azure_service.get_chat_message_contents.call_args[1]
         assert "arguments" in call_kwargs

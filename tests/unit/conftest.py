@@ -5,9 +5,9 @@ This file provides fixtures specific to unit testing with heavy mocking
 of external dependencies like Azure services and file operations.
 """
 
+from unittest.mock import AsyncMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from pathlib import Path
 
 
 @pytest.fixture
@@ -69,7 +69,6 @@ def mock_file_operations():
         patch("pathlib.Path.exists") as mock_exists,
         patch("pathlib.Path.mkdir") as mock_mkdir,
     ):
-
         mock_exists.return_value = True
         yield {"open": mock_open, "exists": mock_exists, "mkdir": mock_mkdir}
 
@@ -100,7 +99,6 @@ def mock_semantic_kernel_imports():
         patch("llm_runner.AuthorRole") as mock_author_role,
         patch("llm_runner.OpenAIChatPromptExecutionSettings") as mock_settings,
     ):
-
         yield {
             "kernel": mock_kernel,
             "chat_history": mock_chat_history,

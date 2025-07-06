@@ -11,13 +11,12 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pytest
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from rich.text import Text
 
 console = Console()
 
@@ -83,7 +82,7 @@ def llm_runner():
 
     def _run_llm_runner(
         input_file: str, output_file: str, schema_file: str = None, timeout: int = 60
-    ) -> Tuple[int, str, str]:
+    ) -> tuple[int, str, str]:
         """Run the LLM runner and return result code, stdout, stderr."""
         cmd = [
             "uv",
@@ -101,9 +100,7 @@ def llm_runner():
             cmd.extend(["--schema-file", schema_file])
 
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             return result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
             return -1, "", f"Command timed out after {timeout} seconds"
@@ -123,9 +120,7 @@ def judgment_schema_path():
 def llm_judge(llm_runner, temp_files, judgment_schema_path):
     """LLM-as-judge evaluator using structured output."""
 
-    async def _evaluate_response(
-        query: str, response: str, criteria: str, input_context: str = ""
-    ) -> Dict[str, Any]:
+    async def _evaluate_response(query: str, response: str, criteria: str, input_context: str = "") -> dict[str, Any]:
         """Evaluate a response using LLM-as-judge with structured output."""
 
         # Create judgment prompt with structured output instructions
@@ -175,16 +170,14 @@ Use objective criteria and provide specific reasoning for your assessment.""",
         judgment_output_file = temp_files()
 
         # Run LLM runner with structured output
-        returncode, stdout, stderr = llm_runner(
-            judgment_input_file, judgment_output_file, judgment_schema_path
-        )
+        returncode, stdout, stderr = llm_runner(judgment_input_file, judgment_output_file, judgment_schema_path)
 
         if returncode != 0:
             return {"error": f"Judgment failed: {stderr}", "pass": False}
 
         # Load structured judgment result
         try:
-            with open(judgment_output_file, "r") as f:
+            with open(judgment_output_file) as f:
                 judgment_result = json.load(f)
 
             structured_judgment = judgment_result.get("response", {})
@@ -205,9 +198,7 @@ Use objective criteria and provide specific reasoning for your assessment.""",
                 "pass",
                 "reasoning",
             ]
-            missing_fields = [
-                field for field in required_fields if field not in structured_judgment
-            ]
+            missing_fields = [field for field in required_fields if field not in structured_judgment]
 
             if missing_fields:
                 return {
@@ -227,7 +218,7 @@ Use objective criteria and provide specific reasoning for your assessment.""",
 def rich_test_output():
     """Rich formatting utilities for test output."""
 
-    def _format_judgment_table(judgment: Dict[str, Any]) -> Table:
+    def _format_judgment_table(judgment: dict[str, Any]) -> Table:
         """Format judgment results as a Rich table."""
         table = Table(title="🧑‍⚖️ LLM Judge Results")
 
@@ -241,13 +232,11 @@ def rich_test_output():
             table.add_row(metric.title(), f"{score}/10", "✅" if score >= 7 else "❌")
 
         # Add overall pass/fail
-        table.add_row(
-            "Overall Decision", "", "✅ PASS" if judgment.get("pass") else "❌ FAIL"
-        )
+        table.add_row("Overall Decision", "", "✅ PASS" if judgment.get("pass") else "❌ FAIL")
 
         return table
 
-    def _format_strengths_weaknesses(judgment: Dict[str, Any]) -> str:
+    def _format_strengths_weaknesses(judgment: dict[str, Any]) -> str:
         """Format strengths and weaknesses as formatted text."""
         output = []
 
@@ -291,9 +280,9 @@ def example_files():
 def load_example_file():
     """Load and return content of example files."""
 
-    def _load_file(file_path: str) -> Dict[str, Any]:
+    def _load_file(file_path: str) -> dict[str, Any]:
         """Load JSON content from file."""
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             return json.load(f)
 
     return _load_file
@@ -308,17 +297,12 @@ def assert_execution_success():
         if returncode != 0:
             console.print(
                 Panel(
-                    f"❌ {test_name} execution failed\n"
-                    f"Return code: {returncode}\n"
-                    f"Stderr: {stderr}\n"
-                    f"Stdout: {stdout}",
+                    f"❌ {test_name} execution failed\nReturn code: {returncode}\nStderr: {stderr}\nStdout: {stdout}",
                     title="Execution Error",
                     style="red",
                 )
             )
-            pytest.fail(
-                f"{test_name} execution failed with code {returncode}: {stderr}"
-            )
+            pytest.fail(f"{test_name} execution failed with code {returncode}: {stderr}")
 
     return _assert_success
 
@@ -327,9 +311,7 @@ def assert_execution_success():
 def assert_judgment_passed():
     """Assert that LLM judge evaluation passed."""
 
-    def _assert_judgment(
-        judgment: Dict[str, Any], test_name: str, min_score: int = 7, rich_output=None
-    ):
+    def _assert_judgment(judgment: dict[str, Any], test_name: str, min_score: int = 7, rich_output=None):
         """Assert judgment passed with detailed Rich output."""
         if "error" in judgment:
             console.print(
@@ -372,9 +354,7 @@ def assert_judgment_passed():
 
         console.print(
             Panel(
-                f"✅ {test_name} passed quality standards\n"
-                f"Overall Score: {overall_score}/10\n"
-                f"Judge Decision: PASS",
+                f"✅ {test_name} passed quality standards\nOverall Score: {overall_score}/10\nJudge Decision: PASS",
                 title="Quality Standards Met",
                 style="green",
             )

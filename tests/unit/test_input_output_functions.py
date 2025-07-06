@@ -5,18 +5,18 @@ Tests load_input_json, write_output_file, and parse_arguments functions
 with heavy mocking following the Given-When-Then pattern.
 """
 
-import pytest
 import json
-import argparse
-from unittest.mock import Mock, patch, mock_open
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from llm_runner import (
-    load_input_json,
-    write_output_file,
-    parse_arguments,
     InputValidationError,
     LLMRunnerError,
+    load_input_json,
+    parse_arguments,
+    write_output_file,
 )
 
 
@@ -67,9 +67,7 @@ class TestLoadInputJson:
             json.dump({"context": {"session_id": "test"}}, f)
 
         # when & then
-        with pytest.raises(
-            InputValidationError, match="Input JSON must contain 'messages' field"
-        ):
+        with pytest.raises(InputValidationError, match="Input JSON must contain 'messages' field"):
             load_input_json(no_messages_file)
 
     def test_load_file_with_empty_messages_raises_error(self, temp_dir):
@@ -80,9 +78,7 @@ class TestLoadInputJson:
             json.dump({"messages": []}, f)
 
         # when & then
-        with pytest.raises(
-            InputValidationError, match="'messages' must be a non-empty array"
-        ):
+        with pytest.raises(InputValidationError, match="'messages' must be a non-empty array"):
             load_input_json(empty_messages_file)
 
     def test_load_file_with_non_array_messages_raises_error(self, temp_dir):
@@ -93,14 +89,10 @@ class TestLoadInputJson:
             json.dump({"messages": "not an array"}, f)
 
         # when & then
-        with pytest.raises(
-            InputValidationError, match="'messages' must be a non-empty array"
-        ):
+        with pytest.raises(InputValidationError, match="'messages' must be a non-empty array"):
             load_input_json(non_array_messages_file)
 
-    def test_load_file_with_context_shows_debug_info(
-        self, temp_input_file, mock_logger
-    ):
+    def test_load_file_with_context_shows_debug_info(self, temp_input_file, mock_logger):
         """Test that file with context logs debug information."""
         # given
         input_file = temp_input_file
@@ -121,9 +113,8 @@ class TestLoadInputJson:
         # when & then
         with (
             patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.open", side_effect=IOError("Permission denied")),
+            patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
-
             with pytest.raises(InputValidationError, match="Error reading input file"):
                 load_input_json(error_file)
 
@@ -146,7 +137,7 @@ class TestWriteOutputFile:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             written_data = json.load(f)
 
         assert written_data["success"] is True
@@ -165,7 +156,7 @@ class TestWriteOutputFile:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             written_data = json.load(f)
 
         assert written_data["success"] is True
@@ -196,9 +187,7 @@ class TestWriteOutputFile:
             with pytest.raises(LLMRunnerError, match="Error writing output file"):
                 write_output_file(output_file, response)
 
-    def test_write_with_json_serialization_error_raises_llm_error(
-        self, temp_output_file
-    ):
+    def test_write_with_json_serialization_error_raises_llm_error(self, temp_output_file):
         """Test that JSON serialization errors are wrapped in LLMRunnerError."""
         # given
         output_file = temp_output_file

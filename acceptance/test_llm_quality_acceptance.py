@@ -10,6 +10,7 @@ Remember, this test does real API calls to Azure OpenAI, so it will cost money.
 from __future__ import annotations
 
 import json
+
 import pytest
 from rich.console import Console
 
@@ -55,7 +56,7 @@ class TestTextResponseQuality:
         assert_execution_success(returncode, stdout, stderr, "Simple Text Response")
 
         # Load and evaluate response
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
         response_text = result.get("response", "")
 
@@ -67,9 +68,7 @@ class TestTextResponseQuality:
             input_context="Software development topic explanation request",
         )
 
-        assert_judgment_passed(
-            judgment, "Simple Text Response", rich_output=rich_test_output
-        )
+        assert_judgment_passed(judgment, "Simple Text Response", rich_output=rich_test_output)
 
 
 class TestStructuredOutputCompliance:
@@ -98,19 +97,17 @@ class TestStructuredOutputCompliance:
         assert_execution_success(returncode, stdout, stderr, "Structured Output")
 
         # Load and validate the response
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
         response_data = result.get("response", {})
 
         # Load schema for validation
-        with open(schema_file, "r") as f:
+        with open(schema_file) as f:
             schema = json.load(f)
 
         # Basic schema compliance checks
         required_fields = schema.get("required", [])
-        missing_fields = [
-            field for field in required_fields if field not in response_data
-        ]
+        missing_fields = [field for field in required_fields if field not in response_data]
 
         assert not missing_fields, f"Missing required fields: {missing_fields}"
 
@@ -120,9 +117,7 @@ class TestStructuredOutputCompliance:
         # Check sentiment enum
         if "sentiment" in response_data:
             valid_sentiments = properties.get("sentiment", {}).get("enum", [])
-            assert (
-                response_data["sentiment"] in valid_sentiments
-            ), f"Invalid sentiment: {response_data['sentiment']}"
+            assert response_data["sentiment"] in valid_sentiments, f"Invalid sentiment: {response_data['sentiment']}"
 
         # Check confidence range
         if "confidence" in response_data:
@@ -133,9 +128,7 @@ class TestStructuredOutputCompliance:
         if "key_points" in response_data:
             key_points = response_data["key_points"]
             assert isinstance(key_points, list), "key_points must be an array"
-            assert (
-                1 <= len(key_points) <= 5
-            ), f"Invalid key_points count: {len(key_points)}"
+            assert 1 <= len(key_points) <= 5, f"Invalid key_points count: {len(key_points)}"
 
         # Check summary length
         if "summary" in response_data:
@@ -187,7 +180,7 @@ class TestCodeReviewQuality:
         assert_execution_success(returncode, stdout, stderr, "PR Review")
 
         # Load and evaluate response
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
         response_text = result.get("response", "")
 
@@ -216,9 +209,7 @@ class TestSystemReliability:
         example_name,
     ):
         """Test that all examples execute successfully with valid output structure."""
-        console.print(
-            f"\n🔍 Testing {example_name} example reliability...", style="blue"
-        )
+        console.print(f"\n🔍 Testing {example_name} example reliability...", style="blue")
 
         # given
         input_file = example_files[example_name]
@@ -228,21 +219,17 @@ class TestSystemReliability:
         returncode, stdout, stderr = llm_runner(input_file, output_file)
 
         # then
-        assert_execution_success(
-            returncode, stdout, stderr, f"{example_name.title()} Example"
-        )
+        assert_execution_success(returncode, stdout, stderr, f"{example_name.title()} Example")
 
         # Verify output structure
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
 
         assert result.get("success") is True, "Response should indicate success"
         assert "response" in result, "Response should contain response field"
         assert "metadata" in result, "Response should contain metadata field"
 
-        console.print(
-            f"✅ {example_name.title()} example executed successfully", style="green"
-        )
+        console.print(f"✅ {example_name.title()} example executed successfully", style="green")
 
     def test_concurrent_execution_stability(
         self,
@@ -269,27 +256,19 @@ class TestSystemReliability:
 
         # then - verify all succeeded
         for example_name, returncode, stdout, stderr, output_file in results:
-            assert_execution_success(
-                returncode, stdout, stderr, f"{example_name.title()} Concurrent"
-            )
+            assert_execution_success(returncode, stdout, stderr, f"{example_name.title()} Concurrent")
 
             # Verify output structure
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 result = json.load(f)
 
-            assert (
-                result.get("success") is True
-            ), f"{example_name} should indicate success"
+            assert result.get("success") is True, f"{example_name} should indicate success"
             assert "response" in result, f"{example_name} should contain response field"
 
         success_rate = len([r for r in results if r[1] == 0]) / len(results) * 100
-        console.print(
-            f"✅ System reliability: {success_rate:.1f}% success rate", style="green"
-        )
+        console.print(f"✅ System reliability: {success_rate:.1f}% success rate", style="green")
 
-        assert (
-            success_rate == 100.0
-        ), f"Expected 100% success rate, got {success_rate:.1f}%"
+        assert success_rate == 100.0, f"Expected 100% success rate, got {success_rate:.1f}%"
 
 
 class TestQualityBenchmarks:
@@ -351,12 +330,10 @@ class TestQualityBenchmarks:
         returncode, stdout, stderr = llm_runner(input_file, output_file)
 
         # then
-        assert_execution_success(
-            returncode, stdout, stderr, f"{example_name.title()} Benchmark"
-        )
+        assert_execution_success(returncode, stdout, stderr, f"{example_name.title()} Benchmark")
 
         # Load and evaluate response
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
         response_text = result.get("response", "")
 
@@ -419,7 +396,7 @@ class TestCustomScenarios:
         # then
         assert_execution_success(returncode, stdout, stderr, "Mathematical Reasoning")
 
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
         response_text = result.get("response", "")
 
@@ -430,9 +407,7 @@ class TestCustomScenarios:
             input_context="Average speed calculation problem",
         )
 
-        assert_judgment_passed(
-            judgment, "Mathematical Reasoning", rich_output=rich_test_output
-        )
+        assert_judgment_passed(judgment, "Mathematical Reasoning", rich_output=rich_test_output)
 
     @pytest.mark.parametrize(
         "topic,min_score",
@@ -456,9 +431,7 @@ class TestCustomScenarios:
         min_score,
     ):
         """Test technical expertise across different topics - EXAMPLE: Parametrized testing!"""
-        console.print(
-            f"\n🔬 Testing {topic} expertise (min: {min_score}/10)...", style="blue"
-        )
+        console.print(f"\n🔬 Testing {topic} expertise (min: {min_score}/10)...", style="blue")
 
         # given - Dynamic test content based on topic
         topic_questions = {
@@ -467,14 +440,12 @@ class TestCustomScenarios:
             "machine_learning": "Explain the bias-variance tradeoff in machine learning and how to address it.",
         }
 
-        technical_input = {
-            "messages": [{"role": "user", "content": topic_questions[topic]}]
-        }
+        technical_input = {"messages": [{"role": "user", "content": topic_questions[topic]}]}
         input_file = temp_files(json.dumps(technical_input, indent=2))
         output_file = temp_files()
 
         criteria = f"""
-        - Should demonstrate deep understanding of {topic.replace('_', ' ')}
+        - Should demonstrate deep understanding of {topic.replace("_", " ")}
         - Should provide accurate technical information
         - Should include practical examples where appropriate
         - Should be clear and well-structured
@@ -485,11 +456,9 @@ class TestCustomScenarios:
         returncode, stdout, stderr = llm_runner(input_file, output_file)
 
         # then
-        assert_execution_success(
-            returncode, stdout, stderr, f"{topic.title()} Expertise"
-        )
+        assert_execution_success(returncode, stdout, stderr, f"{topic.title()} Expertise")
 
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             result = json.load(f)
         response_text = result.get("response", "")
 

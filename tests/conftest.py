@@ -5,12 +5,12 @@ This file provides common fixtures and test utilities used across
 unit and integration tests.
 """
 
-import pytest
-import tempfile
 import json
+import tempfile
 from pathlib import Path
-from typing import Dict, Any, List
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 
 @pytest.fixture
@@ -119,9 +119,7 @@ def mock_azure_service():
 def mock_chat_message_content():
     """Mock ChatMessageContent for testing."""
     mock_content = Mock()
-    mock_content.content = (
-        '{"sentiment":"neutral","confidence":0.85,"summary":"Test response"}'
-    )
+    mock_content.content = '{"sentiment":"neutral","confidence":0.85,"summary":"Test response"}'
     mock_content.role = "assistant"
     return mock_content
 

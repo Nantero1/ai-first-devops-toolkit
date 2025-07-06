@@ -6,11 +6,11 @@ proper argument parsing, help text, and error handling.
 Uses the Given-When-Then pattern.
 """
 
-import pytest
-import subprocess
 import json
+import subprocess
 from pathlib import Path
-from unittest.mock import patch
+
+import pytest
 
 
 class TestCLIArgumentParsing:
@@ -66,10 +66,7 @@ class TestCLIArgumentParsing:
 
         # then
         assert result.returncode != 0
-        assert (
-            "invalid choice" in result.stderr.lower()
-            or "error" in result.stderr.lower()
-        )
+        assert "invalid choice" in result.stderr.lower() or "error" in result.stderr.lower()
 
     def test_cli_with_nonexistent_input_file_shows_error(self):
         """Test that nonexistent input file shows appropriate error."""
@@ -166,10 +163,7 @@ class TestCLIFileHandling:
         # then
         assert result.returncode == 1
         # Should fail at authentication, not input validation
-        assert (
-            "AZURE_OPENAI_ENDPOINT" in result.stderr
-            or "authentication" in result.stderr.lower()
-        )
+        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
 
     def test_cli_with_invalid_json_input_shows_validation_error(self, temp_dir):
         """Test that invalid JSON input shows validation error."""
@@ -239,15 +233,9 @@ class TestCLIFileHandling:
         # then
         assert result.returncode == 1
         # Should fail at authentication, not schema processing
-        assert (
-            "AZURE_OPENAI_ENDPOINT" in result.stderr
-            or "authentication" in result.stderr.lower()
-        )
+        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
         # Should not have schema-related errors
-        assert (
-            "schema" not in result.stderr.lower()
-            or "not found" not in result.stderr.lower()
-        )
+        assert "schema" not in result.stderr.lower() or "not found" not in result.stderr.lower()
 
 
 class TestCLIErrorHandling:
@@ -317,9 +305,7 @@ class TestCLIIntegrationWithExamples:
             "examples/pr-review-example.json",
         ],
     )
-    def test_cli_with_example_files_reaches_authentication_stage(
-        self, temp_dir, example_file
-    ):
+    def test_cli_with_example_files_reaches_authentication_stage(self, temp_dir, example_file):
         """Test that CLI with example files reaches authentication stage."""
         # given
         output_file = temp_dir / f"output_{Path(example_file).stem}.json"
@@ -342,10 +328,7 @@ class TestCLIIntegrationWithExamples:
         # then
         assert result.returncode == 1
         # Should fail at authentication, not input processing
-        assert (
-            "AZURE_OPENAI_ENDPOINT" in result.stderr
-            or "authentication" in result.stderr.lower()
-        )
+        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
 
     def test_cli_with_structured_output_example_processes_schema(self, temp_dir):
         """Test that CLI with structured output processes schema correctly."""
@@ -374,15 +357,9 @@ class TestCLIIntegrationWithExamples:
         # then
         assert result.returncode == 1
         # Should fail at authentication, not schema processing
-        assert (
-            "AZURE_OPENAI_ENDPOINT" in result.stderr
-            or "authentication" in result.stderr.lower()
-        )
+        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
         # Should not have schema-related errors
-        assert (
-            "schema" not in result.stderr.lower()
-            or "invalid" not in result.stderr.lower()
-        )
+        assert "schema" not in result.stderr.lower() or "invalid" not in result.stderr.lower()
 
 
 class TestCLILoggingAndOutput:

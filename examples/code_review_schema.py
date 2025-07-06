@@ -5,7 +5,6 @@ This module demonstrates how to create comprehensive schemas for LLM structured 
 using Semantic Kernel's KernelBaseModel for guaranteed JSON format compliance.
 """
 
-from typing import List, Optional
 from pydantic import Field
 from semantic_kernel.kernel_pydantic import KernelBaseModel
 
@@ -21,7 +20,7 @@ class CodeIssue(KernelBaseModel):
         description="Category of the issue",
         examples=["security", "performance", "maintainability", "style", "logic"],
     )
-    line_number: Optional[int] = Field(
+    line_number: int | None = Field(
         description="Line number where the issue occurs (if applicable)",
         examples=[1, 5, 12],
         ge=1,
@@ -57,9 +56,7 @@ class QualityRating(KernelBaseModel):
             "testability",
         ],
     )
-    score: int = Field(
-        description="Rating score from 1 to 10", examples=[7, 8, 9], ge=1, le=10
-    )
+    score: int = Field(description="Rating score from 1 to 10", examples=[7, 8, 9], ge=1, le=10)
     justification: str = Field(
         description="Explanation for the given score",
         examples=[
@@ -82,15 +79,11 @@ class CodeReviewAnalysis(KernelBaseModel):
         ],
     )
 
-    issues: List[CodeIssue] = Field(
-        description="List of specific issues found in the code", min_items=0
-    )
+    issues: list[CodeIssue] = Field(description="List of specific issues found in the code", min_items=0)
 
-    quality_ratings: List[QualityRating] = Field(
-        description="Ratings for different quality aspects", min_items=1
-    )
+    quality_ratings: list[QualityRating] = Field(description="Ratings for different quality aspects", min_items=1)
 
-    positive_aspects: List[str] = Field(
+    positive_aspects: list[str] = Field(
         description="Things that are done well in the code",
         examples=[
             "Clear function name that describes its purpose",
@@ -100,7 +93,7 @@ class CodeReviewAnalysis(KernelBaseModel):
         min_items=0,
     )
 
-    improvement_suggestions: List[str] = Field(
+    improvement_suggestions: list[str] = Field(
         description="General suggestions for improvement",
         examples=[
             "Add comprehensive input validation",
@@ -181,7 +174,7 @@ class SentimentAnalysis(KernelBaseModel):
         ge=0.0,
         le=1.0,
     )
-    key_phrases: List[str] = Field(
+    key_phrases: list[str] = Field(
         description="Important phrases that influenced the sentiment",
         examples=["excellent quality", "terrible experience", "works as expected"],
     )
@@ -201,19 +194,17 @@ class ProductExtraction(KernelBaseModel):
         description="Name of the product",
         examples=["iPhone 15 Pro", "MacBook Air M2", "AirPods Pro"],
     )
-    brand: str = Field(
-        description="Brand or manufacturer name", examples=["Apple", "Samsung", "Sony"]
-    )
-    price: Optional[float] = Field(
+    brand: str = Field(description="Brand or manufacturer name", examples=["Apple", "Samsung", "Sony"])
+    price: float | None = Field(
         description="Price of the product if mentioned",
         examples=[999.99, 1299.00, 199.99],
         ge=0,
     )
-    features: List[str] = Field(
+    features: list[str] = Field(
         description="Key features mentioned",
         examples=["48MP camera", "All-day battery life", "5G connectivity"],
     )
-    availability: Optional[str] = Field(
+    availability: str | None = Field(
         description="Availability status if mentioned",
         examples=["in stock", "out of stock", "pre-order", "coming soon"],
     )

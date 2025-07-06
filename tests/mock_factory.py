@@ -7,18 +7,19 @@ based on actual Semantic Kernel and Azure OpenAI API responses.
 The mock data is based on actual API responses captured during testing.
 """
 
+from typing import Any
 from unittest.mock import Mock
-from typing import List, Dict, Any, Optional
+
 from semantic_kernel.contents import ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.contents.text_content import TextContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 
 def create_mock_chat_message_content(
     content: str,
     role: str = "assistant",
     ai_model_id: str = "gpt-4.1-nano-stable",
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> Mock:
     """
     Create a realistic mock ChatMessageContent object.
@@ -80,7 +81,7 @@ def create_mock_chat_message_content(
     return mock_content
 
 
-def create_structured_output_mock() -> List[Mock]:
+def create_structured_output_mock() -> list[Mock]:
     """
     Create mock for structured output response based on actual API response.
 
@@ -102,7 +103,7 @@ def create_structured_output_mock() -> List[Mock]:
     return [mock_content]
 
 
-def create_text_output_mock() -> List[Mock]:
+def create_text_output_mock() -> list[Mock]:
     """
     Create mock for text output response based on actual API response.
 
@@ -124,7 +125,7 @@ def create_text_output_mock() -> List[Mock]:
     return [mock_content]
 
 
-def create_pr_review_mock() -> List[Mock]:
+def create_pr_review_mock() -> list[Mock]:
     """
     Create mock for PR review response based on expected realistic output.
     """
@@ -159,13 +160,11 @@ def create_pr_review_mock() -> List[Mock]:
     return [mock_content]
 
 
-def create_minimal_response_mock() -> List[Mock]:
+def create_minimal_response_mock() -> list[Mock]:
     """
     Create mock for minimal response based on minimal-example.json.
     """
-    minimal_response = (
-        "Hello! I'm ready to help you with any questions or tasks you have."
-    )
+    minimal_response = "Hello! I'm ready to help you with any questions or tasks you have."
 
     mock_content = create_mock_chat_message_content(
         content=minimal_response,

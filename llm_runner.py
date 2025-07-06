@@ -25,7 +25,7 @@ Input Format:
                 "content": "You are a helpful assistant."
             },
             {
-                "role": "user", 
+                "role": "user",
                 "content": "Review this for issues",
                 "name": "developer"
             }
@@ -44,39 +44,38 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Type
+from typing import Any
 
+from azure.core.exceptions import ClientAuthenticationError
+
+# Azure authentication
+from azure.identity.aio import DefaultAzureCredential
+from json_schema_to_pydantic import create_model as create_model_from_schema  # type: ignore[import-untyped]
+
+# Pydantic imports for schema handling
 # Rich imports for beautiful console output
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install as install_rich_traceback
 
-# Pydantic imports for schema handling
-from pydantic import BaseModel
-from json_schema_to_pydantic import create_model as create_model_from_schema
-
 # Semantic Kernel imports
 from semantic_kernel import Kernel
-from semantic_kernel.contents import ChatHistory, ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
-from semantic_kernel.functions import KernelArguments
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import (
     AzureChatCompletion,
 )
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+from semantic_kernel.contents import ChatHistory, ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.functions import KernelArguments
 from semantic_kernel.kernel_pydantic import KernelBaseModel
-
-# Azure authentication
-from azure.identity.aio import DefaultAzureCredential
-from azure.core.exceptions import ClientAuthenticationError
 
 # Tenacity for retry logic
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential_jitter,
-    retry_if_exception_type,
-    before_sleep_log,
 )
 
 # Install rich traceback for better error display
@@ -118,8 +117,8 @@ class SchemaValidationError(LLMRunnerError):
 
 
 def create_dynamic_model_from_schema(
-    schema_dict: Dict[str, Any], model_name: str = "DynamicOutputModel"
-) -> Type[KernelBaseModel]:
+    schema_dict: dict[str, Any], model_name: str = "DynamicOutputModel"
+) -> type[KernelBaseModel]:
     """
     Create a dynamic Pydantic model from JSON schema that inherits from KernelBaseModel.
 
@@ -139,11 +138,11 @@ def create_dynamic_model_from_schema(
 
     try:
         # Use the dedicated library for robust JSON schema -> Pydantic conversion
-        BaseGeneratedModel = create_model_from_schema(schema_dict)
+        base_generated_model = create_model_from_schema(schema_dict)
 
         # Create a new class that inherits from both KernelBaseModel and the generated model
         # This ensures we get KernelBaseModel functionality while keeping the schema structure
-        class DynamicKernelModel(KernelBaseModel, BaseGeneratedModel):
+        class DynamicKernelModel(KernelBaseModel, base_generated_model):  # type: ignore[valid-type, misc]
             pass
 
         # Set the name for better debugging
@@ -151,21 +150,17 @@ def create_dynamic_model_from_schema(
         DynamicKernelModel.__qualname__ = model_name
 
         # Count fields for logging
-        field_count = len(BaseGeneratedModel.model_fields)
-        required_fields = [
-            name
-            for name, field in BaseGeneratedModel.model_fields.items()
-            if field.is_required()
-        ]
+        field_count = len(base_generated_model.model_fields)
+        required_fields = [name for name, field in base_generated_model.model_fields.items() if field.is_required()]
 
         LOGGER.info(f"✅ Created dynamic model with {field_count} fields")
         LOGGER.debug(f"   Required fields: {required_fields}")
-        LOGGER.debug(f"   All fields: {list(BaseGeneratedModel.model_fields.keys())}")
+        LOGGER.debug(f"   All fields: {list(base_generated_model.model_fields.keys())}")
 
         return DynamicKernelModel
 
     except Exception as e:
-        raise SchemaValidationError(f"Failed to create dynamic model: {e}")
+        raise SchemaValidationError(f"Failed to create dynamic model: {e}") from e
 
 
 def setup_logging(log_level: str) -> logging.Logger:
@@ -202,9 +197,7 @@ def setup_logging(log_level: str) -> logging.Logger:
         ],
     )
 
-    LOGGER.info(
-        f"[bold green]🚀 LLM Runner initialized with log level: {log_level.upper()}[/bold green]"
-    )
+    LOGGER.info(f"[bold green]🚀 LLM Runner initialized with log level: {log_level.upper()}[/bold green]")
     return LOGGER
 
 
@@ -222,10 +215,10 @@ def parse_arguments() -> argparse.Namespace:
 Examples:
     # Basic usage
     python llm_runner.py --input-file input.json --output-file result.json
-    
+
     # With structured output schema
     python llm_runner.py --input-file input.json --output-file result.json --schema-file schema.json
-    
+
     # With debug logging
     python llm_runner.py --input-file input.json --output-file result.json --log-level DEBUG
 
@@ -266,7 +259,7 @@ Environment Variables:
     return parser.parse_args()
 
 
-def load_input_json(input_file: Path) -> Dict[str, Any]:
+def load_input_json(input_file: Path) -> dict[str, Any]:
     """
     Load and parse input JSON file containing messages and optional context.
 
@@ -285,7 +278,7 @@ def load_input_json(input_file: Path) -> Dict[str, Any]:
         raise InputValidationError(f"Input file not found: {input_file}")
 
     try:
-        with open(input_file, "r", encoding="utf-8") as f:
+        with open(input_file, encoding="utf-8") as f:
             data = json.load(f)
 
         # Validate required 'messages' field
@@ -297,19 +290,17 @@ def load_input_json(input_file: Path) -> Dict[str, Any]:
 
         LOGGER.debug(f"✅ Loaded {len(data['messages'])} messages")
         if "context" in data:
-            LOGGER.debug(
-                f"📋 Additional context provided: {list(data['context'].keys())}"
-            )
+            LOGGER.debug(f"📋 Additional context provided: {list(data['context'].keys())}")
 
-        return data
+        return data  # type: ignore[no-any-return]
 
     except json.JSONDecodeError as e:
-        raise InputValidationError(f"Invalid JSON in input file: {e}")
+        raise InputValidationError(f"Invalid JSON in input file: {e}") from e
     except Exception as e:
-        raise InputValidationError(f"Error reading input file: {e}")
+        raise InputValidationError(f"Error reading input file: {e}") from e
 
 
-def create_chat_history(messages: List[Dict[str, Any]]) -> ChatHistory:
+def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
     """
     Create Semantic Kernel ChatHistory from messages array.
 
@@ -330,9 +321,7 @@ def create_chat_history(messages: List[Dict[str, Any]]) -> ChatHistory:
         try:
             # Validate message structure
             if "role" not in msg or "content" not in msg:
-                raise InputValidationError(
-                    f"Message {i} missing required 'role' or 'content' field"
-                )
+                raise InputValidationError(f"Message {i} missing required 'role' or 'content' field")
 
             # Create ChatMessageContent
             chat_message = ChatMessageContent(
@@ -342,16 +331,12 @@ def create_chat_history(messages: List[Dict[str, Any]]) -> ChatHistory:
             )
 
             chat_history.add_message(chat_message)
-            LOGGER.debug(
-                f"  ➕ Added {msg['role']} message ({len(msg['content'])} chars)"
-            )
+            LOGGER.debug(f"  ➕ Added {msg['role']} message ({len(msg['content'])} chars)")
 
         except ValueError as e:
-            raise InputValidationError(
-                f"Invalid role '{msg.get('role')}' in message {i}: {e}"
-            )
+            raise InputValidationError(f"Invalid role '{msg.get('role')}' in message {i}: {e}") from e
         except Exception as e:
-            raise InputValidationError(f"Error processing message {i}: {e}")
+            raise InputValidationError(f"Error processing message {i}: {e}") from e
 
     LOGGER.info(f"✅ Created ChatHistory with {len(chat_history)} messages")
     return chat_history
@@ -416,7 +401,7 @@ async def setup_azure_service() -> AzureChatCompletion:
         service = AzureChatCompletion(
             deployment_name=model,
             endpoint=endpoint,
-            ad_token_provider=credential.get_token,
+            ad_token_provider=credential.get_token,  # type: ignore[arg-type]
             api_version=api_version,
         )
 
@@ -424,12 +409,12 @@ async def setup_azure_service() -> AzureChatCompletion:
         return service
 
     except ClientAuthenticationError as e:
-        raise AuthenticationError(f"Azure authentication failed: {e}")
+        raise AuthenticationError(f"Azure authentication failed: {e}") from e
     except Exception as e:
-        raise AuthenticationError(f"Error setting up Azure service: {e}")
+        raise AuthenticationError(f"Error setting up Azure service: {e}") from e
 
 
-def load_json_schema(schema_file: Optional[Path]) -> Optional[Type[KernelBaseModel]]:
+def load_json_schema(schema_file: Path | None) -> type[KernelBaseModel] | None:
     """
     Load JSON schema from file and convert to dynamic Pydantic model for 100% enforcement.
 
@@ -453,19 +438,17 @@ def load_json_schema(schema_file: Optional[Path]) -> Optional[Type[KernelBaseMod
         if not schema_file.exists():
             raise InputValidationError(f"Schema file not found: {schema_file}")
 
-        with open(schema_file, "r", encoding="utf-8") as f:
+        with open(schema_file, encoding="utf-8") as f:
             schema_content = f.read().strip()
 
         # Parse and validate JSON schema
         try:
             schema_dict = json.loads(schema_content)
         except json.JSONDecodeError as e:
-            raise InputValidationError(f"Invalid JSON in schema file: {e}")
+            raise InputValidationError(f"Invalid JSON in schema file: {e}") from e
 
         # Create dynamic Pydantic model from schema
-        model_name = (
-            f"Schema_{schema_file.stem.title().replace('-', '').replace('_', '')}"
-        )
+        model_name = f"Schema_{schema_file.stem.title().replace('-', '').replace('_', '')}"
         dynamic_model = create_dynamic_model_from_schema(schema_dict, model_name)
 
         LOGGER.info(f"✅ JSON schema converted to Pydantic model: {model_name}")
@@ -474,7 +457,7 @@ def load_json_schema(schema_file: Optional[Path]) -> Optional[Type[KernelBaseMod
     except (InputValidationError, SchemaValidationError):
         raise
     except Exception as e:
-        raise InputValidationError(f"Error loading schema file: {e}")
+        raise InputValidationError(f"Error loading schema file: {e}") from e
 
 
 @retry(
@@ -497,9 +480,9 @@ def load_json_schema(schema_file: Optional[Path]) -> Optional[Type[KernelBaseMod
 async def execute_llm_task(
     service: AzureChatCompletion,
     chat_history: ChatHistory,
-    context: Optional[Dict[str, Any]],
-    schema_model: Optional[Type[KernelBaseModel]],
-) -> Union[str, Dict[str, Any]]:
+    context: dict[str, Any] | None,
+    schema_model: type[KernelBaseModel] | None,
+) -> str | dict[str, Any]:
     """
     Execute LLM task using Semantic Kernel with 100% schema enforcement.
 
@@ -532,9 +515,7 @@ async def execute_llm_task(
             # CRITICAL: Use response_format with KernelBaseModel for 100% enforcement
             # This triggers Azure OpenAI's structured outputs with token-level constraints
             settings.response_format = schema_model
-            LOGGER.info(
-                f"🔒 Using 100% schema enforcement with model: {schema_model.__name__}"
-            )
+            LOGGER.info(f"🔒 Using 100% schema enforcement with model: {schema_model.__name__}")
             LOGGER.debug("   → Token-level constraint enforcement active")
         else:
             LOGGER.debug("📝 Using text output mode (no schema)")
@@ -559,17 +540,11 @@ async def execute_llm_task(
         # Extract result content from Semantic Kernel response
         if isinstance(result, list) and len(result) > 0:
             # Direct service call returns list of ChatMessageContent
-            response = (
-                result[0].content if hasattr(result[0], "content") else str(result[0])
-            )
+            response = result[0].content if hasattr(result[0], "content") else str(result[0])
         elif hasattr(result, "value") and result.value:
             # Kernel invoke_prompt returns FunctionResult with value
             if isinstance(result.value, list) and len(result.value) > 0:
-                response = (
-                    result.value[0].content
-                    if hasattr(result.value[0], "content")
-                    else str(result.value[0])
-                )
+                response = result.value[0].content if hasattr(result.value[0], "content") else str(result.value[0])
             else:
                 response = str(result.value)
         else:
@@ -587,16 +562,12 @@ async def execute_llm_task(
                 # Parse response as JSON since it's guaranteed to be schema-compliant
                 parsed_response = json.loads(response)
                 LOGGER.info("✅ LLM task completed with 100% schema-enforced output")
-                LOGGER.debug(
-                    f"📄 Structured response with {len(parsed_response)} fields"
-                )
+                LOGGER.debug(f"📄 Structured response with {len(parsed_response)} fields")
                 LOGGER.debug(f"   Fields: {list(parsed_response.keys())}")
-                return parsed_response
+                return parsed_response  # type: ignore[no-any-return]
             except json.JSONDecodeError as e:
                 # This should never happen with proper structured output enforcement
-                raise LLMExecutionError(
-                    f"Schema enforcement failed - invalid JSON returned: {e}"
-                )
+                raise LLMExecutionError(f"Schema enforcement failed - invalid JSON returned: {e}") from e
 
         # Text output mode
         LOGGER.info("✅ LLM task completed successfully")
@@ -606,10 +577,10 @@ async def execute_llm_task(
     except LLMExecutionError:
         raise
     except Exception as e:
-        raise LLMExecutionError(f"LLM execution failed: {e}")
+        raise LLMExecutionError(f"LLM execution failed: {e}") from e
 
 
-def write_output_file(output_file: Path, response: Union[str, Dict[str, Any]]) -> None:
+def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None:
     """
     Write LLM response to output file in JSON format.
 
@@ -644,7 +615,7 @@ def write_output_file(output_file: Path, response: Union[str, Dict[str, Any]]) -
         LOGGER.info(f"✅ Output written to: {output_file}")
 
     except Exception as e:
-        raise LLMRunnerError(f"Error writing output file: {e}")
+        raise LLMRunnerError(f"Error writing output file: {e}") from e
 
 
 async def main() -> None:
@@ -688,9 +659,7 @@ async def main() -> None:
         write_output_file(args.output_file, response)
 
         # Success message
-        CONSOLE.print(
-            "\n[bold green]🎉 LLM Runner completed successfully![/bold green]"
-        )
+        CONSOLE.print("\n[bold green]🎉 LLM Runner completed successfully![/bold green]")
         CONSOLE.print(f"[dim]📁 Output saved to: {args.output_file}[/dim]")
 
     except LLMRunnerError as e:
