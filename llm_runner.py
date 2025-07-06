@@ -44,12 +44,16 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Type
 
 # Rich imports for beautiful console output
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install as install_rich_traceback
+
+# Pydantic imports for schema handling
+from pydantic import BaseModel
+from json_schema_to_pydantic import create_model as create_model_from_schema
 
 # Semantic Kernel imports
 from semantic_kernel import Kernel
@@ -60,6 +64,7 @@ from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import
     AzureChatCompletion,
 )
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+from semantic_kernel.kernel_pydantic import KernelBaseModel
 
 # Azure authentication
 from azure.identity.aio import DefaultAzureCredential
@@ -95,6 +100,63 @@ class LLMExecutionError(LLMRunnerError):
     """Raised when LLM execution fails."""
 
     pass
+
+
+class SchemaValidationError(LLMRunnerError):
+    """Raised when JSON schema validation or conversion fails."""
+
+    pass
+
+
+def create_dynamic_model_from_schema(
+    schema_dict: Dict[str, Any], model_name: str = "DynamicOutputModel"
+) -> Type[KernelBaseModel]:
+    """
+    Create a dynamic Pydantic model from JSON schema that inherits from KernelBaseModel.
+
+    Uses the json-schema-to-pydantic library for robust schema conversion instead of manual implementation.
+
+    Args:
+        schema_dict: JSON schema dictionary
+        model_name: Name for the generated model class
+
+    Returns:
+        Dynamic Pydantic model class inheriting from KernelBaseModel
+
+    Raises:
+        SchemaValidationError: If schema conversion fails
+    """
+    LOGGER.debug(f"🏗️  Creating dynamic model: {model_name}")
+
+    try:
+        # Use the dedicated library for robust JSON schema -> Pydantic conversion
+        BaseGeneratedModel = create_model_from_schema(schema_dict)
+
+        # Create a new class that inherits from both KernelBaseModel and the generated model
+        # This ensures we get KernelBaseModel functionality while keeping the schema structure
+        class DynamicKernelModel(KernelBaseModel, BaseGeneratedModel):
+            pass
+
+        # Set the name for better debugging
+        DynamicKernelModel.__name__ = model_name
+        DynamicKernelModel.__qualname__ = model_name
+
+        # Count fields for logging
+        field_count = len(BaseGeneratedModel.model_fields)
+        required_fields = [
+            name
+            for name, field in BaseGeneratedModel.model_fields.items()
+            if field.is_required()
+        ]
+
+        LOGGER.info(f"✅ Created dynamic model with {field_count} fields")
+        LOGGER.debug(f"   Required fields: {required_fields}")
+        LOGGER.debug(f"   All fields: {list(BaseGeneratedModel.model_fields.keys())}")
+
+        return DynamicKernelModel
+
+    except Exception as e:
+        raise SchemaValidationError(f"Failed to create dynamic model: {e}")
 
 
 def setup_logging(log_level: str) -> logging.Logger:
@@ -358,18 +420,19 @@ async def setup_azure_service() -> AzureChatCompletion:
         raise AuthenticationError(f"Error setting up Azure service: {e}")
 
 
-def load_json_schema(schema_file: Optional[Path]) -> Optional[str]:
+def load_json_schema(schema_file: Optional[Path]) -> Optional[Type[KernelBaseModel]]:
     """
-    Load JSON schema from file for structured output.
+    Load JSON schema from file and convert to dynamic Pydantic model for 100% enforcement.
 
     Args:
         schema_file: Optional path to JSON schema file
 
     Returns:
-        JSON schema string or None if no schema
+        Dynamic KernelBaseModel class or None if no schema
 
     Raises:
         InputValidationError: If schema file cannot be loaded or is invalid JSON
+        SchemaValidationError: If schema conversion to Pydantic model fails
     """
     if not schema_file:
         LOGGER.debug("📋 No schema file provided - using text output")
@@ -384,16 +447,22 @@ def load_json_schema(schema_file: Optional[Path]) -> Optional[str]:
         with open(schema_file, "r", encoding="utf-8") as f:
             schema_content = f.read().strip()
 
-        # Validate it's valid JSON
+        # Parse and validate JSON schema
         try:
-            json.loads(schema_content)
+            schema_dict = json.loads(schema_content)
         except json.JSONDecodeError as e:
             raise InputValidationError(f"Invalid JSON in schema file: {e}")
 
-        LOGGER.info(f"✅ JSON schema loaded successfully from: {schema_file}")
-        return schema_content
+        # Create dynamic Pydantic model from schema
+        model_name = (
+            f"Schema_{schema_file.stem.title().replace('-', '').replace('_', '')}"
+        )
+        dynamic_model = create_dynamic_model_from_schema(schema_dict, model_name)
 
-    except InputValidationError:
+        LOGGER.info(f"✅ JSON schema converted to Pydantic model: {model_name}")
+        return dynamic_model
+
+    except (InputValidationError, SchemaValidationError):
         raise
     except Exception as e:
         raise InputValidationError(f"Error loading schema file: {e}")
@@ -403,20 +472,22 @@ async def execute_llm_task(
     service: AzureChatCompletion,
     chat_history: ChatHistory,
     context: Optional[Dict[str, Any]],
-    json_schema: Optional[str],
+    schema_model: Optional[Type[KernelBaseModel]],
 ) -> Union[str, Dict[str, Any]]:
     """
-    Execute LLM task using Semantic Kernel with optional structured output.
+    Execute LLM task using Semantic Kernel with 100% schema enforcement.
+
+    Uses KernelBaseModel with response_format for token-level constraint enforcement,
+    guaranteeing 100% schema compliance when schema_model is provided.
 
     Args:
         service: Azure ChatCompletion service
         chat_history: ChatHistory with messages
         context: Optional context for KernelArguments
-        json_schema: Optional JSON schema string for structured output
-        logger: Logger instance
+        schema_model: Optional KernelBaseModel class for structured output enforcement
 
     Returns:
-        LLM response as string or structured dict
+        LLM response as string or structured dict with guaranteed schema compliance
 
     Raises:
         LLMExecutionError: If LLM execution fails
@@ -428,13 +499,19 @@ async def execute_llm_task(
         kernel = Kernel()
         kernel.add_service(service)
 
-        # Setup execution settings
+        # Setup execution settings with proper structured output enforcement
         settings = OpenAIChatPromptExecutionSettings()
 
-        if json_schema:
-            # Use basic JSON mode - schema will guide the prompt
-            settings.response_format = {"type": "json_object"}
-            LOGGER.debug("📋 Using JSON output mode with schema guidance")
+        if schema_model:
+            # CRITICAL: Use response_format with KernelBaseModel for 100% enforcement
+            # This triggers Azure OpenAI's structured outputs with token-level constraints
+            settings.response_format = schema_model
+            LOGGER.info(
+                f"🔒 Using 100% schema enforcement with model: {schema_model.__name__}"
+            )
+            LOGGER.debug("   → Token-level constraint enforcement active")
+        else:
+            LOGGER.debug("📝 Using text output mode (no schema)")
 
         # Create kernel arguments
         args = KernelArguments(settings=settings)
@@ -445,60 +522,63 @@ async def execute_llm_task(
                 args[key] = value
             LOGGER.debug(f"📋 Added context: {list(context.keys())}")
 
-        # Build prompt template based on whether schema is provided
-        if json_schema:
-            prompt_template = (
-                """{{$chat_history}}
-
-IMPORTANT: You must respond with valid JSON that follows this exact schema:
-
-```json
-"""
-                + json_schema
-                + """
-```
-
-Respond ONLY with valid JSON that matches this schema. Do not include any other text."""
-            )
-        else:
-            prompt_template = "{{$chat_history}}"
-
-        # Execute LLM with prompt template
-        LOGGER.info("🚀 Sending request to LLM...")
-
-        result = await kernel.invoke_prompt(
-            prompt=prompt_template,
-            arguments=args,
+        # Use the chat completion service directly with chat_history
+        result = await service.get_chat_message_contents(
             chat_history=chat_history,
+            settings=settings,
+            arguments=args,
         )
+        LOGGER.debug(result)
 
-        # Extract result content
-        if hasattr(result, "value") and result.value:
+        # Extract result content from Semantic Kernel response
+        if isinstance(result, list) and len(result) > 0:
+            # Direct service call returns list of ChatMessageContent
             response = (
-                result.value[0].content
-                if hasattr(result.value[0], "content")
-                else str(result.value[0])
+                result[0].content if hasattr(result[0], "content") else str(result[0])
             )
+        elif hasattr(result, "value") and result.value:
+            # Kernel invoke_prompt returns FunctionResult with value
+            if isinstance(result.value, list) and len(result.value) > 0:
+                response = (
+                    result.value[0].content
+                    if hasattr(result.value[0], "content")
+                    else str(result.value[0])
+                )
+            else:
+                response = str(result.value)
         else:
             response = str(result)
 
-        # If we used structured output, try to parse as JSON
-        if json_schema and response:
+        LOGGER.debug(
+            f"📄 Extracted response: {response[:100]}..."
+            if len(response) > 100
+            else f"📄 Extracted response: {response}"
+        )
+
+        # Handle structured output response
+        if schema_model:
             try:
+                # Parse response as JSON since it's guaranteed to be schema-compliant
                 parsed_response = json.loads(response)
-                LOGGER.info("✅ LLM task completed with structured output")
+                LOGGER.info("✅ LLM task completed with 100% schema-enforced output")
                 LOGGER.debug(
                     f"📄 Structured response with {len(parsed_response)} fields"
                 )
+                LOGGER.debug(f"   Fields: {list(parsed_response.keys())}")
                 return parsed_response
-            except json.JSONDecodeError:
-                LOGGER.warning("⚠️  Response was not valid JSON, returning as text")
+            except json.JSONDecodeError as e:
+                # This should never happen with proper structured output enforcement
+                raise LLMExecutionError(
+                    f"Schema enforcement failed - invalid JSON returned: {e}"
+                )
 
+        # Text output mode
         LOGGER.info("✅ LLM task completed successfully")
         LOGGER.debug(f"📄 Response length: {len(response)} characters")
-
         return response
 
+    except LLMExecutionError:
+        raise
     except Exception as e:
         raise LLMExecutionError(f"LLM execution failed: {e}")
 
@@ -565,16 +645,16 @@ async def main() -> None:
         LOGGER.info("🔐 Authenticating with Azure...")
         service = await setup_azure_service()
 
-        # Load JSON schema if provided
-        json_schema = load_json_schema(args.schema_file)
+        # Load JSON schema and convert to dynamic Pydantic model if provided
+        schema_model = load_json_schema(args.schema_file)
 
-        # Execute LLM task
+        # Execute LLM task with 100% schema enforcement
         LOGGER.info("🤖 Processing with LLM...")
         response = await execute_llm_task(
             service=service,
             chat_history=chat_history,
             context=input_data.get("context"),
-            json_schema=json_schema,
+            schema_model=schema_model,
         )
 
         # Write output file

@@ -2,13 +2,14 @@
   "success": true,
   "response": {
     "sentiment": "neutral",
-    "confidence": 0.85,
+    "confidence": 0.9,
     "key_points": [
-      "Recent company earnings report",
-      "Market performance insights",
-      "Upcoming product launches"
+      "CI/CD stands for Continuous Integration and Continuous Deployment/Delivery.",
+      "It is a set of practices to automate the building, testing, and deploying of software.",
+      "CI encourages developers to integrate code frequently into a shared repository.",
+      "CD automates the release process, enabling fast and reliable software delivery."
     ],
-    "summary": "The company reported steady earnings, highlighting stable market performance and future product plans."
+    "summary": "CI/CD in software development automates integration, testing, and deployment to enhance efficiency and reliability."
   },
   "metadata": {
     "runner": "llm_runner.py",

@@ -1,6 +1,6 @@
 [project]
 name = "llm-runner"
-version = "0.1.0"
+version = "1.0.0"
 description = "A simple CI/CD utility for running LLM tasks with Semantic Kernel"
 readme = "README.md"
 authors = [
@@ -15,6 +15,8 @@ dependencies = [
     "pydantic>=2.11.0",
     "aiohttp>=3.12.0",
     "openai>=1.93.0",
+    "tenacity>=9.1.2",
+    "json-schema-to-pydantic>=0.4.0",
 ]
 
 [build-system]

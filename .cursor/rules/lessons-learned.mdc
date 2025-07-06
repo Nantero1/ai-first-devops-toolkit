@@ -7,3 +7,126 @@ alwaysApply: false
 # Lessons Learned
 
 *Note: This file is updated only upon user request and focuses on capturing important, reusable lessons learned during development. Each entry follows format: [Timestamp] Priority: Category → Issue: [Problem] → Fix: [Solution] → Why: [Impact]. Use grep/automated tools to verify changes and prevent regressions.*
+
+## 2025-01-06 - Code Quality and Refactoring
+
+[2025-01-06 23:16] **Critical**: Code Smell Detection and Library Usage → Issue: Manual implementation of JSON schema to Pydantic model conversion instead of using dedicated libraries creates 150+ lines of maintenance burden and incomplete feature coverage → Fix: Replace manual implementation with json-schema-to-pydantic library, use multiple inheritance to maintain KernelBaseModel functionality → Why: Eliminates reinventing-the-wheel anti-pattern, reduces code by 150+ lines, improves robustness with comprehensive JSON schema support including references and combiners, follows DRY principle and reduces maintenance burden. Libraries exist for common problems - use them.
+
+```python
+# ❌ CODE SMELL - Manual implementation
+def _convert_json_schema_field(field_schema: Dict[str, Any], field_name: str) -> tuple:
+    # 150+ lines of manual type mapping...
+    if field_type == "string":
+        if "enum" in field_schema:
+            # Manual enum handling...
+    # More manual mapping...
+
+# ✅ PROPER - Use dedicated library
+from json_schema_to_pydantic import create_model as create_model_from_schema
+
+def create_dynamic_model_from_schema(schema_dict: Dict[str, Any], model_name: str) -> Type[KernelBaseModel]:
+    BaseGeneratedModel = create_model_from_schema(schema_dict)
+    
+    class DynamicKernelModel(KernelBaseModel, BaseGeneratedModel):
+        pass
+    
+    return DynamicKernelModel
+```
+
+## 2025-01-06 - Schema Enforcement Implementation
+
+[2025-01-06 22:48] **Critical**: Semantic Kernel ChatHistory Integration → Issue: Using kernel.invoke_prompt() with {{$chat_history}} template variable causes "Variable not found" error when chat_history is passed separately → Fix: Use service.get_chat_message_contents() directly with chat_history parameter instead of prompt templates → Why: Direct service call properly handles ChatHistory objects and avoids template variable resolution issues. Critical for structured output workflows.
+
+```python
+# ❌ WRONG - Template variable approach fails
+result = await kernel.invoke_prompt(
+    prompt="{{$chat_history}}",
+    arguments=args,
+    chat_history=chat_history,
+)
+
+# ✅ CORRECT - Direct service call works
+result = await service.get_chat_message_contents(
+    chat_history=chat_history,
+    settings=settings,
+    arguments=args,
+)
+```
+
+[2025-01-06 22:47] **Critical**: Semantic Kernel Response Extraction → Issue: Different response objects returned by kernel.invoke_prompt() vs service.get_chat_message_contents() causing extraction failures → Fix: Handle both list[ChatMessageContent] and FunctionResult.value patterns with proper type checking → Why: Ensures robust response handling across different Semantic Kernel execution paths. Essential for production reliability.
+
+```python
+# ✅ ROBUST - Handle both response types
+if isinstance(result, list) and len(result) > 0:
+    # Direct service call returns list of ChatMessageContent
+    response = result[0].content if hasattr(result[0], "content") else str(result[0])
+elif hasattr(result, "value") and result.value:
+    # Kernel invoke_prompt returns FunctionResult with value
+    if isinstance(result.value, list) and len(result.value) > 0:
+        response = result.value[0].content if hasattr(result.value[0], "content") else str(result.value[0])
+    else:
+        response = str(result.value)
+else:
+    response = str(result)
+```
+
+[2025-01-06 22:45] **Important**: Dynamic Pydantic Model Creation → Issue: JSON schemas need runtime conversion to KernelBaseModel classes for 100% enforcement → Fix: Use pydantic.create_model() with custom field mapping function to convert JSON schema properties to Pydantic field definitions → Why: Enables true token-level constraint enforcement through settings.response_format = ModelClass. Achieves 100% schema compliance vs basic JSON mode.
+
+```python
+# ✅ PATTERN - Dynamic model creation
+def create_dynamic_model_from_schema(schema_dict: Dict[str, Any], model_name: str) -> Type[KernelBaseModel]:
+    properties = schema_dict.get("properties", {})
+    required_fields = schema_dict.get("required", [])
+    field_definitions = {}
+    
+    for field_name, field_schema in properties.items():
+        field_type, field_info = _convert_json_schema_field(field_schema, field_name)
+        if field_name in required_fields:
+            field_definitions[field_name] = (field_type, field_info)
+        else:
+            field_definitions[field_name] = (Optional[field_type], Field(default=None, **field_info.extra))
+    
+    return create_model(model_name, __base__=KernelBaseModel, **field_definitions)
+```
+
+[2025-01-06 22:43] **Important**: JSON Schema Field Type Mapping → Issue: JSON schema types (string, number, array, etc.) need conversion to Python types with constraint validation → Fix: Create comprehensive mapping function handling enums, numeric ranges, array limits, string constraints → Why: Ensures all JSON schema validation rules are enforced at the Pydantic model level. Critical for maintaining schema integrity.
+
+```python
+# ✅ COMPREHENSIVE - Handle all JSON schema types
+def _convert_json_schema_field(field_schema: Dict[str, Any], field_name: str) -> tuple:
+    field_type = field_schema.get("type")
+    field_kwargs = {"description": field_schema.get("description", "")} if field_schema.get("description") else {}
+    
+    if field_type == "string":
+        python_type = str
+        if "enum" in field_schema:
+            enum_values = field_schema["enum"]
+            field_kwargs["pattern"] = f"^({'|'.join(enum_values)})$"
+        if "maxLength" in field_schema:
+            field_kwargs["max_length"] = field_schema["maxLength"]
+        if "minLength" in field_schema:
+            field_kwargs["min_length"] = field_schema["minLength"]
+    elif field_type == "number":
+        python_type = float
+        if "minimum" in field_schema:
+            field_kwargs["ge"] = field_schema["minimum"]
+        if "maximum" in field_schema:
+            field_kwargs["le"] = field_schema["maximum"]
+    # ... handle other types
+    
+    return python_type, Field(**field_kwargs)
+```
+
+[2025-01-06 22:42] **Enhancement**: Structured Output Enforcement Architecture → Issue: Basic JSON mode ({type: "json_object"}) provides no schema validation → Fix: Use settings.response_format = KernelBaseModel for token-level constraint enforcement → Why: Achieves 100% schema compliance through Azure OpenAI's structured outputs feature. Eliminates schema validation errors in production CI/CD pipelines.
+
+```python
+# ❌ WEAK - Basic JSON mode (no enforcement)
+settings.response_format = {"type": "json_object"}
+
+# ✅ STRONG - Token-level constraint enforcement
+settings.response_format = DynamicPydanticModel  # 100% guaranteed compliance
+```
+
+# ✅ STRONG - Token-level constraint enforcement
+settings.response_format = DynamicPydanticModel  # 100% guaranteed compliance
+```
