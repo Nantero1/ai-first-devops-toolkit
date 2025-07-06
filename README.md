@@ -1,16 +1,46 @@
-# LLM Runner - CI/CD LLM Utilities
+# AI-First DevOps Toolkit: LLM-Powered CI/CD Automation
 
-A simple, zero-friction utility for running LLM-driven tasks in CI/CD pipelines using Microsoft Semantic Kernel.
+> **🚀 The Future of DevOps is AI-First**  
+> This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read the blog post for more details on the motivation.
+
+## TLDR: What This Tool Does
+
+**Purpose**: Zero-friction LLM integration for CI/CD pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first development practices. Basically it takes your input and runs it through your Azure hosted OpenAI LLM, and then returns a JSON output in your desired format.
+
+**Perfect For**:
+- 🤖 **AI-Generated Code Reviews**: Automated PR analysis with structured findings
+- 📝 **Intelligent Documentation**: Generate changelogs, release notes, and docs automatically  
+- 🔍 **Security Analysis**: AI-powered vulnerability detection with structured reports
+- 🎯 **Quality Gates**: Enforce standards through AI-driven validation
+- 🚀 **Autonomous Development**: Enable AI agents to make decisions in your pipelines
+- 🎯 **JIRA Ticket Updates**: Update JIRA tickets based on LLM output
+- 🔗 **Unlimited Integration Possibilities**: Chain it multiple times and use as intelligent glue in your tool stack
+
+---
+
+## The AI-First Development Revolution
+
+This toolkit embodies the principles outlined in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html):
+
+| Traditional DevOps | AI-First DevOps (This Tool) |
+|-------------------|----------------------------|
+| Manual code reviews | 🤖 AI-powered reviews with structured findings |
+| Human-written documentation | 📝 AI-generated docs with guaranteed consistency |
+| Reactive security scanning | 🔍 Proactive AI security analysis |
+| Manual quality gates | 🎯 AI-driven validation with schema enforcement |
+| Linear productivity | 📈 Exponential gains through intelligent automation |
+
+**The Result**: Teams that master AI-first tools like this achieve unprecedented velocity while maintaining enterprise-grade reliability.
 
 ## Features
 
-- 🚀 **Zero-friction CLI**: Single script, minimal configuration
-- 🔐 **Enterprise security**: Azure RBAC via DefaultAzureCredential
 - 🎯 **100% Schema Enforcement**: Token-level constraint enforcement with guaranteed compliance
+- 🚀 **Zero-Friction CLI**: Single script, minimal configuration for CI/CD integration
+- 🔐 **Enterprise Security**: Azure RBAC via DefaultAzureCredential
 - 📋 **Dynamic Schema Support**: Runtime conversion of JSON schemas to Pydantic models
-- 🎨 **Beautiful logging**: Rich console output with timestamps and colors
+- 🎨 **Beautiful Logging**: Rich console output with timestamps and colors
 - 📁 **File-based I/O**: CI/CD friendly with JSON input/output
-- 🔧 **Simple & extensible**: Easy to understand and modify
+- 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
 
 ## Quick Start
 
@@ -28,9 +58,13 @@ uv sync
 
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-export AZURE_OPENAI_MODEL="gpt-4"
-export AZURE_OPENAI_API_VERSION="2024-08-01-preview"  # Optional
+export AZURE_OPENAI_MODEL="gpt-4.1-mini"  # or any other GPT
+export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 ```
+
+If you don't specify an API key, it will run `DefaultAzureCredential` to use RBAC (Role Based Access Control) for authentication (best practice). See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for more details.
+
+Otherwise, you can specify the API key in the environment variable `AZURE_OPENAI_API_KEY`.
 
 ### 3. Basic Usage
 
@@ -80,6 +114,8 @@ The script accepts JSON input with the following structure:
 **Optional fields:**
 - `context`: Additional context passed to the LLM kernel
 - `name`: Optional name for user messages
+
+This format is the same as the one used by the Azure OpenAI API and is passed 1:1 to the `context` of kernel.
 
 ## CLI Options
 
@@ -185,6 +221,8 @@ uv run llm_runner.py \
 ✅ **Required Fields**: Enforced at generation time  
 ✅ **Type Validation**: `string`, `number`, `integer`, `boolean`, `array`  
 ✅ **Enum Validation**: Strict enum compliance  
+
+Basically all [Pydantic](https://docs.pydantic.dev/latest/concepts/schema_validation/) schema features are supported.
 
 ### Example: Sentiment Analysis
 
@@ -499,6 +537,17 @@ Built on **Microsoft Semantic Kernel** for:
 - **100% Schema Enforcement**: KernelBaseModel integration with token-level constraints
 - **Dynamic Model Creation**: Runtime JSON schema → Pydantic model conversion
 
+## The AI-First Development Journey
+
+This toolkit is your first step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html). As you integrate AI into your development workflows, you'll experience:
+
+1. **🚀 Exponential Productivity**: AI handles routine tasks while you focus on architecture
+2. **🎯 Guaranteed Quality**: Schema enforcement eliminates validation errors
+3. **🤖 Autonomous Operations**: AI agents make decisions in your pipelines
+4. **📈 Continuous Improvement**: Every interaction improves your AI system
+
+**The future belongs to teams that master AI-first principles.** This toolkit gives you the foundation to start that journey today.
+
 ## License
 
 MIT License - See LICENSE file for details.
@@ -509,4 +558,8 @@ For issues and questions:
 1. Check the examples in the `examples/` directory
 2. Review the error logs (beautiful output with Rich!)
 3. Validate your Azure authentication and permissions
-4. Ensure your input JSON follows the required format 
+4. Ensure your input JSON follows the required format
+
+---
+
+*Ready to embrace the AI-First future? Start with this toolkit and build your path to exponential productivity. Learn more about the AI-First DevOps revolution in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html).* 
