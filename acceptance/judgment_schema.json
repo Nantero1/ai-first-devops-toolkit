@@ -1,0 +1,74 @@
+{
+    "type": "object",
+    "properties": {
+        "relevance": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "How well does the response address the query? (1-10)"
+        },
+        "accuracy": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "How factually correct is the response? (1-10)"
+        },
+        "completeness": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "How complete is the response? (1-10)"
+        },
+        "clarity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "How clear and well-structured is the response? (1-10)"
+        },
+        "overall": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10,
+            "description": "Overall assessment of response quality (1-10)"
+        },
+        "pass": {
+            "type": "boolean",
+            "description": "Does this response meet acceptable quality standards?"
+        },
+        "strengths": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Main strengths of the response"
+        },
+        "weaknesses": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 0,
+            "maxItems": 5,
+            "description": "Main weaknesses or areas for improvement"
+        },
+        "reasoning": {
+            "type": "string",
+            "minLength": 50,
+            "maxLength": 1000,
+            "description": "Detailed reasoning for the pass/fail decision"
+        }
+    },
+    "required": [
+        "relevance",
+        "accuracy",
+        "completeness",
+        "clarity",
+        "overall",
+        "pass",
+        "strengths",
+        "weaknesses",
+        "reasoning"
+    ]
+}

@@ -67,11 +67,11 @@ Next Steps:
 7. Implement integration tests for all examples
 8. Test CLI interface separately
 
-Current Phase: PHASE-TESTING-INFRASTRUCTURE
-Mode Context: Implementation Type - New testing infrastructure
+Current Phase: PHASE-ACCEPTANCE-TEST-REFACTORING
+Mode Context: Implementation Type - Acceptance test framework refactoring
 Status: Complete - All tasks implemented
 Confidence: 95%
-Last Updated: v1.2
+Last Updated: v1.3
 
 Tasks:
 [PLAN-001] Analyze existing test_runner.py and examples
@@ -115,6 +115,26 @@ Dependencies: [PLAN-003]
 Progress Notes: v1.2 NEW - test CLI args, help, validation via subprocess
 
 [PLAN-009] Move test_runner.py to acceptance/ directory with LLM-as-judge pattern
-Status: [ ] Priority: Medium
+Status: [X] Priority: Medium
 Dependencies: [PLAN-003]
-Progress Notes: v1.2 NEW - convert to acceptance test, add env var requirements explanation
+Progress Notes: v1.3 COMPLETED - refactored to pytest-based structure with Rich formatting
+
+[ACCEPTANCE-001] Refactor acceptance tests to use pytest framework with Rich formatting
+Status: [X] Priority: High
+Dependencies: [PLAN-009]
+Progress Notes: v1.3 COMPLETED - replaced monolithic framework with pytest fixtures
+
+[ACCEPTANCE-002] Create conftest.py with reusable fixtures for acceptance testing
+Status: [X] Priority: High
+Dependencies: [ACCEPTANCE-001]
+Progress Notes: v1.3 COMPLETED - created comprehensive fixtures with Rich formatting
+
+[ACCEPTANCE-003] Implement structured output for LLM-as-judge responses
+Status: [X] Priority: High
+Dependencies: [ACCEPTANCE-001]
+Progress Notes: v1.3 COMPLETED - eliminated regex parsing with judgment_schema.json
+
+[ACCEPTANCE-004] Create extensible test structure with minimal boilerplate
+Status: [X] Priority: High
+Dependencies: [ACCEPTANCE-002, ACCEPTANCE-003]
+Progress Notes: v1.3 COMPLETED - achieved ~20 lines per new test vs 50+ previously

@@ -127,10 +127,6 @@ settings.response_format = {"type": "json_object"}
 settings.response_format = DynamicPydanticModel  # 100% guaranteed compliance
 ```
 
-# ✅ STRONG - Token-level constraint enforcement
-settings.response_format = DynamicPydanticModel  # 100% guaranteed compliance
-```
-
 
 ## 2025-01-06 - Comprehensive Testing Infrastructure
 
@@ -218,4 +214,168 @@ def test_invalid_json_schema():
 def test_invalid_json_schema():
     with pytest.raises(InputValidationError):  # Actual exception type
         load_json_schema("invalid.json")
+```
+
+
+## 2025-01-07 - Acceptance Test Framework Refactoring
+
+[2025-01-07 00:15] **Critical**: Monolithic Test Framework Anti-Pattern → Issue: Custom AcceptanceTestFramework class with 600+ lines violates testing best practices, creates maintenance burden, and lacks proper test isolation → Fix: Refactor to pytest-based structure with conftest.py fixtures, Rich formatting, and structured output for LLM-as-judge responses → Why: Eliminates custom framework maintenance, follows industry standards, enables easy test extension, provides beautiful visual feedback. Achieves professional test structure with minimal boilerplate.
+
+```python
+# ❌ ANTI-PATTERN - Custom monolithic framework
+class AcceptanceTestFramework:
+    def __init__(self):
+        self.results = []
+        self.temp_files = []
+    
+    async def judge_response_with_llm(self, query, response, criteria):
+        # 150+ lines of custom logic with regex parsing
+        pass
+    
+    def run_llm_runner(self, input_file, output_file):
+        # Custom subprocess handling
+        pass
+
+# ✅ PROPER - Pytest fixtures with Rich formatting
+@pytest.fixture
+def llm_judge(llm_runner, temp_files, judgment_schema_path):
+    async def _evaluate_response(query, response, criteria):
+        # Structured output, no parsing needed
+        return structured_judgment
+    
+    return _evaluate_response
+
+@pytest.fixture  
+def rich_test_output():
+    def _format_judgment_table(judgment):
+        # Beautiful Rich tables and panels
+        return table
+    
+    return {"format_judgment_table": _format_judgment_table}
+```
+
+[2025-01-07 00:14] **Important**: String Parsing Anti-Pattern in LLM-as-Judge → Issue: Using regex to parse LLM judgment responses causes brittle tests, false failures, and maintenance overhead → Fix: Use structured output with JSON schema (judgment_schema.json) for guaranteed parsing reliability → Why: Eliminates regex parsing errors, ensures consistent judgment structure, provides type safety, enables easy validation. Critical for reliable acceptance testing.
+
+```python
+# ❌ BRITTLE - Regex parsing of text responses
+def _extract_score(self, text: str, criteria: str) -> int:
+    pattern = f"{criteria}.*?(\\d+)"
+    match = re.search(pattern, text, re.IGNORECASE)
+    return int(match.group(1)) if match else 0
+
+def judge_response_with_llm(self, query, response, criteria):
+    # Parse text with regex - error prone!
+    pass_fail_match = re.search(r"PASS/FAIL:.*?(PASS|FAIL)", judgment_text)
+    actual_decision = pass_fail_match.group(1).upper() if pass_fail_match else "FAIL"
+
+# ✅ ROBUST - Structured output with schema validation
+async def _evaluate_response(query, response, criteria):
+    # Use judgment_schema.json for structured output
+    returncode, stdout, stderr = llm_runner(
+        judgment_input_file, 
+        judgment_output_file, 
+        judgment_schema_path  # Guaranteed structure!
+    )
+    
+    structured_judgment = judgment_result.get("response", {})
+    # No parsing needed - direct access to fields
+    return structured_judgment
+```
+
+[2025-01-07 00:13] **Important**: Test Extensibility Architecture → Issue: Adding new acceptance tests requires 50+ lines of boilerplate, custom framework knowledge, and manual setup → Fix: Create pytest fixtures (environment_check, llm_runner, llm_judge, temp_files, rich_test_output) that enable new tests with ~20 lines → Why: Dramatically reduces test creation effort, follows DRY principle, enables rapid test development, maintains consistency across test suite.
+
+```python
+# ❌ HIGH BOILERPLATE - Custom framework approach
+async def test_new_scenario():
+    with AcceptanceTestFramework() as framework:
+        # 50+ lines of setup, execution, validation
+        input_file = "examples/new-example.json"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            output_file = f.name
+            framework.temp_files.append(output_file)
+        
+        returncode, stdout, stderr = framework.run_llm_runner(input_file, output_file)
+        # ... more boilerplate
+        
+        judgment = await framework.judge_response_with_llm(...)
+        # ... manual validation
+
+# ✅ MINIMAL BOILERPLATE - Pytest fixtures approach
+@pytest.mark.asyncio
+async def test_new_scenario(
+    self, environment_check, llm_runner, temp_files, llm_judge,
+    assert_execution_success, assert_judgment_passed, rich_test_output
+):
+    # given - just define input and criteria (~10 lines)
+    input_file = temp_files(json.dumps(input_data, indent=2))
+    output_file = temp_files()
+    
+    # when - single line execution
+    returncode, stdout, stderr = llm_runner(input_file, output_file)
+    
+    # then - single line validation with Rich output
+    assert_judgment_passed(judgment, "Test Name", rich_output=rich_test_output)
+```
+
+[2025-01-07 00:12] **Enhancement**: Rich Formatting for Test Output → Issue: Basic print statements provide poor user experience and make test results hard to interpret → Fix: Implement Rich console formatting with tables, panels, and colored output for professional test feedback → Why: Improves developer experience, makes test results visually appealing, enables better debugging, provides clear pass/fail indicators with detailed reasoning.
+
+```python
+# ❌ BASIC - Simple print statements
+print(f"  ❌ FAIL: {test_name}")
+print(f"    Details: {details}")
+print(f"    Full judgment: {judgment.get('full_judgment', '')[:200]}...")
+
+# ✅ RICH - Beautiful formatted output
+def _format_judgment_table(judgment: Dict[str, Any]) -> Table:
+    table = Table(title="🧑‍⚖️ LLM Judge Results")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Score", style="magenta")
+    table.add_column("Status", style="green" if judgment.get("pass") else "red")
+    
+    for metric in ["relevance", "accuracy", "completeness", "clarity", "overall"]:
+        score = judgment.get(metric, 0)
+        table.add_row(metric.title(), f"{score}/10", "✅" if score >= 7 else "❌")
+    
+    return table
+
+console.print(table)
+console.print(Panel(details, title="📊 Detailed Assessment"))
+```
+
+[2025-01-07 00:11] **Enhancement**: Pytest Parametrization for Test Efficiency → Issue: Testing multiple scenarios requires duplicate test functions or manual iteration → Fix: Use @pytest.mark.parametrize for efficient testing of multiple scenarios with shared logic → Why: Reduces code duplication, enables comprehensive scenario coverage, maintains test consistency, improves test execution efficiency.
+
+```python
+# ❌ DUPLICATE - Multiple similar test functions
+async def test_python_programming_expertise():
+    # 30+ lines of test logic
+    pass
+
+async def test_data_science_expertise():
+    # 30+ lines of nearly identical test logic
+    pass
+
+async def test_machine_learning_expertise():
+    # 30+ lines of nearly identical test logic
+    pass
+
+# ✅ EFFICIENT - Single parametrized test
+@pytest.mark.parametrize("topic,min_score", [
+    ("python_programming", 8),
+    ("data_science", 7),
+    ("machine_learning", 8),
+])
+@pytest.mark.asyncio
+async def test_technical_expertise_topics(
+    self, environment_check, llm_runner, temp_files, llm_judge,
+    assert_execution_success, assert_judgment_passed, rich_test_output,
+    topic, min_score
+):
+    # Single test function handles all scenarios
+    # Dynamic content based on topic parameter
+    topic_questions = {
+        "python_programming": "Explain list comprehensions...",
+        "data_science": "What are key data science steps...",
+        "machine_learning": "Explain bias-variance tradeoff..."
+    }
+    # ... shared test logic
 ```
