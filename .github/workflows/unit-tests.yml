@@ -1,0 +1,67 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies with locked versions
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Run unit tests
+        id: run_tests
+        continue-on-error: true
+        run: |
+          mkdir -p test-results
+          uv run pytest tests/unit/ -v --junitxml=test-results/junit.xml --tb=short
+
+      - name: Set test status
+        id: test_status
+        run: |
+          echo "passed=${{ steps.run_tests.outcome == 'success' }}" >> $GITHUB_OUTPUT
+
+      - name: Upload test results
+        if: always()  # Always upload test results, even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-${{ matrix.python-version }}
+          path: test-results/junit.xml
+          retention-days: 30
+
+      - name: Report Test Results
+        if: always()
+        run: |
+          echo "::notice title=Unit Test Results::Test run completed with status: ${{ steps.run_tests.outcome }}"
+          if [ -f "test-results/junit.xml" ]; then
+            echo "::group::Test Summary"
+            cat test-results/junit.xml | grep -E "tests=|failures=|errors=|skipped="
+            echo "::endgroup::"
+          fi
+
+      - name: Check test status
+        if: steps.test_status.outputs.passed != 'true'
+        run: exit 1 

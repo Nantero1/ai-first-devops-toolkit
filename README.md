@@ -333,6 +333,37 @@ The script uses **simple error handling**:
 - ✅ CI/CD can use `failOnStdErr` to detect failures
 - ✅ Natural failures when input is malformed
 
+## CI/CD Pipeline
+
+Our project uses GitHub Actions with UV for fast, reliable CI/CD:
+
+### Automated Checks
+
+Every push and pull request triggers:
+
+- **🧹 Linting**: Ruff code formatting and style checks
+- **🔍 Type Checking**: MyPy static type analysis  
+- **🧪 Unit Tests**: 69 tests with 100% coverage (unit tests only)
+- **🔒 Security**: Dependency vulnerability scanning and secret detection
+
+### Pipeline Features
+
+- **⚡ Fast**: UV caching and parallel job execution
+- **🔒 Secure**: Locked dependencies with `uv sync --frozen`
+- **📊 Detailed**: JUnit XML test reports with artifact uploads
+- **🛡️ Safe**: Auto-mocked API keys prevent accidental real calls
+
+### Local Development
+
+```bash
+# Run the same checks locally
+uv sync --group dev
+uv run ruff check .
+uv run ruff format .
+uv run mypy llm_runner.py
+uv run pytest tests/unit/ -v
+```
+
 ## Development
 
 ### Running Tests

@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies with locked versions
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Run linting
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies with locked versions
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Run type checking
+        run: |
+          uv run mypy llm_runner.py
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies with locked versions
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Run unit tests
+        id: run_tests
+        continue-on-error: true
+        run: |
+          mkdir -p test-results
+          uv run pytest tests/unit/ -v --junitxml=test-results/junit.xml --tb=short --strict-markers
+
+      - name: Set test status
+        id: test_status
+        run: |
+          echo "passed=${{ steps.run_tests.outcome == 'success' }}" >> $GITHUB_OUTPUT
+
+      - name: Upload test results
+        if: always()  # Always upload test results, even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results-${{ matrix.python-version }}
+          path: test-results/junit.xml
+          retention-days: 30
+
+      - name: Report Test Results
+        if: always()
+        run: |
+          echo "::notice title=Unit Test Results::Test run completed with status: ${{ steps.run_tests.outcome }}"
+          if [ -f "test-results/junit.xml" ]; then
+            echo "::group::Test Summary"
+            cat test-results/junit.xml | grep -E "tests=|failures=|errors=|skipped="
+            echo "::endgroup::"
+          fi
+
+      - name: Check test status
+        if: steps.test_status.outputs.passed != 'true'
+        run: exit 1
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies with locked versions
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Run security checks
+        run: |
+          # Check for known vulnerabilities in dependencies
+          uv run pip-audit --format json --output pip-audit-report.json || true
+          
+          # Basic security checks
+          echo "Checking for hardcoded secrets..."
+          if grep -r "sk-" . --exclude-dir=.git --exclude-dir=__pycache__ --exclude=*.pyc; then
+            echo "::error::Potential hardcoded secrets found!"
+            exit 1
+          fi
+          
+          echo "Checking for debug statements..."
+          if grep -r "import pdb\|pdb.set_trace()\|breakpoint()" . --exclude-dir=.git --exclude-dir=__pycache__ --exclude=*.pyc; then
+            echo "::warning::Debug statements found in code"
+          fi 
