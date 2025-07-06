@@ -3,7 +3,7 @@ description: Tests
 globs: tests/*,tests/**/*.py
 alwaysApply: false
 ---
-# Testing Guide for Mr. Chamberlain
+# Testing Guide 
 
 ## Directory Structure & Organization
 

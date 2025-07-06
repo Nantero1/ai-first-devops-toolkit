@@ -2,14 +2,15 @@
   "success": true,
   "response": {
     "sentiment": "neutral",
-    "confidence": 0.9,
+    "confidence": 0.95,
     "key_points": [
-      "CI/CD stands for Continuous Integration and Continuous Deployment/Delivery.",
-      "It is a set of practices to automate the building, testing, and deploying of software.",
-      "CI encourages developers to integrate code frequently into a shared repository.",
-      "CD automates the release process, enabling fast and reliable software delivery."
+      "Continuous Integration (CI): automated testing and merging of code changes",
+      "Continuous Deployment (CD): automated deployment of code to production",
+      "Improves software delivery speed and quality",
+      "Reduces manual errors",
+      "Facilitates frequent releases"
     ],
-    "summary": "CI/CD in software development automates integration, testing, and deployment to enhance efficiency and reliability."
+    "summary": "CI/CD in software development refers to practices of automatically integrating, testing, and deploying code to improve delivery speed and quality."
   },
   "metadata": {
     "runner": "llm_runner.py",

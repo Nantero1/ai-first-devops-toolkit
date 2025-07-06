@@ -1,0 +1,310 @@
+"""
+Unit tests for input/output functions in llm_runner.py
+
+Tests load_input_json, write_output_file, and parse_arguments functions
+with heavy mocking following the Given-When-Then pattern.
+"""
+
+import pytest
+import json
+import argparse
+from unittest.mock import Mock, patch, mock_open
+from pathlib import Path
+
+from llm_runner import (
+    load_input_json,
+    write_output_file,
+    parse_arguments,
+    InputValidationError,
+    LLMRunnerError,
+)
+
+
+class TestLoadInputJson:
+    """Tests for load_input_json function."""
+
+    def test_load_valid_input_file(self, temp_input_file):
+        """Test loading a valid input JSON file."""
+        # given
+        input_file = temp_input_file
+
+        # when
+        result = load_input_json(input_file)
+
+        # then
+        assert isinstance(result, dict)
+        assert "messages" in result
+        assert isinstance(result["messages"], list)
+        assert len(result["messages"]) == 2
+        assert result["messages"][0]["role"] == "system"
+        assert result["messages"][1]["role"] == "user"
+
+    def test_load_nonexistent_file_raises_error(self):
+        """Test that nonexistent file raises InputValidationError."""
+        # given
+        nonexistent_file = Path("nonexistent.json")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Input file not found"):
+            load_input_json(nonexistent_file)
+
+    def test_load_invalid_json_raises_error(self, temp_dir):
+        """Test that invalid JSON raises InputValidationError."""
+        # given
+        invalid_json_file = temp_dir / "invalid.json"
+        with open(invalid_json_file, "w") as f:
+            f.write("{ invalid json }")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Invalid JSON in input file"):
+            load_input_json(invalid_json_file)
+
+    def test_load_file_without_messages_raises_error(self, temp_dir):
+        """Test that file without messages field raises InputValidationError."""
+        # given
+        no_messages_file = temp_dir / "no_messages.json"
+        with open(no_messages_file, "w") as f:
+            json.dump({"context": {"session_id": "test"}}, f)
+
+        # when & then
+        with pytest.raises(
+            InputValidationError, match="Input JSON must contain 'messages' field"
+        ):
+            load_input_json(no_messages_file)
+
+    def test_load_file_with_empty_messages_raises_error(self, temp_dir):
+        """Test that file with empty messages array raises InputValidationError."""
+        # given
+        empty_messages_file = temp_dir / "empty_messages.json"
+        with open(empty_messages_file, "w") as f:
+            json.dump({"messages": []}, f)
+
+        # when & then
+        with pytest.raises(
+            InputValidationError, match="'messages' must be a non-empty array"
+        ):
+            load_input_json(empty_messages_file)
+
+    def test_load_file_with_non_array_messages_raises_error(self, temp_dir):
+        """Test that file with non-array messages raises InputValidationError."""
+        # given
+        non_array_messages_file = temp_dir / "non_array_messages.json"
+        with open(non_array_messages_file, "w") as f:
+            json.dump({"messages": "not an array"}, f)
+
+        # when & then
+        with pytest.raises(
+            InputValidationError, match="'messages' must be a non-empty array"
+        ):
+            load_input_json(non_array_messages_file)
+
+    def test_load_file_with_context_shows_debug_info(
+        self, temp_input_file, mock_logger
+    ):
+        """Test that file with context logs debug information."""
+        # given
+        input_file = temp_input_file
+
+        # when
+        result = load_input_json(input_file)
+
+        # then
+        assert "context" in result
+        # Logger debug should have been called
+        mock_logger.debug.assert_called()
+
+    def test_load_file_with_read_error_raises_error(self):
+        """Test that file read errors are wrapped in InputValidationError."""
+        # given
+        error_file = Path("error.json")
+
+        # when & then
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", side_effect=IOError("Permission denied")),
+        ):
+
+            with pytest.raises(InputValidationError, match="Error reading input file"):
+                load_input_json(error_file)
+
+
+class TestWriteOutputFile:
+    """Tests for write_output_file function."""
+
+    def test_write_structured_response(self, temp_output_file):
+        """Test writing structured response to output file."""
+        # given
+        output_file = temp_output_file
+        response = {
+            "sentiment": "neutral",
+            "confidence": 0.95,
+            "summary": "Test response",
+        }
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        with open(output_file, "r") as f:
+            written_data = json.load(f)
+
+        assert written_data["success"] is True
+        assert written_data["response"] == response
+        assert "metadata" in written_data
+        assert written_data["metadata"]["runner"] == "llm_runner.py"
+
+    def test_write_text_response(self, temp_output_file):
+        """Test writing text response to output file."""
+        # given
+        output_file = temp_output_file
+        response = "This is a simple text response."
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        with open(output_file, "r") as f:
+            written_data = json.load(f)
+
+        assert written_data["success"] is True
+        assert written_data["response"] == response
+        assert "metadata" in written_data
+
+    def test_write_creates_parent_directories(self, temp_dir):
+        """Test that parent directories are created if they don't exist."""
+        # given
+        nested_output_file = temp_dir / "nested" / "deep" / "output.json"
+        response = "test response"
+
+        # when
+        write_output_file(nested_output_file, response)
+
+        # then
+        assert nested_output_file.exists()
+        assert nested_output_file.parent.exists()
+
+    def test_write_with_file_permission_error_raises_llm_error(self, temp_output_file):
+        """Test that file write errors are wrapped in LLMRunnerError."""
+        # given
+        output_file = temp_output_file
+        response = "test response"
+
+        # when & then
+        with patch("builtins.open", side_effect=PermissionError("Permission denied")):
+            with pytest.raises(LLMRunnerError, match="Error writing output file"):
+                write_output_file(output_file, response)
+
+    def test_write_with_json_serialization_error_raises_llm_error(
+        self, temp_output_file
+    ):
+        """Test that JSON serialization errors are wrapped in LLMRunnerError."""
+        # given
+        output_file = temp_output_file
+        # Create a response that can't be serialized to JSON
+        response = {"key": set([1, 2, 3])}  # sets are not JSON serializable
+
+        # when & then
+        with pytest.raises(LLMRunnerError, match="Error writing output file"):
+            write_output_file(output_file, response)
+
+
+class TestParseArguments:
+    """Tests for parse_arguments function."""
+
+    def test_parse_required_arguments(self):
+        """Test parsing with only required arguments."""
+        # given
+        test_args = ["--input-file", "input.json", "--output-file", "output.json"]
+
+        # when
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.input_file == Path("input.json")
+        assert args.output_file == Path("output.json")
+        assert args.schema_file is None
+        assert args.log_level == "INFO"
+
+    def test_parse_all_arguments(self):
+        """Test parsing with all arguments provided."""
+        # given
+        test_args = [
+            "--input-file",
+            "input.json",
+            "--output-file",
+            "output.json",
+            "--schema-file",
+            "schema.json",
+            "--log-level",
+            "DEBUG",
+        ]
+
+        # when
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.input_file == Path("input.json")
+        assert args.output_file == Path("output.json")
+        assert args.schema_file == Path("schema.json")
+        assert args.log_level == "DEBUG"
+
+    def test_parse_missing_required_arguments_raises_error(self):
+        """Test that missing required arguments raises SystemExit."""
+        # given
+        test_args = ["--input-file", "input.json"]  # Missing output-file
+
+        # when & then
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            with pytest.raises(SystemExit):
+                parse_arguments()
+
+    @pytest.mark.parametrize("log_level", ["DEBUG", "INFO", "WARNING", "ERROR"])
+    def test_parse_valid_log_levels(self, log_level):
+        """Test parsing with all valid log levels."""
+        # given
+        test_args = [
+            "--input-file",
+            "input.json",
+            "--output-file",
+            "output.json",
+            "--log-level",
+            log_level,
+        ]
+
+        # when
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.log_level == log_level
+
+    def test_parse_invalid_log_level_raises_error(self):
+        """Test that invalid log level raises SystemExit."""
+        # given
+        test_args = [
+            "--input-file",
+            "input.json",
+            "--output-file",
+            "output.json",
+            "--log-level",
+            "INVALID",
+        ]
+
+        # when & then
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            with pytest.raises(SystemExit):
+                parse_arguments()
+
+    def test_parse_help_argument_raises_system_exit(self):
+        """Test that help argument raises SystemExit."""
+        # given
+        test_args = ["--help"]
+
+        # when & then
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            with pytest.raises(SystemExit):
+                parse_arguments()

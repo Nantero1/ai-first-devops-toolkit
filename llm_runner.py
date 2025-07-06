@@ -70,6 +70,15 @@ from semantic_kernel.kernel_pydantic import KernelBaseModel
 from azure.identity.aio import DefaultAzureCredential
 from azure.core.exceptions import ClientAuthenticationError
 
+# Tenacity for retry logic
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential_jitter,
+    retry_if_exception_type,
+    before_sleep_log,
+)
+
 # Install rich traceback for better error display
 install_rich_traceback()
 
@@ -468,6 +477,23 @@ def load_json_schema(schema_file: Optional[Path]) -> Optional[Type[KernelBaseMod
         raise InputValidationError(f"Error loading schema file: {e}")
 
 
+@retry(
+    retry=retry_if_exception_type(
+        (
+            # Network-related exceptions that should be retried
+            ConnectionError,
+            TimeoutError,
+            # Azure-specific exceptions that might be transient
+            ClientAuthenticationError,
+            # Generic exceptions that might be transient
+            RuntimeError,
+        )
+    ),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential_jitter(initial=1, max=10, jitter=2),
+    before_sleep=before_sleep_log(LOGGER, logging.WARNING),
+    reraise=True,
+)
 async def execute_llm_task(
     service: AzureChatCompletion,
     chat_history: ChatHistory,
