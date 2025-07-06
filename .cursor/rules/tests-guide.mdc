@@ -10,7 +10,7 @@ alwaysApply: false
 ```
 tests/python/
 ├── unit/                    # Unit tests with heavy mocking
-│   └── directory/           # Mirror source code structure
+│   └── somedirectory/           # Mirror source code structure
 │       ├── langchain_related/
 │       ├── user_client/
 │       └── ...
@@ -19,15 +19,15 @@ tests/python/
 ```
 
 **File Naming**: Test files prefixed with `test_` and mirror source structure:
-- Source: `python/mrchamberlain/langchain_related/tools/planer.py`
-- Test: `tests/python/unit/mrchamberlain/langchain_related/tools/test_planer.py`
+- Source: `somedirectory/langchain_related/tools/planer.py`
+- Test: `tests/unit/somedirectory/langchain_related/tools/test_planer.py`
 
 ## Running Tests
 
 ### Direct UV Execution
 ```bash
-cd python && uv run pytest ../tests/python/unit/ -v
-cd python && uv run pytest ../tests/python/unit/path/to/test.py::TestClass::test_method -v
+uv run pytest tests/unit/ -v
+uv run pytest tests/unit/path/to/test.py::TestClass::test_method -v
 ```
 
 ## Test Structure Patterns

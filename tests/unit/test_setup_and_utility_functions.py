@@ -128,18 +128,12 @@ class TestSetupLogging:
         log_level = "INFO"
 
         # when
-        with (
-            patch("logging.basicConfig"),
-            patch("logging.getLogger") as mock_get_logger,
-        ):
-            mock_logger_instance = Mock()
-            mock_get_logger.return_value = mock_logger_instance
-
+        with patch("logging.basicConfig"):
             logger = setup_logging(log_level)
 
         # then
-        assert logger == mock_logger_instance
-        mock_get_logger.assert_called_with("llm_runner")
+        assert isinstance(logger, logging.Logger)
+        assert logger.name == "llm_runner"
 
     def test_setup_logging_uses_global_console(self, mock_console):
         """Test that setup_logging uses the global CONSOLE instance."""
