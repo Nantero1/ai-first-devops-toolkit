@@ -1,0 +1,10 @@
+node_modules/
+.vscode/
+.git/
+.devcontainer/
+nodejs/
+.cloud9/
+.venv/
+python/.venv/
+python/.venv_ubuntu/
+python/dist/

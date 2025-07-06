@@ -1,0 +1,194 @@
+---
+description: Tests
+globs: tests/*,tests/**/*.py
+alwaysApply: false
+---
+# Testing Guide for Mr. Chamberlain
+
+## Directory Structure & Organization
+
+```
+tests/python/
+├── unit/                    # Unit tests with heavy mocking
+│   └── directory/           # Mirror source code structure
+│       ├── langchain_related/
+│       ├── user_client/
+│       └── ...
+└── integ/                  # Integration tests with minimal mocking
+    └── telegram/           # Telegram integration tests
+```
+
+**File Naming**: Test files prefixed with `test_` and mirror source structure:
+- Source: `python/mrchamberlain/langchain_related/tools/planer.py`
+- Test: `tests/python/unit/mrchamberlain/langchain_related/tools/test_planer.py`
+
+## Running Tests
+
+### Direct UV Execution
+```bash
+cd python && uv run pytest ../tests/python/unit/ -v
+cd python && uv run pytest ../tests/python/unit/path/to/test.py::TestClass::test_method -v
+```
+
+## Test Structure Patterns
+
+### Test Organization
+```python
+class TestPlanModel:
+    """Tests for PlanModel class."""
+    
+    def test_valid_model(self):
+        """Test creating a valid PlanModel."""
+        # given
+        data = {"selected_tool_names": ["Tool1"], "main_goal": "Test"}
+        
+        # when
+        model = PlanModel(**data)
+        
+        # then
+        assert model.selected_tool_names == ["Tool1"]
+        assert model.main_goal == "Test"
+
+    @pytest.mark.parametrize("input_data, expected", [
+        pytest.param("input1", "output1", id="scenario1"),
+        pytest.param("input2", "output2", id="scenario2"),
+    ])
+    def test_multiple_scenarios(self, input_data, expected):
+        """Test multiple scenarios with different inputs."""
+        # given
+        component = ComponentUnderTest()
+        
+        # when
+        result = component.process(input_data)
+        
+        # then
+        assert result == expected
+```
+
+### Given-When-Then Pattern (Required)
+```python
+def test_feature_functionality(self):
+    """Test description of what this validates."""
+    # given: setup test conditions
+    mock_data = {"key": "value"}
+    component = ComponentUnderTest()
+    
+    # when: execute the action being tested
+    result = component.method_under_test(mock_data)
+    
+    # then: verify expected outcomes
+    assert result == "expected_result"
+    assert component.state == "expected_state"
+```
+
+### Async Testing
+```python
+@pytest.mark.asyncio
+async def test_async_functionality(self):
+    """Test async operations."""
+    # given
+    mock_service = AsyncMock()
+    mock_service.process.return_value = "async_result"
+    
+    # when
+    result = await component.async_method()
+    
+    # then
+    assert result == "async_result"
+    mock_service.process.assert_called_once()
+```
+
+## Common Test Patterns
+
+### Unit Test Template
+```python
+class TestMyComponent:
+    """Tests for MyComponent class."""
+    
+    @pytest.fixture
+    def component(self):
+        """Create component instance for testing."""
+        return MyComponent()
+    
+    def test_basic_functionality(self, component):
+        """Test basic component functionality."""
+        # given
+        input_data = "test input"
+        
+        # when
+        result = component.process(input_data)
+        
+        # then
+        assert result == "expected output"
+```
+
+
+## Best Practices
+
+1. **Use Given-When-Then structure** - Always structure tests with these comments
+2. **Group tests in classes** - Organize related tests together
+3. **Use descriptive test names** - Test name should explain what is being tested
+4. **Leverage autouse fixtures** - Don't manually mock what's auto-mocked
+5. **Test both success and error paths** - Include error handling tests
+6. **Use parametrization** - Test multiple scenarios efficiently
+7. **Keep tests focused** - One assertion per test concept
+8. **Use appropriate markers** - `@pytest.mark.asyncio`, `@pytest.mark.essential`
+
+## Adding New Tests
+
+1. **Create test file** mirroring source structure with `test_` prefix
+2. **Import necessary modules** and fixtures
+3. **Organize tests in classes** by functionality
+4. **Use Given-When-Then pattern** for all tests
+5. **Add fixtures** in local `conftest.py` if needed
+6. **Run tests locally** before committing: `./run_tests.sh unit/path/to/test.py`
+
+## 🛠️ **SYSTEMATIC TEST FAILURE RESOLUTION FOR CURSOR**
+
+*Advanced debugging methodology for large-scale test failures during refactoring*
+
+### **When to Use Systematic Approach**
+
+Use this methodology when facing:
+- **Large refactoring impacts** (20+ failing tests)
+- **Architectural changes** (module moves, domain model evolution)
+- **Infrastructure updates** (Pydantic adoption, API changes)
+- **Multiple failure categories** (imports, types, business logic)
+
+### **Phase-Based Debugging Strategy**
+
+#### **🚨 Phase 1: Import/Module Errors (Fix First)**
+```python
+# Common pattern: Module refactoring breaks imports
+# ❌ OLD: from handlers.google_calendar_handler import Handler
+# ✅ NEW: from langchain_related.tools.google_calendar_tool import Tool
+
+# Strategy: Update import paths systematically
+# 1. Fix conftest.py fixtures first (prevents cascade failures)
+# 2. Update patch targets to match new module structure
+# 3. Create import mapping for large refactors
+```
+
+#### **🔧 Phase 2: Domain Model Evolution (High Impact)**
+```python
+# Common pattern: Business logic changes break tests
+# ❌ OLD: consent.category == ConsentCategory.BASIC_TERMS
+# ✅ NEW: consent.category == ConsentCategory.BASIC_DATA_PROCESSING
+
+# Strategy: Understand business changes before fixing
+# 1. Analyze current domain model structure
+# 2. Add delegation methods for backward compatibility
+# 3. Update test expectations to match new business rules
+```
+
+#### **🔒 Phase 3: Type Safety Migration (Pydantic Focus)**
+```python
+# Common pattern: Dict access → Pydantic attribute access
+# ❌ OLD: result['allowed'], limits['minute_limit']
+# ✅ NEW: result.allowed, limits.minute_limit
+
+# Strategy: Systematic type safety conversion
+# 1. Find all dictionary access patterns
+# 2. Convert to attribute access systematically
+# 3. Update all related assertions
+```

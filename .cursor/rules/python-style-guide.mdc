@@ -1,0 +1,181 @@
+---
+description: Python
+globs: *.py
+alwaysApply: false
+---
+# Python Style Guide
+
+This guide defines project-specific Python conventions based on Google Python Style Guide. We assume familiarity with standard Python practices and focus on our custom patterns.
+
+## Foundation
+- **Base Standard**: Google Python Style Guide with PEP 8
+- **Readability counts** - Code is read more often than it is written
+- **Consistency is key** - Follow these standards throughout the codebase
+- **Line Length**: 120 characters (project preference)
+- **PURPOSE Documentation**: Every file and class must explain its PURPOSE
+
+## Project-Specific Patterns
+
+### Class Documentation with purpose
+
+Every class requires a purpose docstring:
+
+```python
+class PaymentProcessor:
+    """Processes payments through multiple payment gateways.
+    
+    Provides unified interface for Stripe, PayPal, and Square payments.
+    Handles validation, error handling, and transaction logging with
+    automatic retry logic for failed transactions.
+    
+    Attributes:
+        retry_attempts: Number of retries for failed transactions.
+        supported_currencies: List of supported currency codes.
+    """
+```
+
+### Error Handling Patterns
+
+Use specific exception types with descriptive messages:
+
+```python
+from langchain_core.tools import ToolException
+
+def process_data(data: str) -> dict:
+    """Process user data with proper error handling."""
+    try:
+        result = external_service.process(data)
+        LOGGER.info("Data processed successfully", data_size=len(data))
+        return result
+    except ValidationError as e:
+        LOGGER.error("Validation failed", error=str(e), data=data)
+        raise ToolException(f"Invalid data format: {e}")
+    except ExternalServiceError as e:
+        LOGGER.error("External service failed", service="processor", error=str(e))
+        raise ToolException("Service temporarily unavailable. Please try again.")
+```
+
+Try to use fallbacks, we don't want to crash. Apply fallback mechanisms were appropriate.
+
+## Comments
+
+### Comment Style
+- Use `#` followed by a space
+- Write complete sentences with proper capitalization
+- Keep comments up-to-date with code changes
+- Comment only when the code is not self explanatory
+
+### Testing Patterns
+
+Follow our testing structure from `tests.mdc`:
+
+```python
+class TestMyComponent:
+    """Tests for MyComponent class."""
+    
+    def test_basic_functionality(self, component):
+        """Test basic component functionality."""
+        # given
+        input_data = "test input"
+        
+        # when
+        result = component.process(input_data)
+        
+        # then
+        assert result == "expected output"
+    
+    @pytest.mark.parametrize("input_data, expected", [
+        pytest.param("input1", "output1", id="scenario1"),
+        pytest.param("input2", "output2", id="scenario2"),
+    ])
+    def test_multiple_scenarios(self, input_data, expected):
+        """Test multiple scenarios with different inputs."""
+        # given
+        component = ComponentUnderTest()
+        
+        # when
+        result = component.process(input_data)
+        
+        # then
+        assert result == expected
+```
+
+**Testing Guidelines:**
+- Use Given-When-Then structure (mandatory)
+- Leverage autouse fixtures (secrets, time, mocking)
+- Group tests in classes by functionality
+- Use descriptive test names explaining what is tested
+- Don't manually mock what's auto-mocked (SecretsMixin, etc.)
+
+
+### Domain Models
+
+Use Pydantic for domain objects with proper field descriptions:
+
+```python
+from pydantic import BaseModel, Field
+from datetime import datetime
+
+class User(BaseModel):
+    """Domain aggregate for user data and business logic."""
+    
+    id: str = Field(..., description="Unique user identifier")
+    preferences: Dict[str, Any] = Field(
+        default_factory=dict, 
+        description="User preferences and settings"
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.now,
+        description="User creation timestamp"
+    )
+    
+    def has_active_subscription(self) -> bool:
+        """Check if user has an active subscription."""
+        return self.subscription is not None and self.subscription.is_active
+```
+
+## File Organization
+
+### Import Order
+```python
+from __future__ import annotations
+
+# Standard library
+import os
+from typing import Dict, List, Optional
+
+# Third-party
+import requests
+from pydantic import BaseModel, Field
+
+# Project imports
+from mixins.mixin_secrets import SecretsMixin
+from our_utils.our_logger import get_formatted_logger
+```
+
+### Module Structure
+```python
+"""Brief description of module's business purpose."""
+
+from __future__ import annotations
+
+# Imports...
+
+LOGGER = get_formatted_logger(__name__)
+
+# Constants
+DEFAULT_TIMEOUT = 30
+
+# Classes and functions...
+```
+
+## Key Principles
+
+1. **PURPOSE-Driven**: Every file and class explains its business purpose
+3. **Validation-Heavy**: Extensive Pydantic validation with examples
+4. **Error-Specific**: Descriptive error messages with proper exception types
+5. **Test-Structured**: Given-When-Then pattern with comprehensive coverage
+6. **Async-Aware**: Proper async/sync patterns using our utilities
+9. **Fallback-Mechanisms**: LOG the errors, but try to not crash, use sane fallbacks
+10. **PEP 8 compliance** with modern Python best practicesons
+11. **Performance-conscious** coding patterns
