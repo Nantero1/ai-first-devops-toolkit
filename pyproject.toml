@@ -1,0 +1,92 @@
+[project]
+name = "llm-runner"
+version = "0.1.0"
+description = "A simple CI/CD utility for running LLM tasks with Semantic Kernel"
+readme = "README.md"
+authors = [
+    {name = "AI Platform Team", email = "ai-platform@example.com"},
+]
+requires-python = ">=3.12"
+dependencies = [
+    "semantic-kernel>=1.32.0",
+    "rich>=14.0.0",
+    "azure-identity>=1.23.0",
+    "azure-core>=1.35.0",
+    "pydantic>=2.11.0",
+    "aiohttp>=3.12.0",
+    "openai>=1.93.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+llm-runner = "llm_runner:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-mock>=3.14.0",
+    "mypy>=1.16.0",
+    "ruff>=0.12.0",
+]
+
+[tool.uv]
+# Use system Python instead of managing Python versions
+python-downloads = "manual"
+# Only install main dependencies by default (no dev dependencies)
+default-groups = []
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true 
