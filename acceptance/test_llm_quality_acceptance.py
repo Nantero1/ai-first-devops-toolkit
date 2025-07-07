@@ -82,16 +82,12 @@ class TestExampleComprehensive:
 
         # when - Execute example ONCE
         if schema_file:
-            returncode, stdout, stderr = llm_ci_runner(
-                str(input_file), output_file, str(schema_file)
-            )
+            returncode, stdout, stderr = llm_ci_runner(str(input_file), output_file, str(schema_file))
         else:
             returncode, stdout, stderr = llm_ci_runner(str(input_file), output_file)
 
         # then - Phase 1: Basic execution reliability
-        assert_execution_success(
-            returncode, stdout, stderr, f"{example_name} Comprehensive"
-        )
+        assert_execution_success(returncode, stdout, stderr, f"{example_name} Comprehensive")
 
         # Load result for all validations
         with open(output_file) as f:
@@ -105,9 +101,7 @@ class TestExampleComprehensive:
         # then - Phase 2: Schema compliance (if schema exists)
         if schema_file:
             self._validate_schema_compliance(result, schema_file, example_name)
-            console.print(
-                f"  ✅ {example_name} schema compliance verified", style="green"
-            )
+            console.print(f"  ✅ {example_name} schema compliance verified", style="green")
 
         # then - Phase 3: LLM-as-judge quality assessment (if not smoke test)
         if not smoke_test_mode:
@@ -120,9 +114,7 @@ class TestExampleComprehensive:
                 assert_judgment_passed,
                 rich_test_output,
             )
-            console.print(
-                f"  ✅ {example_name} quality assessment passed", style="green"
-            )
+            console.print(f"  ✅ {example_name} quality assessment passed", style="green")
 
         console.print(
             f"🎉 {example_name} comprehensive test completed successfully",
@@ -139,12 +131,8 @@ class TestExampleComprehensive:
 
         # Basic schema compliance checks
         required_fields = schema.get("required", [])
-        missing_fields = [
-            field for field in required_fields if field not in response_data
-        ]
-        assert (
-            not missing_fields
-        ), f"Missing required fields in {example_name}: {missing_fields}"
+        missing_fields = [field for field in required_fields if field not in response_data]
+        assert not missing_fields, f"Missing required fields in {example_name}: {missing_fields}"
 
         # Validate specific constraints
         properties = schema.get("properties", {})
@@ -154,37 +142,35 @@ class TestExampleComprehensive:
 
                 # Check enum constraints
                 if "enum" in field_schema:
-                    assert (
-                        value in field_schema["enum"]
-                    ), f"Invalid enum value in {example_name}.{field_name}: {value}"
+                    assert value in field_schema["enum"], f"Invalid enum value in {example_name}.{field_name}: {value}"
 
                 # Check string length constraints
                 if isinstance(value, str) and "maxLength" in field_schema:
-                    assert (
-                        len(value) <= field_schema["maxLength"]
-                    ), f"String too long in {example_name}.{field_name}: {len(value)} chars"
+                    assert len(value) <= field_schema["maxLength"], (
+                        f"String too long in {example_name}.{field_name}: {len(value)} chars"
+                    )
 
                 # Check numeric range constraints
                 if isinstance(value, (int, float)):
                     if "minimum" in field_schema:
-                        assert (
-                            value >= field_schema["minimum"]
-                        ), f"Value below minimum in {example_name}.{field_name}: {value}"
+                        assert value >= field_schema["minimum"], (
+                            f"Value below minimum in {example_name}.{field_name}: {value}"
+                        )
                     if "maximum" in field_schema:
-                        assert (
-                            value <= field_schema["maximum"]
-                        ), f"Value above maximum in {example_name}.{field_name}: {value}"
+                        assert value <= field_schema["maximum"], (
+                            f"Value above maximum in {example_name}.{field_name}: {value}"
+                        )
 
                 # Check array constraints
                 if isinstance(value, list):
                     if "minItems" in field_schema:
-                        assert (
-                            len(value) >= field_schema["minItems"]
-                        ), f"Array too small in {example_name}.{field_name}: {len(value)} items"
+                        assert len(value) >= field_schema["minItems"], (
+                            f"Array too small in {example_name}.{field_name}: {len(value)} items"
+                        )
                     if "maxItems" in field_schema:
-                        assert (
-                            len(value) <= field_schema["maxItems"]
-                        ), f"Array too large in {example_name}.{field_name}: {len(value)} items"
+                        assert len(value) <= field_schema["maxItems"], (
+                            f"Array too large in {example_name}.{field_name}: {len(value)} items"
+                        )
 
     async def _evaluate_example_quality(
         self,
@@ -324,10 +310,7 @@ class TestExampleComprehensive:
         name_lower = example_name.lower()
 
         # Higher standards for complex examples
-        if any(
-            keyword in name_lower
-            for keyword in ["code-review", "vulnerability", "security", "autonomous"]
-        ):
+        if any(keyword in name_lower for keyword in ["code-review", "vulnerability", "security", "autonomous"]):
             return 8
 
         # Standard requirements for most examples
@@ -392,9 +375,7 @@ class TestCustomScenarios:
             input_context="Average speed calculation problem",
         )
 
-        assert_judgment_passed(
-            judgment, "Mathematical Reasoning", rich_output=rich_test_output
-        )
+        assert_judgment_passed(judgment, "Mathematical Reasoning", rich_output=rich_test_output)
 
     @pytest.mark.parametrize(
         "topic,min_score",
@@ -419,9 +400,7 @@ class TestCustomScenarios:
         skip_if_smoke_test,  # Skip in smoke test mode
     ):
         """Test technical expertise across different topics - EXAMPLE: Parametrized testing!"""
-        console.print(
-            f"\n🔬 Testing {topic} expertise (min: {min_score}/10)...", style="blue"
-        )
+        console.print(f"\n🔬 Testing {topic} expertise (min: {min_score}/10)...", style="blue")
 
         # given - Dynamic test content based on topic
         topic_questions = {
@@ -430,9 +409,7 @@ class TestCustomScenarios:
             "machine_learning": "Explain the bias-variance tradeoff in machine learning and how to address it.",
         }
 
-        technical_input = {
-            "messages": [{"role": "user", "content": topic_questions[topic]}]
-        }
+        technical_input = {"messages": [{"role": "user", "content": topic_questions[topic]}]}
         input_file = temp_files(json.dumps(technical_input, indent=2))
         output_file = temp_files()
 
@@ -448,9 +425,7 @@ class TestCustomScenarios:
         returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
-        assert_execution_success(
-            returncode, stdout, stderr, f"{topic.title()} Expertise"
-        )
+        assert_execution_success(returncode, stdout, stderr, f"{topic.title()} Expertise")
 
         with open(output_file) as f:
             result = json.load(f)
@@ -488,11 +463,7 @@ def pytest_generate_tests(metafunc):
             folder = input_file.parent
             schema_file = folder / "schema.json"
             schema = schema_file if schema_file.exists() else None
-            example_name = (
-                str(folder.relative_to(examples_dir))
-                .replace("/", "_")
-                .replace("\\", "_")
-            )
+            example_name = str(folder.relative_to(examples_dir)).replace("/", "_").replace("\\", "_")
             examples.append((input_file, schema, example_name))
 
         # Parametrize the test

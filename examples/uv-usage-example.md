@@ -12,7 +12,7 @@ pip install llm-ci-runner
 2. **Set Environment Variables**:
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-export AZURE_OPENAI_MODEL="gpt-4o-mini"  # or any other GPT model
+export AZURE_OPENAI_MODEL="gpt-4.1-nano"  # or any other GPT deployment name
 export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 ```
 

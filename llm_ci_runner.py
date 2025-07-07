@@ -15,8 +15,8 @@ Usage:
 
 Environment Variables:
     AZURE_OPENAI_ENDPOINT: Azure OpenAI endpoint URL
-    AZURE_OPENAI_MODEL: Model deployment name (e.g., gpt-4)
-    AZURE_OPENAI_API_VERSION: API version (default: 2024-08-01-preview)
+    AZURE_OPENAI_MODEL: Your custom model deployment name (e.g., gpt-4.1-nano)
+    AZURE_OPENAI_API_VERSION: API version (default: 2024-12-01-preview)
 
 Input Format:
     {
@@ -243,7 +243,7 @@ Examples:
 Environment Variables:
     AZURE_OPENAI_ENDPOINT    Azure OpenAI endpoint URL
     AZURE_OPENAI_MODEL       Model deployment name
-    AZURE_OPENAI_API_VERSION API version (default: 2024-08-01-preview)
+    AZURE_OPENAI_API_VERSION API version (default: 2024-12-01-preview)
         """,
     )
 
@@ -382,7 +382,7 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
     # Get environment variables
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     model = os.getenv("AZURE_OPENAI_MODEL")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
 
     if not endpoint:

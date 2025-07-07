@@ -217,7 +217,7 @@ Add new test classes in `TestCustomScenarios` for specialized validation.
 ### Required Environment Variables
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-export AZURE_OPENAI_MODEL="gpt-4.1-mini"
+export AZURE_OPENAI_MODEL="gpt-4.1-nano"
 export AZURE_OPENAI_API_KEY="your-api-key"
 ```
 

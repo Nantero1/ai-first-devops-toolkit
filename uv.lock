@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -1056,7 +1056,7 @@ wheels = [
 
 [[package]]
 name = "llm-ci-runner"
-version = "1.0.0"
+version = "1.0.4"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },

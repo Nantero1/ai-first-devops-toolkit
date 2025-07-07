@@ -154,6 +154,6 @@ jobs:
           fi
           
           echo "Checking for debug statements..."
-          if grep -r "import pdb\|pdb.set_trace()\|breakpoint()" . --exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.venv --exclude=*.pyc; then
+          if grep -r "import pdb\|pdb.set_trace()\|breakpoint()" . --exclude=ci.yml --exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.venv --exclude=*.pyc; then
             echo "::warning::Debug statements found in code"
           fi 

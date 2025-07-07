@@ -13,9 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 
-def run_command(
-    cmd: list[str], check: bool = True, capture_output: bool = True
-) -> subprocess.CompletedProcess:
+def run_command(cmd: list[str], check: bool = True, capture_output: bool = True) -> subprocess.CompletedProcess:
     """Run a command and return the result."""
     print(f"Running: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=capture_output, text=True)
@@ -51,41 +49,41 @@ def update_version(version: str) -> None:
 
         # More precise approach: find the [project] section and update version there
         # This ensures we only update the project version, not dependency versions
-        
+
         # Split content into lines for easier processing
-        lines = content.split('\n')
+        lines = content.split("\n")
         updated_lines = []
         in_project_section = False
         version_updated = False
-        
+
         for line in lines:
             # Check if we're entering the [project] section
-            if line.strip() == '[project]':
+            if line.strip() == "[project]":
                 in_project_section = True
                 updated_lines.append(line)
             # Check if we're leaving the [project] section
-            elif line.strip().startswith('[') and line.strip() != '[project]':
+            elif line.strip().startswith("[") and line.strip() != "[project]":
                 in_project_section = False
                 updated_lines.append(line)
             # If we're in the [project] section and this is the version line
-            elif in_project_section and line.strip().startswith('version ='):
+            elif in_project_section and line.strip().startswith("version ="):
                 # Update the version
                 updated_lines.append(f'version = "{version}"')
                 version_updated = True
-                print(f"Found and updated version line: {line.strip()} -> version = \"{version}\"")
+                print(f'Found and updated version line: {line.strip()} -> version = "{version}"')
             else:
                 updated_lines.append(line)
-        
+
         if not version_updated:
             print("Error: Project version line not found in [project] section")
             return
-        
+
         # Write the updated content back
-        updated_content = '\n'.join(updated_lines)
-        
+        updated_content = "\n".join(updated_lines)
+
         with open("pyproject.toml", "w") as f:
             f.write(updated_content)
-        
+
         print(f"Successfully updated project version to {version}")
 
     except Exception as e:
@@ -122,6 +120,7 @@ def run_linting() -> None:
     run_command(["uv", "run", "ruff", "check", "*.py"])
     run_command(["uv", "run", "ruff", "format", "--check", "*.py"])
     run_command(["uv", "run", "mypy", "llm_ci_runner.py"])
+
 
 def check_security() -> None:
     """Check for security vulnerabilities."""
@@ -169,9 +168,7 @@ def test_package_installation() -> None:
     wheel_file = wheel_files[0]
 
     # Test installation
-    result = run_command(
-        ["uv", "run", "pip", "install", str(wheel_file), "--force-reinstall"]
-    )
+    result = run_command(["uv", "run", "pip", "install", str(wheel_file), "--force-reinstall"])
 
     if result.returncode == 0:
         print("✅ Package installation test passed")

@@ -142,9 +142,7 @@ def llm_ci_runner():
             cmd.extend(["--schema-file", schema_file])
 
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             return result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
             return -1, "", f"Command timed out after {timeout} seconds"
@@ -164,9 +162,7 @@ def judgment_schema_path():
 def llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
     """LLM-as-judge evaluator using structured output."""
 
-    async def _evaluate_response(
-        query: str, response: str, criteria: str, input_context: str = ""
-    ) -> dict[str, Any]:
+    async def _evaluate_response(query: str, response: str, criteria: str, input_context: str = "") -> dict[str, Any]:
         """Evaluate a response using LLM-as-judge with structured output."""
 
         # Create judgment prompt with structured output instructions
@@ -216,9 +212,7 @@ Use objective criteria and provide specific reasoning for your assessment.""",
         judgment_output_file = temp_files()
 
         # Run LLM runner with structured output
-        returncode, stdout, stderr = llm_ci_runner(
-            judgment_input_file, judgment_output_file, judgment_schema_path
-        )
+        returncode, stdout, stderr = llm_ci_runner(judgment_input_file, judgment_output_file, judgment_schema_path)
 
         if returncode != 0:
             return {"error": f"Judgment failed: {stderr}", "pass": False}
@@ -246,9 +240,7 @@ Use objective criteria and provide specific reasoning for your assessment.""",
                 "pass",
                 "reasoning",
             ]
-            missing_fields = [
-                field for field in required_fields if field not in structured_judgment
-            ]
+            missing_fields = [field for field in required_fields if field not in structured_judgment]
 
             if missing_fields:
                 return {
@@ -282,9 +274,7 @@ def rich_test_output():
             table.add_row(metric.title(), f"{score}/10", "✅" if score >= 7 else "❌")
 
         # Add overall pass/fail
-        table.add_row(
-            "Overall Decision", "", "✅ PASS" if judgment.get("pass") else "❌ FAIL"
-        )
+        table.add_row("Overall Decision", "", "✅ PASS" if judgment.get("pass") else "❌ FAIL")
 
         return table
 
@@ -371,9 +361,7 @@ def assert_execution_success():
                     style="red",
                 )
             )
-            pytest.fail(
-                f"{test_name} execution failed with code {returncode}: {stderr}"
-            )
+            pytest.fail(f"{test_name} execution failed with code {returncode}: {stderr}")
 
     return _assert_success
 
@@ -382,9 +370,7 @@ def assert_execution_success():
 def assert_judgment_passed():
     """Assert that LLM judge evaluation passed."""
 
-    def _assert_judgment(
-        judgment: dict[str, Any], test_name: str, min_score: int = 7, rich_output=None
-    ):
+    def _assert_judgment(judgment: dict[str, Any], test_name: str, min_score: int = 7, rich_output=None):
         """Assert judgment passed with detailed Rich output."""
         if "error" in judgment:
             console.print(
