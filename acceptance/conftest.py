@@ -2,6 +2,8 @@
 
 This module provides shared fixtures and utilities for LLM-as-judge acceptance tests.
 Follows our testing best practices with Rich formatting and reusable components.
+
+⚠️  Uses real Azure OpenAI API calls
 """
 
 from __future__ import annotations
@@ -11,7 +13,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, List, Optional, Tuple
 
 import pytest
 from rich.console import Console
@@ -21,9 +23,50 @@ from rich.table import Table
 console = Console()
 
 
+def pytest_addoption(parser):
+    """Add custom command line options for pytest."""
+    parser.addoption(
+        "--smoke-test",
+        action="store_true",
+        default=False,
+        help="Run smoke tests only (skip expensive LLM-as-judge tests)",
+    )
+
+
 @pytest.fixture(scope="session")
-def environment_check():
+def smoke_test_mode(request):
+    """Fixture to determine if running in smoke test mode."""
+    return request.config.getoption("--smoke-test")
+
+
+@pytest.fixture(scope="session")
+def skip_if_not_smoke_test(smoke_test_mode):
+    """Skip test if not in smoke test mode - for LLM-as-judge tests."""
+    if not smoke_test_mode:
+        return False  # Don't skip
+    pytest.skip("Skipping expensive LLM-as-judge test in smoke test mode")
+
+
+@pytest.fixture(scope="session")
+def skip_if_smoke_test(smoke_test_mode):
+    """Skip test if in smoke test mode - for expensive LLM-as-judge tests."""
+    if smoke_test_mode:
+        pytest.skip("Skipping expensive LLM-as-judge test in smoke test mode")
+
+
+@pytest.fixture(scope="session")
+def environment_check(smoke_test_mode):
     """Check that Azure OpenAI environment is properly configured."""
+    if smoke_test_mode:
+        console.print(
+            Panel(
+                "🚀 Running in SMOKE TEST mode - no LLM calls will be made",
+                title="Smoke Test Mode",
+                style="blue",
+            )
+        )
+        return True  # Skip environment check in smoke test mode
+
     required_vars = [
         "AZURE_OPENAI_ENDPOINT",
         "AZURE_OPENAI_MODEL",
@@ -36,7 +79,8 @@ def environment_check():
         console.print(
             Panel(
                 f"❌ Missing environment variables: {', '.join(missing_vars)}\n"
-                "Please set these before running acceptance tests.",
+                "Please set these before running acceptance tests.\n\n"
+                "💡 TIP: Use --smoke-test flag to do less LLM calls (faster, skip LLM-as-judge tests)",
                 title="Environment Check Failed",
                 style="red",
             )
@@ -45,7 +89,7 @@ def environment_check():
 
     console.print(
         Panel(
-            "✅ Environment properly configured",
+            "✅ Environment properly configured for LLM calls",
             title="Environment Check",
             style="green",
         )
@@ -85,9 +129,7 @@ def llm_ci_runner():
     ) -> tuple[int, str, str]:
         """Run the LLM runner and return result code, stdout, stderr."""
         cmd = [
-            "uv",
-            "run",
-            "llm_ci_runner.py",
+            "llm-ci-runner",
             "--input-file",
             input_file,
             "--output-file",
@@ -100,7 +142,9 @@ def llm_ci_runner():
             cmd.extend(["--schema-file", schema_file])
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=timeout
+            )
             return result.returncode, result.stdout, result.stderr
         except subprocess.TimeoutExpired:
             return -1, "", f"Command timed out after {timeout} seconds"
@@ -120,7 +164,9 @@ def judgment_schema_path():
 def llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
     """LLM-as-judge evaluator using structured output."""
 
-    async def _evaluate_response(query: str, response: str, criteria: str, input_context: str = "") -> dict[str, Any]:
+    async def _evaluate_response(
+        query: str, response: str, criteria: str, input_context: str = ""
+    ) -> dict[str, Any]:
         """Evaluate a response using LLM-as-judge with structured output."""
 
         # Create judgment prompt with structured output instructions
@@ -170,7 +216,9 @@ Use objective criteria and provide specific reasoning for your assessment.""",
         judgment_output_file = temp_files()
 
         # Run LLM runner with structured output
-        returncode, stdout, stderr = llm_ci_runner(judgment_input_file, judgment_output_file, judgment_schema_path)
+        returncode, stdout, stderr = llm_ci_runner(
+            judgment_input_file, judgment_output_file, judgment_schema_path
+        )
 
         if returncode != 0:
             return {"error": f"Judgment failed: {stderr}", "pass": False}
@@ -198,7 +246,9 @@ Use objective criteria and provide specific reasoning for your assessment.""",
                 "pass",
                 "reasoning",
             ]
-            missing_fields = [field for field in required_fields if field not in structured_judgment]
+            missing_fields = [
+                field for field in required_fields if field not in structured_judgment
+            ]
 
             if missing_fields:
                 return {
@@ -232,7 +282,9 @@ def rich_test_output():
             table.add_row(metric.title(), f"{score}/10", "✅" if score >= 7 else "❌")
 
         # Add overall pass/fail
-        table.add_row("Overall Decision", "", "✅ PASS" if judgment.get("pass") else "❌ FAIL")
+        table.add_row(
+            "Overall Decision", "", "✅ PASS" if judgment.get("pass") else "❌ FAIL"
+        )
 
         return table
 
@@ -265,15 +317,32 @@ def rich_test_output():
 
 
 @pytest.fixture
-def example_files():
-    """Paths to example input files."""
-    return {
-        "simple": "examples/simple-example.json",
-        "minimal": "examples/minimal-example.json",
-        "pr_review": "examples/pr-review-example.json",
-        "structured_schema": "examples/structured-output-example.json",
-        "code_review_schema": "examples/code_review_schema.json",
-    }
+def examples_dir():
+    """Get path to examples directory."""
+    return Path("examples")
+
+
+@pytest.fixture
+def discovered_examples(examples_dir):
+    """Auto-discover examples based on folder structure convention."""
+
+    def _discover_examples() -> List[Tuple[Path, Optional[Path], str]]:
+        """
+        Recursively discover all example folders under examples/ containing input.json.
+        If schema.json exists in the same folder, it's used for validation.
+        Returns: List of (input_file, schema_file, example_name) tuples
+        """
+        examples = []
+        for input_file in examples_dir.rglob("input.json"):
+            folder = input_file.parent
+            schema_file = folder / "schema.json"
+            schema = schema_file if schema_file.exists() else None
+            # Example name: relative path from examples_dir, with / replaced by _
+            example_name = str(folder.relative_to(examples_dir)).replace(os.sep, "_")
+            examples.append((input_file, schema, example_name))
+        return examples
+
+    return _discover_examples()
 
 
 @pytest.fixture
@@ -302,7 +371,9 @@ def assert_execution_success():
                     style="red",
                 )
             )
-            pytest.fail(f"{test_name} execution failed with code {returncode}: {stderr}")
+            pytest.fail(
+                f"{test_name} execution failed with code {returncode}: {stderr}"
+            )
 
     return _assert_success
 
@@ -311,7 +382,9 @@ def assert_execution_success():
 def assert_judgment_passed():
     """Assert that LLM judge evaluation passed."""
 
-    def _assert_judgment(judgment: dict[str, Any], test_name: str, min_score: int = 7, rich_output=None):
+    def _assert_judgment(
+        judgment: dict[str, Any], test_name: str, min_score: int = 7, rich_output=None
+    ):
         """Assert judgment passed with detailed Rich output."""
         if "error" in judgment:
             console.print(

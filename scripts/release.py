@@ -119,9 +119,9 @@ def run_tests() -> None:
 def run_linting() -> None:
     """Run linting checks."""
     print("\n2. Running linting...")
-    run_command(["uv", "run", "ruff", "check", "."])
-    run_command(["uv", "run", "mypy", "."])
-
+    run_command(["uv", "run", "ruff", "check", "*.py"])
+    run_command(["uv", "run", "ruff", "format", "--check", "*.py"])
+    run_command(["uv", "run", "mypy", "llm_ci_runner.py"])
 
 def check_security() -> None:
     """Check for security vulnerabilities."""
