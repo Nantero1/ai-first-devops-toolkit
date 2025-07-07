@@ -21,13 +21,11 @@ Real-world DevOps scenarios with AI-powered automation.
 AI-powered security analysis and vulnerability detection.
 
 - **[vulnerability-analysis/](03-security/vulnerability-analysis/)** - Security vulnerability detection
-- **[security-assessment/](03-security/security-assessment/)** - Comprehensive security assessments
 
 ### 04-ai-first/ - AI-First Development
 Advanced examples inspired by [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) principles.
 
 - **[autonomous-development-plan/](04-ai-first/autonomous-development-plan/)** - AI creates comprehensive development plans
-- **[vibe-coding-workflow/](04-ai-first/vibe-coding-workflow/)** - Natural language to implementation workflows
 
 ## 🚀 Quick Start
 
