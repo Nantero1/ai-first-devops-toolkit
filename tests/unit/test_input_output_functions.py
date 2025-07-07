@@ -205,7 +205,7 @@ class TestParseArguments:
     def test_parse_required_arguments(self):
         """Test parsing with only required arguments."""
         # given
-        test_args = ["--input-file", "input.json", "--output-file", "output.json"]
+        test_args = ["--input-file", "input.json"]  # Only input-file is required
 
         # when
         with patch("sys.argv", ["llm_runner.py"] + test_args):
@@ -213,7 +213,7 @@ class TestParseArguments:
 
         # then
         assert args.input_file == Path("input.json")
-        assert args.output_file == Path("output.json")
+        assert args.output_file == Path("result.json")  # Default value
         assert args.schema_file is None
         assert args.log_level == "INFO"
 
@@ -244,7 +244,7 @@ class TestParseArguments:
     def test_parse_missing_required_arguments_raises_error(self):
         """Test that missing required arguments raises SystemExit."""
         # given
-        test_args = ["--input-file", "input.json"]  # Missing output-file
+        test_args = []  # Missing input-file (the only required argument)
 
         # when & then
         with patch("sys.argv", ["llm_runner.py"] + test_args):
@@ -287,6 +287,21 @@ class TestParseArguments:
         with patch("sys.argv", ["llm_runner.py"] + test_args):
             with pytest.raises(SystemExit):
                 parse_arguments()
+
+    def test_parse_with_default_output_file(self):
+        """Test parsing with default output file when not specified."""
+        # given
+        test_args = ["--input-file", "input.json"]  # No output-file specified
+
+        # when
+        with patch("sys.argv", ["llm_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.input_file == Path("input.json")
+        assert args.output_file == Path("result.json")  # Should use default
+        assert args.schema_file is None
+        assert args.log_level == "INFO"
 
     def test_parse_help_argument_raises_system_exit(self):
         """Test that help argument raises SystemExit."""

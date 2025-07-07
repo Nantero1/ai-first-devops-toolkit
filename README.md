@@ -1,11 +1,13 @@
 # AI-First DevOps Toolkit: LLM-Powered CI/CD Automation
 
+[![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml)
+
 > **🚀 The Future of DevOps is AI-First**  
 > This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on the motivation.
 
 ## TLDR: What This Tool Does
 
-**Purpose**: Zero-friction LLM integration for CI/CD pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first development practices.
+**Purpose**: Zero-friction LLM integration for CI/CD pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first integration practices.
 
 **Perfect For**:
 - 🤖 **AI-Generated Code Reviews**: Automated PR analysis with structured findings
@@ -14,7 +16,7 @@
 - 🎯 **Quality Gates**: Enforce standards through AI-driven validation
 - 🚀 **Autonomous Development**: Enable AI agents to make decisions in your pipelines
 - 🎯 **JIRA Ticket Updates**: Update JIRA tickets based on LLM output
-- 🔗 **Unlimited Integration Possibilities**: Chain it multiple times and use as intelligent glue in your tool stack
+- 🔗 **Unlimited Integration Possibilities**: Chain it multiple times and use as glue code in your tool stack
 ---
 
 ### Simple structured output example
