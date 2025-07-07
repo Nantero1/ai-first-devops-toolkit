@@ -1,0 +1,100 @@
+{
+    "type": "object",
+    "properties": {
+        "security_rating": {
+            "type": "string",
+            "enum": [
+                "secure",
+                "low_risk",
+                "medium_risk",
+                "high_risk",
+                "critical"
+            ],
+            "description": "Overall security assessment"
+        },
+        "vulnerabilities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "sql_injection",
+                            "xss",
+                            "path_traversal",
+                            "command_injection",
+                            "authentication",
+                            "authorization",
+                            "data_exposure",
+                            "other"
+                        ]
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "critical",
+                            "high",
+                            "medium",
+                            "low"
+                        ]
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "line_number": {
+                        "type": "integer"
+                    },
+                    "fix_suggestion": {
+                        "type": "string"
+                    },
+                    "cwe_id": {
+                        "type": "string"
+                    },
+                    "owasp_category": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "type",
+                    "severity",
+                    "description",
+                    "fix_suggestion"
+                ]
+            }
+        },
+        "recommendations": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 0,
+            "maxItems": 10
+        },
+        "compliance_issues": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "risk_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Numeric risk score (0-10)"
+        },
+        "summary": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Executive summary of security findings"
+        }
+    },
+    "required": [
+        "security_rating",
+        "vulnerabilities",
+        "recommendations",
+        "risk_score",
+        "summary"
+    ],
+    "additionalProperties": false
+}

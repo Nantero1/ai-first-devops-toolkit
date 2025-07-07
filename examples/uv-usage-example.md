@@ -1,6 +1,6 @@
-# UV Usage Examples for LLM Runner
+# Real-World CI/CD Examples with LLM Runner
 
-This document demonstrates practical usage of the LLM Runner with UV in different scenarios.
+This document demonstrates practical AI-first DevOps workflows using the LLM Runner in real CI/CD scenarios. Each example shows how to integrate AI-powered automation into your development pipeline.
 
 ## Prerequisites
 
@@ -12,229 +12,559 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 2. **Set Environment Variables**:
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-export AZURE_OPENAI_MODEL="gpt-4"
+export AZURE_OPENAI_MODEL="gpt-4.1-nano"
 ```
 
-## Basic Usage
+## Real-World CI/CD Scenarios
 
-### 1. Install Dependencies
+### 1. Automated PR Description Updates
 
+**Scenario**: Generate comprehensive PR descriptions based on commit messages and code changes.
+
+#### Step 1: Extract Git Information
 ```bash
-# Install all dependencies (uses system Python)
-uv sync
+# Get the last commit message and diff
+git log -1 --pretty=format:"%s" > commit_message.txt
+git diff HEAD~1 > code_changes.diff
 
-# Install with development dependencies
-uv sync --group dev
+# For PR context (if in a PR)
+if [ -n "$PR_NUMBER" ]; then
+  git diff origin/main...HEAD > pr_changes.diff
+fi
 ```
 
-### 2. Run the Script
+#### Step 2: Create Input Context
+```json
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert DevOps engineer. Generate comprehensive PR descriptions that include: summary of changes, impact analysis, testing notes, and deployment considerations."
+    },
+    {
+      "role": "user",
+      "content": "Generate a PR description based on:\n\nCOMMIT MESSAGE:\n$(cat commit_message.txt)\n\nCODE CHANGES:\n$(cat code_changes.diff)\n\nFocus on: what changed, why it changed, impact on users, testing requirements, and deployment notes."
+    }
+  ]
+}
+```
 
+#### Step 3: Execute with Structured Output
 ```bash
-# Method 1: Direct script execution (recommended for CI/CD)
+# Create PR description with schema enforcement
 uv run llm_runner.py \
-  --input-file examples/simple-example.json \
-  --output-file result.json \
+  --input-file pr-description-input.json \
+  --output-file pr-description.json \
+  --schema-file examples/pr-description-schema.json \
   --log-level INFO
 
-# Method 2: Use the installed entry point
-uv run llm-runner \
-  --input-file examples/simple-example.json \
-  --output-file result.json \
-  --log-level INFO
+# Extract the description for GitHub
+PR_DESCRIPTION=$(jq -r '.response.description' pr-description.json)
+echo "$PR_DESCRIPTION" > pr_description.md
 ```
 
-## CI/CD Integration Examples
-
-### GitHub Actions
-
+#### Step 4: GitHub Actions Integration
 ```yaml
-name: LLM Task Automation
+name: Auto-Generate PR Description
 
-on: [push, pull_request]
+on:
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
-  llm-task:
+  generate-pr-description:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Get full history for diff
     
     - name: Install UV
       run: curl -LsSf https://astral.sh/uv/install.sh | sh
     
-    - name: Run LLM Task
+    - name: Extract Git Context
+      run: |
+        git log -1 --pretty=format:"%s" > commit_message.txt
+        git diff origin/main...HEAD > pr_changes.diff
+    
+    - name: Generate PR Description
       run: |
         uv run llm_runner.py \
-          --input-file .github/context.json \
-          --output-file output/result.json \
-          --log-level INFO
+          --input-file .github/pr-description-input.json \
+          --output-file pr-description.json \
+          --schema-file .github/pr-description-schema.json
       env:
         AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
         AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+    
+    - name: Update PR Description
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const description = require('fs').readFileSync('pr-description.json', 'utf8');
+          const content = JSON.parse(description).response.description;
+          await github.rest.pulls.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number,
+            body: content
+          });
 ```
 
-### Azure DevOps
+### 2. Security Analysis with LLM-as-Judge
 
-```yaml
-trigger:
-- main
+**Scenario**: Analyze code changes for security vulnerabilities with guaranteed schema compliance and quality validation.
 
-pool:
-  vmImage: 'ubuntu-latest'
-
-steps:
-- script: |
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    echo "##vso[task.setvariable variable=PATH]${HOME}/.local/bin:${PATH}"
-  displayName: 'Install UV'
-
-- script: |
-    uv run llm_runner.py \
-      --input-file context.json \
-      --output-file $(Build.ArtifactStagingDirectory)/result.json
-  displayName: 'Run LLM Task'
-  env:
-    AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
-    AZURE_OPENAI_MODEL: $(AZURE_OPENAI_MODEL)
+#### Step 1: Create Security Analysis Schema
+```json
+{
+  "type": "object",
+  "properties": {
+    "security_rating": {
+      "type": "string",
+      "enum": ["secure", "low_risk", "medium_risk", "high_risk", "critical"],
+      "description": "Overall security assessment"
+    },
+    "vulnerabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["sql_injection", "xss", "path_traversal", "command_injection", "authentication", "authorization", "data_exposure", "other"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low"]
+          },
+          "description": {"type": "string"},
+          "line_number": {"type": "integer"},
+          "fix_suggestion": {"type": "string"}
+        },
+        "required": ["type", "severity", "description", "fix_suggestion"]
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "compliance_issues": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "required": ["security_rating", "vulnerabilities", "recommendations"]
+}
 ```
 
-### Docker Usage
-
-```dockerfile
-FROM python:3.11-slim
-
-# Install UV
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:$PATH"
-
-# Copy project files
-WORKDIR /app
-COPY . .
-
-# Install dependencies
-RUN uv sync
-
-# Set default command
-CMD ["uv", "run", "llm_runner.py", "--help"]
-```
-
-## Development Workflow
-
-### 1. Setup Development Environment
-
+#### Step 2: Security Analysis Pipeline
 ```bash
-# Install with development dependencies
-uv sync --group dev
+#!/bin/bash
+# security-analysis.sh
 
-# Run linting and formatting
-uv run ruff check .
-uv run ruff format .
+# Get the diff for analysis
+git diff HEAD~1 > code_changes.diff
 
-# Run type checking
-uv run mypy llm_runner.py
-```
+# Create security analysis input
+cat > security-input.json << EOF
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a security expert. Analyze code changes for security vulnerabilities, focusing on OWASP Top 10, common attack vectors, and secure coding practices."
+    },
+    {
+      "role": "user",
+      "content": "Analyze these code changes for security vulnerabilities:\n\n$(cat code_changes.diff)\n\nProvide detailed security assessment with specific vulnerabilities, severity levels, and fix recommendations."
+    }
+  ]
+}
+EOF
 
-### 2. Testing
-
-```bash
-# Run validation tests
-uv run python test_runner.py
-
-# Run unit tests (when implemented)
-uv run pytest tests/
-
-# Run with coverage
-uv run pytest tests/ --cov=llm_runner
-```
-
-### 3. Quick Development Runs
-
-```bash
-# Run with debug logging
+# Run security analysis with schema enforcement
 uv run llm_runner.py \
-  --input-file examples/simple-example.json \
-  --output-file debug-output.json \
-  --log-level DEBUG
+  --input-file security-input.json \
+  --output-file security-analysis.json \
+  --schema-file security-schema.json \
+  --log-level INFO
 
-# Test different examples
-uv run llm_runner.py --input-file examples/pr-review-example.json --output-file pr-result.json
-uv run llm_runner.py --input-file examples/minimal-example.json --output-file minimal-result.json
+# Extract results
+SECURITY_RATING=$(jq -r '.response.security_rating' security-analysis.json)
+VULNERABILITY_COUNT=$(jq -r '.response.vulnerabilities | length' security-analysis.json)
+
+echo "Security Rating: $SECURITY_RATING"
+echo "Vulnerabilities Found: $VULNERABILITY_COUNT"
+
+# Fail pipeline if critical vulnerabilities found
+if [ "$SECURITY_RATING" = "critical" ]; then
+  echo "❌ Critical security vulnerabilities detected!"
+  exit 1
+fi
 ```
 
-## UV Project Benefits
-
-### 1. **System Python Usage**
-- Uses your system Python installation
-- No Python version management overhead
-- Perfect for containers with pre-installed Python
-
-### 2. **Fast Dependency Resolution**
-- 10-100x faster than pip
-- Parallel downloads and efficient caching
-- Lock file ensures reproducible builds
-
-### 3. **CI/CD Optimized**
-- Single command dependency installation
-- No virtual environment activation needed
-- Works seamlessly in containers
-
-### 4. **Development Experience**
-- Integrated linting and formatting
-- Type checking configuration
-- Clear development vs production dependencies
-
-## Lock File Management
-
+#### Step 3: LLM-as-Judge Quality Validation
 ```bash
-# Update dependencies and regenerate lock file
-uv sync --upgrade
+#!/bin/bash
+# validate-security-analysis.sh
 
-# Add new dependency
-uv add requests
+# Create judgment input for quality validation
+cat > judgment-input.json << EOF
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert security reviewer. Evaluate the quality and accuracy of security analysis reports."
+    },
+    {
+      "role": "user",
+      "content": "Evaluate this security analysis report:\n\n$(cat security-analysis.json)\n\nCriteria: accuracy of vulnerability detection, appropriateness of severity ratings, quality of fix suggestions, completeness of analysis."
+    }
+  ]
+}
+EOF
 
-# Add development dependency
-uv add --dev black
+# Run LLM-as-judge evaluation
+uv run llm_runner.py \
+  --input-file judgment-input.json \
+  --output-file judgment-result.json \
+  --schema-file acceptance/judgment_schema.json \
+  --log-level INFO
 
-# Remove dependency
-uv remove requests
+# Check if analysis passes quality standards
+PASSES_QUALITY=$(jq -r '.response.pass' judgment-result.json)
+OVERALL_SCORE=$(jq -r '.response.overall' judgment-result.json)
+
+if [ "$PASSES_QUALITY" = "false" ]; then
+  echo "❌ Security analysis failed quality validation (Score: $OVERALL_SCORE/10)"
+  exit 1
+fi
+
+echo "✅ Security analysis passed quality validation (Score: $OVERALL_SCORE/10)"
 ```
 
-## Troubleshooting
+#### Step 4: Complete Security Pipeline
+```yaml
+name: Security Analysis Pipeline
 
-### UV Not Found
-```bash
-# Check if UV is installed
-uv --version
+on: [push, pull_request]
 
-# If not found, reinstall
-curl -LsSf https://astral.sh/uv/install.sh | sh
-source ~/.bashrc  # or restart terminal
+jobs:
+  security-analysis:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install UV
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Run Security Analysis
+      run: |
+        chmod +x .github/scripts/security-analysis.sh
+        .github/scripts/security-analysis.sh
+      env:
+        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+    
+    - name: Validate Analysis Quality
+      run: |
+        chmod +x .github/scripts/validate-security-analysis.sh
+        .github/scripts/validate-security-analysis.sh
+      env:
+        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+    
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-analysis-report
+        path: security-analysis.json
 ```
 
-### Missing Dependencies
-```bash
-# Ensure dependencies are synced
-uv sync
+### 3. Automated Changelog Generation
 
-# For development work
-uv sync --group dev
+**Scenario**: Generate comprehensive changelogs from commit history with structured output.
+
+#### Step 1: Extract Commit History
+```bash
+# Get commits since last tag
+git log $(git describe --tags --abbrev=0)..HEAD --pretty=format:"%h|%s|%an|%ad" --date=short > commits.txt
+
+# Get files changed
+git diff --name-only $(git describe --tags --abbrev=0)..HEAD > changed_files.txt
 ```
 
-### Python Version Issues
+#### Step 2: Changelog Generation
 ```bash
-# Check Python version
-python --version
+# Create changelog input
+cat > changelog-input.json << EOF
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a technical writer. Generate professional changelog entries from commit history, categorizing changes by type and impact."
+    },
+    {
+      "role": "user",
+      "content": "Generate a changelog for version $(git describe --tags --abbrev=0 | sed 's/v//') to $(git rev-parse --short HEAD):\n\nCOMMITS:\n$(cat commits.txt)\n\nCHANGED FILES:\n$(cat changed_files.txt)\n\nCategorize as: features, bugfixes, breaking_changes, improvements, documentation."
+    }
+  ]
+}
+EOF
 
-# UV will use system Python by default
-# Ensure you have Python 3.11+ installed
+# Generate changelog with schema
+uv run llm_runner.py \
+  --input-file changelog-input.json \
+  --output-file changelog.json \
+  --schema-file examples/changelog-schema.json \
+  --log-level INFO
+
+# Create markdown changelog
+jq -r '.response.markdown_content' changelog.json > CHANGELOG.md
+```
+
+### 4. Code Review Automation
+
+**Scenario**: Automated code review with structured findings and quality gates.
+
+#### Step 1: Code Review Pipeline
+```bash
+#!/bin/bash
+# code-review.sh
+
+# Get PR diff
+git diff origin/main...HEAD > pr_diff.txt
+
+# Create review input
+cat > review-input.json << EOF
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a senior software engineer conducting code reviews. Focus on code quality, best practices, security, performance, and maintainability."
+    },
+    {
+      "role": "user",
+      "content": "Review this pull request:\n\n$(cat pr_diff.txt)\n\nProvide detailed feedback with specific issues, suggestions, and overall assessment."
+    }
+  ]
+}
+EOF
+
+# Run code review
+uv run llm_runner.py \
+  --input-file review-input.json \
+  --output-file code-review.json \
+  --schema-file examples/code_review_schema.json \
+  --log-level INFO
+
+# Extract review results
+OVERALL_RATING=$(jq -r '.response.overall_rating' code-review.json)
+ISSUES_COUNT=$(jq -r '.response.issues | length' code-review.json)
+
+echo "Code Review Rating: $OVERALL_RATING"
+echo "Issues Found: $ISSUES_COUNT"
+
+# Quality gate
+if [ "$OVERALL_RATING" = "poor" ]; then
+  echo "❌ Code review failed - too many issues"
+  exit 1
+fi
+```
+
+#### Step 2: GitHub Actions Integration
+```yaml
+name: Automated Code Review
+
+on: [pull_request]
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install UV
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Run Code Review
+      run: |
+        chmod +x .github/scripts/code-review.sh
+        .github/scripts/code-review.sh
+      env:
+        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+    
+    - name: Post Review Comment
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const review = require('fs').readFileSync('code-review.json', 'utf8');
+          const data = JSON.parse(review).response;
+          
+          let comment = `## 🤖 AI Code Review\n\n`;
+          comment += `**Overall Rating:** ${data.overall_rating}\n\n`;
+          comment += `**Summary:** ${data.summary}\n\n`;
+          
+          if (data.issues.length > 0) {
+            comment += `**Issues Found:**\n`;
+            data.issues.forEach(issue => {
+              comment += `- **${issue.severity.toUpperCase()}** (${issue.category}): ${issue.description}\n`;
+              if (issue.suggestion) {
+                comment += `  - Suggestion: ${issue.suggestion}\n`;
+              }
+            });
+          }
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+```
+
+## Advanced Patterns
+
+### 1. Multi-Stage AI Pipeline
+```bash
+#!/bin/bash
+# multi-stage-pipeline.sh
+
+# Stage 1: Code Analysis
+uv run llm_runner.py \
+  --input-file stage1-input.json \
+  --output-file stage1-output.json \
+  --schema-file stage1-schema.json
+
+# Stage 2: Quality Validation (LLM-as-Judge)
+uv run llm_runner.py \
+  --input-file stage2-input.json \
+  --output-file stage2-output.json \
+  --schema-file acceptance/judgment_schema.json
+
+# Stage 3: Action Generation
+uv run llm_runner.py \
+  --input-file stage3-input.json \
+  --output-file stage3-output.json \
+  --schema-file action-schema.json
+
+# Process final results
+FINAL_ACTIONS=$(jq -r '.response.actions[]' stage3-output.json)
+for action in $FINAL_ACTIONS; do
+  echo "Executing: $action"
+  # Execute action based on type
+done
+```
+
+### 2. Conditional Workflows
+```yaml
+name: Smart CI/CD Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  analyze-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      needs-security-review: ${{ steps.analysis.outputs.security }}
+      needs-performance-review: ${{ steps.analysis.outputs.performance }}
+    steps:
+    - name: Analyze Changes
+      id: analysis
+      run: |
+        # Determine what type of review is needed
+        uv run llm_runner.py \
+          --input-file change-analysis-input.json \
+          --output-file change-analysis.json \
+          --schema-file change-analysis-schema.json
+        
+        SECURITY_NEEDED=$(jq -r '.response.needs_security_review' change-analysis.json)
+        PERFORMANCE_NEEDED=$(jq -r '.response.needs_performance_review' change-analysis.json)
+        
+        echo "security=$SECURITY_NEEDED" >> $GITHUB_OUTPUT
+        echo "performance=$PERFORMANCE_NEEDED" >> $GITHUB_OUTPUT
+
+  security-review:
+    needs: analyze-changes
+    if: needs.analyze-changes.outputs.needs-security-review == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Security Review
+      run: |
+        uv run llm_runner.py \
+          --input-file security-input.json \
+          --output-file security-result.json \
+          --schema-file security-schema.json
+
+  performance-review:
+    needs: analyze-changes
+    if: needs.analyze-changes.outputs.needs-performance-review == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Performance Review
+      run: |
+        uv run llm_runner.py \
+          --input-file performance-input.json \
+          --output-file performance-result.json \
+          --schema-file performance-schema.json
 ```
 
 ## Best Practices
 
-1. **Always commit `uv.lock`** - Ensures reproducible builds
-2. **Use `uv run` in CI/CD** - No activation needed
-3. **Separate dev dependencies** - Keep production lean
-4. **Pin major versions** - For stability in production
-5. **Use environment variables** - Never commit secrets
+### 1. Schema Design
+- **Be Specific**: Define exact constraints for your use case
+- **Include Validation**: Use enums, ranges, and required fields
+- **Plan for Evolution**: Design schemas that can be extended
 
-This setup provides a modern, fast, and reliable Python development experience optimized for CI/CD workflows! 
+### 2. Error Handling
+```bash
+# Always check return codes
+if ! uv run llm_runner.py --input-file input.json --output-file output.json; then
+  echo "❌ LLM execution failed"
+  exit 1
+fi
+
+# Validate output structure
+if ! jq -e '.response' output.json > /dev/null; then
+  echo "❌ Invalid output structure"
+  exit 1
+fi
+```
+
+### 3. Cost Optimization
+- **Cache Results**: Store and reuse analysis results
+- **Batch Processing**: Combine multiple analyses
+- **Selective Execution**: Only run when necessary
+
+### 4. Quality Gates
+- **LLM-as-Judge**: Always validate AI output quality
+- **Schema Compliance**: Ensure 100% schema enforcement
+- **Human Oversight**: Review critical decisions
+
+## Troubleshooting
+
+### Common Issues
+```bash
+# UV not found in CI/CD
+export PATH="$HOME/.local/bin:$PATH"
+
+# Schema validation failures
+uv run llm_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+
+# Timeout issues
+timeout 300 uv run llm_runner.py --input-file input.json --output-file output.json
+```
+
+### Debug Mode
+```bash
+# Enable debug logging
+export LOG_LEVEL=DEBUG
+uv run llm_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+```
+
+This comprehensive guide shows how to implement AI-first DevOps practices in real-world scenarios. Each example demonstrates the power of combining structured outputs, LLM-as-judge validation, and CI/CD integration for exponential productivity gains. 

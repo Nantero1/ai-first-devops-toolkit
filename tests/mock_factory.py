@@ -18,7 +18,7 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 def create_mock_chat_message_content(
     content: str,
     role: str = "assistant",
-    ai_model_id: str = "gpt-4.1-nano-stable",
+    ai_model_id: str = "gpt-4.1-nano",
     metadata: dict[str, Any] | None = None,
 ) -> Mock:
     """

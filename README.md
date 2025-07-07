@@ -5,7 +5,7 @@
 
 ## TLDR: What This Tool Does
 
-**Purpose**: Zero-friction LLM integration for CI/CD pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first development practices. Basically it takes your input and runs it through your Azure hosted OpenAI LLM, and then returns a JSON output in your desired format.
+**Purpose**: Zero-friction LLM integration for CI/CD pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first development practices.
 
 **Perfect For**:
 - 🤖 **AI-Generated Code Reviews**: Automated PR analysis with structured findings
@@ -29,8 +29,6 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 | Reactive security scanning | 🔍 Proactive AI security analysis |
 | Manual quality gates | 🎯 AI-driven validation with schema enforcement |
 | Linear productivity | 📈 Exponential gains through intelligent automation |
-
-**The Result**: Teams that master AI-first tools like this achieve unprecedented velocity while maintaining enterprise-grade reliability.
 
 ## Features
 
@@ -74,17 +72,19 @@ uv run llm_runner.py \
   --input-file examples/simple-example.json \
   --output-file result.json \
   --log-level INFO
-
-# Or use the installed script entry point
-uv run llm-runner \
-  --input-file examples/simple-example.json \
-  --output-file result.json \
-  --log-level INFO
 ```
 
-## Input Format
+## Real-World Examples
 
-The script accepts JSON input with the following structure:
+For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)** which includes:
+
+- 🔄 **Automated PR Description Updates**: Generate comprehensive PR descriptions from commit messages and code changes
+- 🔒 **Security Analysis with LLM-as-Judge**: Analyze code changes for vulnerabilities with guaranteed schema compliance
+- 📋 **Automated Changelog Generation**: Create structured changelogs from commit history
+- 🤖 **Code Review Automation**: Automated reviews with structured findings and quality gates
+- 🔗 **Multi-Stage AI Pipelines**: Chain multiple AI operations for complex workflows
+
+## Input Format
 
 ```json
 {
@@ -95,8 +95,7 @@ The script accepts JSON input with the following structure:
     },
     {
       "role": "user", 
-      "content": "Your task description here",
-      "name": "optional-user-name"
+      "content": "Your task description here"
     }
   ],
   "context": {
@@ -108,432 +107,88 @@ The script accepts JSON input with the following structure:
 }
 ```
 
-**Required fields:**
-- `messages`: Array of chat messages with `role` and `content`
-
-**Optional fields:**
-- `context`: Additional context passed to the LLM kernel
-- `name`: Optional name for user messages
-
-This format is the same as the one used by the Azure OpenAI API and is passed 1:1 to the `context` of kernel.
-
-## CLI Options
-
-| Option | Required | Description |
-|--------|----------|-------------|
-| `--input-file` | ✅ | JSON file containing messages and context |
-| `--output-file` | ✅ | Output file for LLM response (JSON format) |
-| `--schema-file` | ❌ | **JSON schema file for 100% enforcement** (see Structured Outputs) |
-| `--log-level` | ❌ | Logging level: DEBUG, INFO, WARNING, ERROR |
-
-## Examples
-
-### Simple Text Generation
-
-```bash
-uv run llm_runner.py \
-  --input-file examples/simple-example.json \
-  --output-file simple-output.json
-```
-
-### PR Review with Context
-
-```bash
-uv run llm_runner.py \
-  --input-file examples/pr-review-example.json \
-  --output-file pr-review-result.json \
-  --log-level DEBUG
-```
-
-### Minimal Usage (No Context)
-
-```bash
-uv run llm_runner.py \
-  --input-file examples/minimal-example.json \
-  --output-file changelog.json
-```
-
 ## Structured Outputs with 100% Schema Enforcement
 
-The LLM Runner provides **guaranteed schema compliance** through token-level constraint enforcement using Semantic Kernel's KernelBaseModel integration.
-
-### How It Works
-
-When you provide a `--schema-file`, the runner:
-
-1. **Converts JSON Schema → Pydantic Model**: Runtime conversion using `create_dynamic_model_from_schema()`
-2. **Enables Token-Level Constraints**: Uses `settings.response_format = ModelClass` 
-3. **Guarantees 100% Compliance**: Azure OpenAI's structured outputs enforce schema at generation time
-4. **Validates All Constraints**: Enums, ranges, array limits, string lengths, required fields
-
-### Creating a Schema File
-
-Create a JSON schema file with your desired structure:
-
-```json
-{
-  "type": "object",
-  "properties": {
-    "sentiment": {
-      "type": "string",
-      "enum": ["positive", "negative", "neutral"],
-      "description": "Overall sentiment of the content"
-    },
-    "confidence": {
-      "type": "number",
-      "minimum": 0,
-      "maximum": 1,
-      "description": "Confidence score (0-1)"
-    },
-    "key_points": {
-      "type": "array",
-      "items": {"type": "string"},
-      "minItems": 1,
-      "maxItems": 5,
-      "description": "Main points (1-5 items)"
-    },
-    "summary": {
-      "type": "string",
-      "maxLength": 200,
-      "description": "Brief summary (max 200 chars)"
-    }
-  },
-  "required": ["sentiment", "confidence", "key_points", "summary"],
-  "additionalProperties": false
-}
-```
-
-### Using Structured Output
+When you provide a `--schema-file`, the runner guarantees perfect schema compliance:
 
 ```bash
 uv run llm_runner.py \
   --input-file sentiment-input.json \
   --output-file sentiment-output.json \
-  --schema-file sentiment-schema.json \
-  --log-level INFO
+  --schema-file sentiment-schema.json
 ```
 
-### Supported Schema Features
-
-✅ **String Constraints**: `enum`, `minLength`, `maxLength`, `pattern`  
-✅ **Numeric Constraints**: `minimum`, `maximum`, `multipleOf`  
-✅ **Array Constraints**: `minItems`, `maxItems`, `items` type  
-✅ **Required Fields**: Enforced at generation time  
-✅ **Type Validation**: `string`, `number`, `integer`, `boolean`, `array`  
-✅ **Enum Validation**: Strict enum compliance  
-
-Basically all [Pydantic](https://docs.pydantic.dev/latest/concepts/schema_validation/) schema features are supported.
-
-### Example: Sentiment Analysis
-
-**Input** (`sentiment-input.json`):
-```json
-{
-  "messages": [
-    {
-      "role": "system",
-      "content": "You are a sentiment analysis assistant."
-    },
-    {
-      "role": "user",
-      "content": "Analyze: 'I love this new feature! It works perfectly but documentation could be better.'"
-    }
-  ]
-}
-```
-
-**Output** (guaranteed schema compliance):
-```json
-{
-  "success": true,
-  "response": {
-    "sentiment": "positive",
-    "confidence": 0.85,
-    "key_points": [
-      "Love for new feature",
-      "Works perfectly", 
-      "Documentation needs improvement"
-    ],
-    "summary": "User loves the feature's functionality but wants better documentation."
-  }
-}
-```
-
-**🎯 Key Benefits:**
-- **No Schema Violations**: 100% guaranteed compliance
-- **Production Ready**: Eliminates validation errors in CI/CD
-- **Dynamic**: Works with any JSON schema
-- **Comprehensive**: Supports all standard JSON schema features
-
-## Output Format
-
-The script always outputs JSON with the following structure:
-
-### Text Output (No Schema)
-```json
-{
-  "success": true,
-  "response": "LLM response content here",
-  "metadata": {
-    "runner": "llm_runner.py",
-    "timestamp": "auto-generated"
-  }
-}
-```
-
-### Structured Output (With Schema)
-```json
-{
-  "success": true,
-  "response": {
-    "field1": "value1",
-    "field2": 42,
-    "field3": ["item1", "item2"]
-  },
-  "metadata": {
-    "runner": "llm_runner.py",
-    "timestamp": "auto-generated"
-  }
-}
-```
-
-**Key Points:**
-- `success`: Always `true` for successful executions
-- `response`: Contains either text string or structured object based on schema
-- `metadata`: Runner information and timestamp
-- **Schema enforcement**: When using `--schema-file`, `response` is guaranteed to match the schema exactly
+**Supported Schema Features**:
+✅ String constraints (enum, minLength, maxLength, pattern)  
+✅ Numeric constraints (minimum, maximum, multipleOf)  
+✅ Array constraints (minItems, maxItems, items type)  
+✅ Required fields enforced at generation time  
+✅ Type validation (string, number, integer, boolean, array)  
 
 ## CI/CD Integration
 
-### GitHub Actions
+### GitHub Actions Example
 
 ```yaml
-- name: Install UV
-  run: curl -LsSf https://astral.sh/uv/install.sh | sh
-  
 - name: Generate PR Review with Schema Enforcement
   run: |
     uv run llm_runner.py \
       --input-file .github/pr-context.json \
       --output-file pr-review.json \
-      --schema-file .github/pr-review-schema.json \
-      --log-level INFO
+      --schema-file .github/pr-review-schema.json
   env:
     AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
-
-- name: Process Structured Results
-  run: |
-    # Extract specific fields from guaranteed schema-compliant output
-    RISK_LEVEL=$(jq -r '.response.risk_level' pr-review.json)
-    ISSUES_COUNT=$(jq -r '.response.issues | length' pr-review.json)
-    echo "Risk Level: $RISK_LEVEL"
-    echo "Issues Found: $ISSUES_COUNT"
 ```
 
-### Azure DevOps
-
-```yaml
-- script: |
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-  displayName: 'Install UV'
-  
-- script: |
-    uv run llm_runner.py \
-      --input-file $(Build.SourcesDirectory)/context.json \
-      --output-file $(Build.ArtifactStagingDirectory)/result.json
-  displayName: 'Run LLM Task'
-  env:
-    AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
-    AZURE_OPENAI_MODEL: $(AZURE_OPENAI_MODEL)
-```
+For complete CI/CD examples, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)**.
 
 ## Authentication
 
-The script uses Azure's `DefaultAzureCredential` which supports multiple authentication methods:
+Uses Azure's `DefaultAzureCredential` supporting:
+- Environment variables (local development)
+- Managed Identity (recommended for Azure CI/CD)
+- Azure CLI (local development)
+- Service Principal (non-Azure CI/CD)
 
-1. **Environment variables** (for local development)
-2. **Managed Identity** (recommended for Azure-hosted CI/CD)
-3. **Azure CLI** (for local development)
-4. **Service Principal** (for non-Azure CI/CD)
+## Testing
 
-### Required Azure Permissions
-
-Your identity needs the following permissions on the Azure OpenAI resource:
-- `Cognitive Services OpenAI User` role
-- Or custom role with `Microsoft.CognitiveServices/accounts/OpenAI/*/read` and `Microsoft.CognitiveServices/accounts/OpenAI/*/action` permissions
-
-## Error Handling
-
-The script uses **simple error handling**:
-- ✅ All errors logged to `stderr`
-- ✅ Standard Python exceptions (no custom exit codes)
-- ✅ CI/CD can use `failOnStdErr` to detect failures
-- ✅ Natural failures when input is malformed
-
-## CI/CD Pipeline
-
-Our project uses GitHub Actions with UV for fast, reliable CI/CD:
-
-### Automated Checks
-
-Every push and pull request triggers:
-
-- **🧹 Linting**: Ruff code formatting and style checks
-- **🔍 Type Checking**: MyPy static type analysis  
-- **🧪 Unit Tests**: 69 tests with 100% coverage (unit tests only)
-- **🔒 Security**: Dependency vulnerability scanning and secret detection
-
-### Pipeline Features
-
-- **⚡ Fast**: UV caching and parallel job execution
-- **🔒 Secure**: Locked dependencies with `uv sync --frozen`
-- **📊 Detailed**: JUnit XML test reports with artifact uploads
-- **🛡️ Safe**: Auto-mocked API keys prevent accidental real calls
-
-### Local Development
-
-```bash
-# Run the same checks locally
-uv sync --group dev
-uv run ruff check .
-uv run ruff format .
-uv run mypy llm_runner.py
-uv run pytest tests/unit/ -v
-```
-
-## Development
-
-### Running Tests
-
-We maintain a comprehensive test suite with **100% coverage** across all functionality:
+We maintain comprehensive test coverage with **100% success rate**:
 
 ```bash
 # Install development dependencies
 uv sync --group dev
 
-# Run all unit tests (69 tests with 100% success rate!)
-uv run pytest tests/unit/ -v
-
-# Run integration tests
-uv run pytest tests/integration/ -v
-
-# Run acceptance tests (includes LLM-as-judge evaluation)
-uv run pytest acceptance/ -v
-
 # Run all tests
 uv run pytest tests/ acceptance/ -v
 
-# Run with coverage report
-uv run pytest tests/ --cov=llm_runner --cov-report=html
-
 # Run specific test categories
-uv run pytest tests/unit/test_schema_functions.py -v          # Schema handling
-uv run pytest tests/unit/test_semantic_kernel_functions.py -v # Kernel integration  
-uv run pytest tests/unit/test_input_output_functions.py -v    # File I/O
-uv run pytest tests/integration/test_examples_integration.py -v # End-to-end examples
+uv run pytest tests/unit/ -v          # 69 unit tests
+uv run pytest tests/integration/ -v   # End-to-end examples
+uv run pytest acceptance/ -v          # LLM-as-judge evaluation
 ```
-
-#### Test Structure
-
-Our test suite follows industry best practices:
-
-- **📁 tests/unit/**: 69 unit tests with heavy mocking (100% pass rate)
-  - `test_schema_functions.py`: JSON schema → Pydantic model conversion
-  - `test_semantic_kernel_functions.py`: Azure OpenAI integration & ChatHistory
-  - `test_input_output_functions.py`: File I/O, CLI parsing, output generation
-  - `test_setup_and_utility_functions.py`: Logging, main function, error handling
-
-- **📁 tests/integration/**: End-to-end pipeline testing with realistic mocks
-  - `test_examples_integration.py`: All example files with mocked LLM responses
-  - `test_cli_interface.py`: Command-line interface testing via subprocess
-
-- **📁 acceptance/**: Production-quality evaluation
-  - `llm_as_judge_acceptance_test.py`: LLM-as-judge pattern for response quality
-
-#### Mock Strategy
-
-We use **realistic mocks** based on actual API responses:
-- `tests/mock_factory.py`: Factory functions for ChatMessageContent mocks
-- Captured from real Azure OpenAI API calls during development
-- Includes proper inner_content structure, metadata, and usage statistics
-
-#### Test Features
-
-✅ **Given-When-Then Pattern**: All tests follow this clear structure  
-✅ **Realistic Mocks**: Based on actual API response structures  
-✅ **Comprehensive Coverage**: Every function and error path tested  
-✅ **Retry Logic Testing**: Tenacity decorator behavior validation  
-✅ **Schema Enforcement**: KernelBaseModel integration testing  
-✅ **CLI Interface**: Subprocess testing for actual command-line behavior  
-
-```bash
-# Run with different log levels for debugging
-uv run llm_runner.py --input-file examples/simple-example.json --output-file test-output.json --log-level DEBUG
-
-# Run linting and formatting
-uv run ruff check .
-uv run ruff format .
-uv run mypy llm_runner.py
-```
-
-### Extending the Script
-
-The script follows **KISS principles**:
-- Easy to understand and modify
-- Minimal dependencies
-- Clear separation of concerns
-- Non-expert friendly
-
-Key extension points:
-- `create_dynamic_model_from_schema()`: Extend JSON schema → Pydantic model conversion
-- `_convert_json_schema_field()`: Add support for custom JSON schema types
-- `execute_llm_task()`: Modify LLM execution logic
-- Exception classes: Add custom error types (`SchemaValidationError`, etc.)
 
 ## Use Cases
 
 ### Automated Code Review with Structured Output
-Generate detailed code reviews with **guaranteed schema compliance** for CI/CD integration:
-```json
-{
-  "risk_level": "medium",
-  "issues_found": 3,
-  "security_concerns": ["potential XSS vulnerability"],
-  "recommendations": ["add input validation", "use parameterized queries"],
-  "approval_status": "requires_changes"
-}
-```
+Generate detailed code reviews with **guaranteed schema compliance** for CI/CD integration.
 
-### Changelog Generation with Schema Enforcement
-Automatically create changelog entries with consistent structure:
-```json
-{
-  "version": "1.2.0",
-  "release_date": "2024-01-15",
-  "changes": {
-    "features": ["new authentication system"],
-    "bugfixes": ["fixed memory leak in parser"],
-    "breaking_changes": []
-  }
-}
-```
+### Security Analysis with Structured Results
+Analyze code changes for potential security vulnerabilities with structured findings.
 
 ### Documentation Updates
 Generate or update documentation based on code changes.
 
 ### Release Notes with Structured Metadata
-Create formatted release notes with guaranteed schema compliance for automated processing.
+Create formatted release notes with guaranteed schema compliance.
 
-### Security Analysis with Structured Results
-Analyze code changes for potential security vulnerabilities with structured findings that can be processed by security tools and dashboards.
+For detailed examples of each use case, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)**.
 
 ## Architecture
 
 Built on **Microsoft Semantic Kernel** for:
 - Enterprise-ready Azure OpenAI integration
 - Future-proof model compatibility
-- Extensible plugin system
 - **100% Schema Enforcement**: KernelBaseModel integration with token-level constraints
 - **Dynamic Model Creation**: Runtime JSON schema → Pydantic model conversion
 
