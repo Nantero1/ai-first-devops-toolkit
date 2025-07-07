@@ -315,12 +315,26 @@ MIT License - See [LICENSE](LICENSE) file for details. Copyright (c) 2025, Benja
 
 ## Support
 
-For issues and questions:
-1. Check the examples in the `examples/` directory
-2. Review the error logs (beautiful output with Rich!)
-3. Validate your Azure authentication and permissions
-4. Ensure your input JSON follows the required format
-5. Open an issue on GitHub as a last resort, don't expect a response fast. But I'll try to help you out.
+**🐛 Found a bug? 💡 Have a question? 📚 Need help?**
+
+**GitHub is your primary destination for all support:**
+
+- **📋 Issues & Bug Reports**: [Create an issue](https://github.com/Nantero1/ai-first-devops-toolkit/issues)
+- **📖 Documentation**: [Browse examples](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)uv s
+- **🔧 Source Code**: [View source](https://github.com/Nantero1/ai-first-devops-toolkit)
+
+**Before opening an issue, please:**
+1. ✅ Check the [examples/](examples/) directory for solutions
+2. ✅ Review the error logs (beautiful output with Rich!)
+3. ✅ Validate your Azure authentication and permissions
+4. ✅ Ensure your input JSON follows the required format
+5. ✅ Search existing [issues](https://github.com/Nantero1/ai-first-devops-toolkit/issues) for similar problems
+
+**Quick Links:**
+- 🚀 [Getting Started Guide](https://github.com/Nantero1/ai-first-devops-toolkit#quick-start)
+- 📚 [Complete Examples](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)
+- 🔧 [CI/CD Integration](https://github.com/Nantero1/ai-first-devops-toolkit#cicd-integration)
+- 🎯 [Use Cases](https://github.com/Nantero1/ai-first-devops-toolkit#use-cases)
 
 ---
 

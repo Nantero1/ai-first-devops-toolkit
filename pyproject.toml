@@ -3,6 +3,7 @@ name = "llm-ci-runner"
 version = "1.0.1"
 description = "A simple CI/CD utility for running LLM tasks with Semantic Kernel"
 readme = "README.md"
+license = {text = "MIT"}
 authors = [
     {name = "Benjamin Linnik", email = "Benjamin@Linnik.IT"},
 ]
@@ -34,11 +35,13 @@ classifiers = [
 ]
 keywords = ["llm", "ai", "devops", "ci-cd", "semantic-kernel", "azure-openai", "automation"]
 
-[metadata]
+[project.urls]
 Homepage = "https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html"
 Repository = "https://github.com/Nantero1/ai-first-devops-toolkit"
 Documentation = "https://github.com/Nantero1/ai-first-devops-toolkit"
-Project-URL = {Homepage = "https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html", Repository = "https://github.com/Nantero1/ai-first-devops-toolkit", Documentation = "https://github.com/Nantero1/ai-first-devops-toolkit"}
+"Bug Tracker" = "https://github.com/Nantero1/ai-first-devops-toolkit/issues"
+Source = "https://github.com/Nantero1/ai-first-devops-toolkit"
+Changelog = "https://github.com/Nantero1/ai-first-devops-toolkit/releases"
 
 [build-system]
 requires = ["hatchling"]
