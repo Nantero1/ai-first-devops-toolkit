@@ -206,6 +206,7 @@ def setup_logging(log_level: str) -> logging.Logger:
         logging.getLogger("azure.core.pipeline.transport").setLevel(logging.WARNING)
         logging.getLogger("azure.identity").setLevel(logging.WARNING)
         logging.getLogger("azure.core.pipeline").setLevel(logging.WARNING)
+        logging.getLogger("httpx").setLevel(logging.WARNING)
         # Suppress Semantic Kernel HTTP logs
         logging.getLogger("semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion").setLevel(
             logging.WARNING
@@ -359,7 +360,7 @@ def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
     return chat_history
 
 
-async def setup_azure_service() -> AzureChatCompletion:
+async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCredential | None]:
     """
     Setup Azure OpenAI service with dual authentication support.
 
@@ -370,11 +371,8 @@ async def setup_azure_service() -> AzureChatCompletion:
     This provides flexibility for different deployment scenarios while maintaining
     security best practices by defaulting to RBAC authentication.
 
-    Args:
-        logger: Logger instance
-
     Returns:
-        Configured AzureChatCompletion service
+        Tuple of (configured AzureChatCompletion service, credential or None)
 
     Raises:
         AuthenticationError: If Azure authentication fails
@@ -407,23 +405,37 @@ async def setup_azure_service() -> AzureChatCompletion:
                 api_version=api_version,
             )
             LOGGER.info("✅ Azure OpenAI service configured successfully (API Key)")
-            return service
+            return service, None
 
         # Fallback to RBAC authentication
         LOGGER.info("🔐 Using Azure RBAC authentication")
         # Setup async Azure credential
         credential = DefaultAzureCredential()
 
+        # Define a callable token provider with better error handling
+        async def token_provider(scopes: list[str] | None = None) -> str:
+            if scopes is None:
+                scopes = ["https://cognitiveservices.azure.com/.default"]
+            try:
+                # Azure credential handles its own HTTP requests internally
+                token = await credential.get_token(*scopes)
+                LOGGER.debug(f"✅ Token acquired successfully, expires: {token.expires_on}")
+                return token.token
+            except Exception as e:
+                LOGGER.error(f"❌ Failed to acquire Azure token: {e}")
+                LOGGER.info("💡 Ensure you're logged in with 'az login' or have proper managed identity permissions")
+                raise AuthenticationError(f"Azure token acquisition failed: {e}") from e
+
         # Create Azure ChatCompletion service
         service = AzureChatCompletion(
             deployment_name=model,
             endpoint=endpoint,
-            ad_token_provider=credential.get_token,  # type: ignore[arg-type]
+            ad_token_provider=token_provider,
             api_version=api_version,
         )
 
         LOGGER.info("✅ Azure OpenAI service configured successfully")
-        return service
+        return service, credential
 
     except ClientAuthenticationError as e:
         raise AuthenticationError(f"Azure authentication failed: {e}") from e
@@ -658,6 +670,7 @@ async def main() -> None:
 
     Orchestrates the entire pipeline from input parsing to output generation.
     """
+    credential = None
     try:
         # Parse CLI arguments
         args = parse_arguments()
@@ -674,7 +687,7 @@ async def main() -> None:
 
         # Setup Azure OpenAI service
         LOGGER.info("🔐 Authenticating with Azure...")
-        service = await setup_azure_service()
+        service, credential = await setup_azure_service()
 
         # Load JSON schema and convert to dynamic Pydantic model if provided
         schema_model = load_json_schema(args.schema_file)
@@ -709,6 +722,16 @@ async def main() -> None:
         # Unexpected error - log with full traceback
         LOGGER.critical(f"💥 Unexpected error: {e}", exc_info=True)
         sys.exit(1)
+
+    finally:
+        # Properly close Azure credential to prevent unclosed client session warnings
+        if credential is not None:
+            try:
+                await credential.close()
+                LOGGER.debug("🔒 Azure credential closed successfully")
+            except Exception as e:
+                LOGGER.debug(f"Warning: Failed to close Azure credential: {e}")
+                # Don't raise - this is cleanup, not critical
 
 
 if __name__ == "__main__":

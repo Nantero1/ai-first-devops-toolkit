@@ -233,7 +233,7 @@ class TestMainFunction:
 
             mock_load_input.return_value = {"messages": [{"role": "user", "content": "test"}]}
             mock_create_history.return_value = Mock()
-            mock_setup_azure.return_value = Mock()
+            mock_setup_azure.return_value = (Mock(), Mock())  # Return tuple (service, credential)
             mock_load_schema.return_value = None
             mock_execute.return_value = "Test response"
 

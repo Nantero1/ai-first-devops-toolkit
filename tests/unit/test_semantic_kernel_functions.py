@@ -125,13 +125,14 @@ class TestSetupAzureService:
         # Environment variables are already set by fixture
 
         # when
-        result = await setup_azure_service()
+        service, credential = await setup_azure_service()
 
         # then
-        assert result is not None
+        assert service is not None
+        assert credential is None  # API key auth doesn't return a credential
         # The mock_azure_chat_completion fixture already patches AzureChatCompletion
         # and returns the mock service instance, so we just need to verify result
-        assert result == mock_azure_chat_completion
+        assert service == mock_azure_chat_completion
 
     @pytest.mark.asyncio
     async def test_setup_azure_service_with_rbac_auth(self, mock_azure_chat_completion):
@@ -149,12 +150,13 @@ class TestSetupAzureService:
         ):
             # when
             with patch("llm_runner.DefaultAzureCredential") as mock_credential:
-                result = await setup_azure_service()
+                service, credential = await setup_azure_service()
 
         # then
-        assert result is not None
+        assert service is not None
+        assert credential is not None  # RBAC auth returns a credential
         mock_credential.assert_called_once()
-        assert result == mock_azure_chat_completion
+        assert service == mock_azure_chat_completion
 
     @pytest.mark.asyncio
     async def test_setup_azure_service_without_endpoint_raises_error(self):
