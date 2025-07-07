@@ -9,9 +9,7 @@ A basic example demonstrating text-only LLM interaction without structured outpu
 ## Usage
 ```bash
 uv run llm_runner.py \
-  --input-file examples/01-basic/simple-chat/input.json \
-  --output-file result.json \
-  --log-level INFO
+  --input-file examples/01-basic/simple-chat/input.json
 ```
 
 ![Simple chat example](./output.png)

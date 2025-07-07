@@ -60,9 +60,7 @@ class ExampleTestFramework:
     """Core framework for running and validating examples."""
 
     @staticmethod
-    def run_example(
-        llm_runner_path: Path, input_file: Path, output_file: Path
-    ) -> ExampleTestResult:
+    def run_example(llm_runner_path: Path, input_file: Path, output_file: Path) -> ExampleTestResult:
         """Run example without schema enforcement."""
         try:
             cmd = [
@@ -195,15 +193,9 @@ def validate_schema_compliance(output: Dict, schema_file: Path) -> bool:
 
                 # Check array constraints
                 if isinstance(value, list):
-                    if (
-                        "minItems" in field_schema
-                        and len(value) < field_schema["minItems"]
-                    ):
+                    if "minItems" in field_schema and len(value) < field_schema["minItems"]:
                         return False
-                    if (
-                        "maxItems" in field_schema
-                        and len(value) > field_schema["maxItems"]
-                    ):
+                    if "maxItems" in field_schema and len(value) > field_schema["maxItems"]:
                         return False
 
         return True
@@ -224,9 +216,7 @@ class TestExamples:
 def generate_example_tests():
     """Generate test functions for discovered examples."""
 
-    def create_test_function(
-        input_file: Path, schema_file: Optional[Path], example_name: str
-    ):
+    def create_test_function(input_file: Path, schema_file: Optional[Path], example_name: str):
         """Create a test function for a specific example."""
 
         def test_example(temp_output_dir, llm_runner_path, examples_dir):
@@ -240,26 +230,20 @@ def generate_example_tests():
                     llm_runner_path, input_file, output_file, schema_file
                 )
             else:
-                result = ExampleTestFramework.run_example(
-                    llm_runner_path, input_file, output_file
-                )
+                result = ExampleTestFramework.run_example(llm_runner_path, input_file, output_file)
 
             # then
             assert result.success, f"{example_name} failed: {result.error}"
             assert result.output is not None, f"{example_name}: No output generated"
-            assert validate_basic_output(
-                result.output
-            ), f"{example_name}: Invalid output structure"
+            assert validate_basic_output(result.output), f"{example_name}: Invalid output structure"
 
             if schema_file and schema_file.exists():
-                assert validate_schema_compliance(
-                    result.output, schema_file
-                ), f"{example_name}: Schema validation failed"
+                assert validate_schema_compliance(result.output, schema_file), (
+                    f"{example_name}: Schema validation failed"
+                )
 
         # Set the test function name and docstring
-        test_example.__name__ = (
-            f"test_{example_name.lower().replace('-', '_').replace(' ', '_')}"
-        )
+        test_example.__name__ = f"test_{example_name.lower().replace('-', '_').replace(' ', '_')}"
         test_example.__doc__ = f"Test {example_name} example"
 
         return test_example
@@ -295,13 +279,9 @@ def test_example_files_exist(examples_dir):
     discovered = discover_examples(examples_dir)
 
     for input_file, schema_file, example_name in discovered:
-        assert (
-            input_file.exists()
-        ), f"Input file for {example_name} does not exist: {input_file}"
+        assert input_file.exists(), f"Input file for {example_name} does not exist: {input_file}"
         if schema_file:
-            assert (
-                schema_file.exists()
-            ), f"Schema file for {example_name} does not exist: {schema_file}"
+            assert schema_file.exists(), f"Schema file for {example_name} does not exist: {schema_file}"
 
 
 if __name__ == "__main__":

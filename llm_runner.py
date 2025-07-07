@@ -198,6 +198,18 @@ def setup_logging(log_level: str) -> logging.Logger:
         ],
     )
 
+    # Suppress HTTP request logs from Azure libraries unless in DEBUG mode
+    if log_level.upper() != "DEBUG":
+        # Suppress HTTP request logs from Azure client libraries
+        logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
+        logging.getLogger("azure.core.pipeline.transport").setLevel(logging.WARNING)
+        logging.getLogger("azure.identity").setLevel(logging.WARNING)
+        logging.getLogger("azure.core.pipeline").setLevel(logging.WARNING)
+        # Suppress Semantic Kernel HTTP logs
+        logging.getLogger("semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion").setLevel(
+            logging.WARNING
+        )
+
     LOGGER.info(f"[bold green]🚀 LLM Runner initialized with log level: {log_level.upper()}[/bold green]")
     return LOGGER
 
@@ -214,14 +226,17 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Basic usage
-    python llm_runner.py --input-file input.json --output-file result.json
+    # Basic usage (output defaults to result.json)
+    python llm_runner.py --input-file input.json
 
     # With structured output schema
-    python llm_runner.py --input-file input.json --output-file result.json --schema-file schema.json
+    python llm_runner.py --input-file input.json --schema-file schema.json
+
+    # With custom output file
+    python llm_runner.py --input-file input.json --output-file custom-output.json
 
     # With debug logging
-    python llm_runner.py --input-file input.json --output-file result.json --log-level DEBUG
+    python llm_runner.py --input-file input.json --log-level DEBUG
 
 Environment Variables:
     AZURE_OPENAI_ENDPOINT    Azure OpenAI endpoint URL
@@ -239,9 +254,9 @@ Environment Variables:
 
     parser.add_argument(
         "--output-file",
-        required=True,
         type=Path,
-        help="Output file for LLM response (JSON format)",
+        default=Path("result.json"),
+        help="Output file for LLM response (JSON format, default: result.json)",
     )
 
     parser.add_argument(

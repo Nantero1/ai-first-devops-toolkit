@@ -20,7 +20,7 @@
 ### Simple structured output example
 
 ```bash
-uv run llm_runner.py --input-file examples/02-devops/pr-description/input.json --output-file result.json --schema-file examples/02-devops/pr-description/schema.json --log-level INFO
+uv run llm_runner.py --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
 ```
 ![Structured output of the PR review example](./examples/02-devops/pr-description/output.png)
 
@@ -54,8 +54,11 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 # Install UV if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install dependencies (will use system Python)
-uv sync
+# install python (optional)
+uv python install 3.12
+
+# Install dependencies (will use pre-installed Python)
+uv sync --frozen
 ```
 
 ### 2. Set Environment Variables
@@ -74,10 +77,8 @@ Otherwise, you can specify the API key in the environment variable `AZURE_OPENAI
 
 ```bash
 # Run directly with UV (recommended for CI/CD)
-uv run llm_runner.py \
-  --input-file examples/01-basic/simple-chat/input.json \
-  --output-file result.json \
-  --log-level INFO
+uv run --frozen llm_runner.py \
+  --input-file examples/01-basic/simple-chat/input.json
 ```
 
 ## Real-World Examples
@@ -122,9 +123,10 @@ When you provide a `--schema-file`, the runner guarantees perfect schema complia
 ```bash
 uv run llm_runner.py \
   --input-file examples/01-basic/sentiment-analysis/input.json \
-  --output-file result.json \
   --schema-file examples/01-basic/sentiment-analysis/schema.json
 ```
+
+**Note**: Output defaults to `result.json`. Use `--output-file custom-name.json` for custom output files.
 
 **Supported Schema Features**:
 ✅ String constraints (enum, minLength, maxLength, pattern)  
@@ -142,7 +144,6 @@ uv run llm_runner.py \
   run: |
     uv run --frozen llm_runner.py \
       --input-file examples/02-devops/pr-description/input.json \
-      --output-file result.json \
       --schema-file examples/02-devops/pr-description/schema.json \
       --log-level WARNING
   env:
@@ -165,11 +166,8 @@ Uses Azure's `DefaultAzureCredential` supporting:
 We maintain comprehensive test coverage with **100% success rate**:
 
 ```bash
-# Install development dependencies
+# Install development dependencies, without frozen to be up to date
 uv sync --group dev
-
-# Run all tests
-uv run pytest tests/ acceptance/ -v
 
 # Run specific test categories
 uv run pytest tests/unit/ -v          # 69 unit tests
@@ -215,7 +213,7 @@ This toolkit is your first step toward [AI-First DevOps](https://technologyworkr
 
 ## License
 
-MIT License - See LICENSE file for details.
+MIT License - See [LICENSE](LICENSE) file for details. Copyright (c) 2025, Benjamin Linnik.
 
 ## Support
 
