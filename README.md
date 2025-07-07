@@ -1,7 +1,7 @@
 # AI-First DevOps Toolkit: LLM-Powered CI/CD Automation
 
 > **🚀 The Future of DevOps is AI-First**  
-> This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read the blog post for more details on the motivation.
+> This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on the motivation.
 
 ## TLDR: What This Tool Does
 
@@ -15,8 +15,14 @@
 - 🚀 **Autonomous Development**: Enable AI agents to make decisions in your pipelines
 - 🎯 **JIRA Ticket Updates**: Update JIRA tickets based on LLM output
 - 🔗 **Unlimited Integration Possibilities**: Chain it multiple times and use as intelligent glue in your tool stack
-
 ---
+
+### Simple structured output example
+
+```bash
+uv run llm_runner.py --input-file examples/pr-review-example.json --output-file test-structured-output.json --schema-file examples/pr-description-schema.json --log-level INFO
+```
+![Structured output of the PR review example](./examples/pr-review-output.png)
 
 ## The AI-First Development Revolution
 
@@ -214,6 +220,7 @@ For issues and questions:
 2. Review the error logs (beautiful output with Rich!)
 3. Validate your Azure authentication and permissions
 4. Ensure your input JSON follows the required format
+5. Open an issue on GitHub as a last resort, don't expect a response fast. But I'll try to help you out.
 
 ---
 
