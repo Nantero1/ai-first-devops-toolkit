@@ -1,0 +1,313 @@
+{
+    "type": "object",
+    "properties": {
+        "project_overview": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "Project title"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Brief project description"
+                },
+                "ai_first_principles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 3,
+                    "maxItems": 8,
+                    "description": "AI-first principles this project embodies"
+                },
+                "expected_productivity_gain": {
+                    "type": "string",
+                    "enum": [
+                        "2x",
+                        "5x",
+                        "10x",
+                        "exponential"
+                    ],
+                    "description": "Expected productivity improvement"
+                }
+            },
+            "required": [
+                "title",
+                "description",
+                "ai_first_principles",
+                "expected_productivity_gain"
+            ]
+        },
+        "architecture": {
+            "type": "object",
+            "properties": {
+                "system_design": {
+                    "type": "string",
+                    "description": "High-level system architecture"
+                },
+                "components": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "purpose": {
+                                "type": "string"
+                            },
+                            "ai_integration": {
+                                "type": "string"
+                            },
+                            "autonomy_level": {
+                                "type": "string",
+                                "enum": [
+                                    "assisted",
+                                    "semi_autonomous",
+                                    "fully_autonomous"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "purpose",
+                            "ai_integration",
+                            "autonomy_level"
+                        ]
+                    },
+                    "minItems": 3,
+                    "description": "System components and their AI integration"
+                },
+                "data_flow": {
+                    "type": "string",
+                    "description": "How data flows through the AI-first system"
+                }
+            },
+            "required": [
+                "system_design",
+                "components",
+                "data_flow"
+            ]
+        },
+        "implementation_plan": {
+            "type": "object",
+            "properties": {
+                "phases": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "phase": {
+                                "type": "string",
+                                "enum": [
+                                    "foundation",
+                                    "core_features",
+                                    "integration",
+                                    "optimization",
+                                    "deployment"
+                                ]
+                            },
+                            "duration_weeks": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 12
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "deliverables": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "ai_tasks": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "required": [
+                            "phase",
+                            "duration_weeks",
+                            "description",
+                            "deliverables",
+                            "ai_tasks"
+                        ]
+                    },
+                    "minItems": 3,
+                    "description": "Implementation phases"
+                },
+                "critical_path": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Critical path items for project success"
+                }
+            },
+            "required": [
+                "phases",
+                "critical_path"
+            ]
+        },
+        "quality_gates": {
+            "type": "object",
+            "properties": {
+                "automated_validation": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "gate_name": {
+                                "type": "string"
+                            },
+                            "validation_type": {
+                                "type": "string",
+                                "enum": [
+                                    "schema_compliance",
+                                    "llm_as_judge",
+                                    "security_scan",
+                                    "performance_test",
+                                    "integration_test"
+                                ]
+                            },
+                            "threshold": {
+                                "type": "string"
+                            },
+                            "automation_level": {
+                                "type": "string",
+                                "enum": [
+                                    "manual",
+                                    "semi_automated",
+                                    "fully_automated"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "gate_name",
+                            "validation_type",
+                            "threshold",
+                            "automation_level"
+                        ]
+                    },
+                    "minItems": 3,
+                    "description": "Quality gates for validation"
+                },
+                "ai_quality_metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "AI-specific quality metrics to track"
+                }
+            },
+            "required": [
+                "automated_validation",
+                "ai_quality_metrics"
+            ]
+        },
+        "risk_assessment": {
+            "type": "object",
+            "properties": {
+                "risks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "risk": {
+                                "type": "string"
+                            },
+                            "probability": {
+                                "type": "string",
+                                "enum": [
+                                    "low",
+                                    "medium",
+                                    "high",
+                                    "critical"
+                                ]
+                            },
+                            "impact": {
+                                "type": "string",
+                                "enum": [
+                                    "low",
+                                    "medium",
+                                    "high",
+                                    "critical"
+                                ]
+                            },
+                            "mitigation": {
+                                "type": "string"
+                            },
+                            "ai_mitigation": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "risk",
+                            "probability",
+                            "impact",
+                            "mitigation",
+                            "ai_mitigation"
+                        ]
+                    },
+                    "minItems": 3,
+                    "description": "Identified risks and AI-powered mitigation strategies"
+                },
+                "overall_risk_score": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 10,
+                    "description": "Overall project risk score (1-10)"
+                }
+            },
+            "required": [
+                "risks",
+                "overall_risk_score"
+            ]
+        },
+        "success_metrics": {
+            "type": "object",
+            "properties": {
+                "productivity_metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Metrics to measure productivity gains"
+                },
+                "quality_metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Metrics to measure quality improvements"
+                },
+                "ai_efficiency_metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Metrics to measure AI system efficiency"
+                }
+            },
+            "required": [
+                "productivity_metrics",
+                "quality_metrics",
+                "ai_efficiency_metrics"
+            ]
+        }
+    },
+    "required": [
+        "project_overview",
+        "architecture",
+        "implementation_plan",
+        "quality_gates",
+        "risk_assessment",
+        "success_metrics"
+    ],
+    "additionalProperties": false
+}

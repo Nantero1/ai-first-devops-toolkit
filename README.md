@@ -20,9 +20,9 @@
 ### Simple structured output example
 
 ```bash
-uv run llm_runner.py --input-file examples/pr-review-example.json --output-file test-structured-output.json --schema-file examples/pr-description-schema.json --log-level INFO
+uv run llm_runner.py --input-file examples/02-devops/pr-description/input.json --output-file result.json --schema-file examples/02-devops/pr-description/schema.json --log-level INFO
 ```
-![Structured output of the PR review example](./examples/pr-review-output.png)
+![Structured output of the PR review example](./examples/02-devops/pr-description/output.png)
 
 ## The AI-First Development Revolution
 
@@ -75,12 +75,14 @@ Otherwise, you can specify the API key in the environment variable `AZURE_OPENAI
 ```bash
 # Run directly with UV (recommended for CI/CD)
 uv run llm_runner.py \
-  --input-file examples/simple-example.json \
+  --input-file examples/01-basic/simple-chat/input.json \
   --output-file result.json \
   --log-level INFO
 ```
 
 ## Real-World Examples
+
+You can explore the **[examples/](examples/)** directory for a complete collection of self-contained examples organized by category.
 
 For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)** which includes:
 
@@ -119,9 +121,9 @@ When you provide a `--schema-file`, the runner guarantees perfect schema complia
 
 ```bash
 uv run llm_runner.py \
-  --input-file sentiment-input.json \
-  --output-file sentiment-output.json \
-  --schema-file sentiment-schema.json
+  --input-file examples/01-basic/sentiment-analysis/input.json \
+  --output-file result.json \
+  --schema-file examples/01-basic/sentiment-analysis/schema.json
 ```
 
 **Supported Schema Features**:
@@ -138,10 +140,11 @@ uv run llm_runner.py \
 ```yaml
 - name: Generate PR Review with Schema Enforcement
   run: |
-    uv run llm_runner.py \
-      --input-file .github/pr-context.json \
-      --output-file pr-review.json \
-      --schema-file .github/pr-review-schema.json
+    uv run --frozen llm_runner.py \
+      --input-file examples/02-devops/pr-description/input.json \
+      --output-file result.json \
+      --schema-file examples/02-devops/pr-description/schema.json \
+      --log-level WARNING
   env:
     AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
@@ -188,7 +191,7 @@ Generate or update documentation based on code changes.
 ### Release Notes with Structured Metadata
 Create formatted release notes with guaranteed schema compliance.
 
-For detailed examples of each use case, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)**.
+For detailed examples of each use case, see **[examples/](examples/)**.
 
 ## Architecture
 
@@ -197,6 +200,7 @@ Built on **Microsoft Semantic Kernel** for:
 - Future-proof model compatibility
 - **100% Schema Enforcement**: KernelBaseModel integration with token-level constraints
 - **Dynamic Model Creation**: Runtime JSON schema → Pydantic model conversion
+- **RBAC**: Azure RBAC via DefaultAzureCredential
 
 ## The AI-First Development Journey
 

@@ -1,0 +1,21 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an expert AI-first development architect. Create comprehensive development plans that embody the principles of autonomous development, vibe coding, and AI-first DevOps. Focus on natural language to implementation workflows, quality gates, and exponential productivity gains."
+        },
+        {
+            "role": "user",
+            "content": "Create a comprehensive development plan for building an AI-first DevOps pipeline that automatically generates PR descriptions, performs security analysis, and creates changelogs. The system should integrate with GitHub Actions, use LLM-as-judge for quality validation, and support multiple AI models. Include architecture decisions, implementation tasks, testing strategy, and risk assessment. Focus on the AI-first principles of autonomous operation and exponential productivity gains."
+        }
+    ],
+    "context": {
+        "session_id": "ai-first-devops-plan-001",
+        "metadata": {
+            "task_type": "autonomous_development_planning",
+            "domain": "ai_first_devops",
+            "complexity": "high",
+            "inspiration": "Building AI-First DevOps blog article"
+        }
+    }
+}

@@ -1,0 +1,21 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are a technical writer. Generate professional changelog entries from commit history, categorizing changes by type and impact."
+        },
+        {
+            "role": "user",
+            "content": "Generate a changelog for version 2.1.0 with the following commits:\n\n- feat: Add user authentication system with OAuth2 support\n- fix: Resolve SQL injection vulnerability in login endpoint\n- docs: Update API documentation with new endpoints\n- feat: Implement real-time notifications using WebSockets\n- fix: Handle edge case in password validation\n- breaking: Remove deprecated /api/v1 endpoints\n- feat: Add comprehensive logging and monitoring\n- perf: Optimize database queries for user search\n- docs: Add deployment guide for production environments\n- feat: Implement automated backup system\n\nCategorize as: features, bugfixes, breaking_changes, improvements, documentation, deprecations."
+        }
+    ],
+    "context": {
+        "session_id": "changelog-gen-001",
+        "metadata": {
+            "task_type": "changelog_generation",
+            "domain": "documentation",
+            "version": "2.1.0",
+            "release_date": "2025-01-07"
+        }
+    }
+}
