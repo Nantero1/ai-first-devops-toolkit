@@ -56,6 +56,7 @@ from json_schema_to_pydantic import create_model as create_model_from_schema  # 
 # Rich imports for beautiful console output
 from rich.console import Console
 from rich.logging import RichHandler
+from rich.panel import Panel
 from rich.traceback import install as install_rich_traceback
 
 # Semantic Kernel imports
@@ -564,6 +565,18 @@ async def execute_llm_task(
                 LOGGER.info("✅ LLM task completed with 100% schema-enforced output")
                 LOGGER.debug(f"📄 Structured response with {len(parsed_response)} fields")
                 LOGGER.debug(f"   Fields: {list(parsed_response.keys())}")
+
+                # Pretty print structured output with Rich
+                CONSOLE.print("\n[bold cyan]🤖 LLM Response (Structured)[/bold cyan]")
+                CONSOLE.print(
+                    Panel(
+                        json.dumps(parsed_response, indent=2, ensure_ascii=False),
+                        title="📋 Structured Output",
+                        style="cyan",
+                        border_style="cyan",
+                    )
+                )
+
                 return parsed_response  # type: ignore[no-any-return]
             except json.JSONDecodeError as e:
                 # This should never happen with proper structured output enforcement
@@ -572,6 +585,11 @@ async def execute_llm_task(
         # Text output mode
         LOGGER.info("✅ LLM task completed successfully")
         LOGGER.debug(f"📄 Response length: {len(response)} characters")
+
+        # Pretty print text output with Rich
+        CONSOLE.print("\n[bold green]🤖 LLM Response (Text)[/bold green]")
+        CONSOLE.print(Panel(response, title="📝 Text Output", style="green", border_style="green"))
+
         return response
 
     except LLMExecutionError:
