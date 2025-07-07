@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# AI-First DevOps Toolkit – Created by Benjamin Linnik (https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html)
 """
 LLM Runner - A simple CI/CD utility for running LLM tasks with Semantic Kernel
 
