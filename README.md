@@ -26,7 +26,7 @@
 pip install llm-ci-runner
 llm-ci-runner --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
 ```
-![Structured output of the PR review example](./examples/02-devops/pr-description/output.png)
+![Structured output of the PR review example](https://github.com/Nantero1/ai-first-devops-toolkit/raw/main/examples/02-devops/pr-description/output.png)
 
 ## The AI-First Development Revolution
 
@@ -115,9 +115,9 @@ uv run llm_ci_runner.py --input-file examples/01-basic/simple-chat/input.json
 
 ## Real-World Examples
 
-You can explore the **[examples/](examples/)** directory for a complete collection of self-contained examples organized by category.
+You can explore the **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)** for a complete collection of self-contained examples organized by category.
 
-For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)** which includes:
+For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)** which includes:
 
 - 🔄 **Automated PR Description Updates**: Generate comprehensive PR descriptions from commit messages and code changes
 - 🔒 **Security Analysis with LLM-as-Judge**: Analyze code changes for vulnerabilities with guaranteed schema compliance
@@ -209,7 +209,7 @@ llm-ci-runner \
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
 ```
 
-For complete CI/CD examples, see **[examples/uv-usage-example.md](examples/uv-usage-example.md)**.
+For complete CI/CD examples, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**.
 
 ## Authentication
 
@@ -287,7 +287,7 @@ Generate or update documentation based on code changes.
 ### Release Notes with Structured Metadata
 Create formatted release notes with guaranteed schema compliance.
 
-For detailed examples of each use case, see **[examples/](examples/)**.
+For detailed examples of each use case, see **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)**.
 
 ## Architecture
 
@@ -311,7 +311,7 @@ This toolkit is your first step toward [AI-First DevOps](https://technologyworkr
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file for details. Copyright (c) 2025, Benjamin Linnik.
+MIT License - See [LICENSE](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/LICENSE) file for details. Copyright (c) 2025, Benjamin Linnik.
 
 ## Support
 
@@ -320,11 +320,11 @@ MIT License - See [LICENSE](LICENSE) file for details. Copyright (c) 2025, Benja
 **GitHub is your primary destination for all support:**
 
 - **📋 Issues & Bug Reports**: [Create an issue](https://github.com/Nantero1/ai-first-devops-toolkit/issues)
-- **📖 Documentation**: [Browse examples](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)uv s
+- **📖 Documentation**: [Browse examples](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)
 - **🔧 Source Code**: [View source](https://github.com/Nantero1/ai-first-devops-toolkit)
 
 **Before opening an issue, please:**
-1. ✅ Check the [examples/](examples/) directory for solutions
+1. ✅ Check the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples) for solutions
 2. ✅ Review the error logs (beautiful output with Rich!)
 3. ✅ Validate your Azure authentication and permissions
 4. ✅ Ensure your input JSON follows the required format
@@ -338,4 +338,4 @@ MIT License - See [LICENSE](LICENSE) file for details. Copyright (c) 2025, Benja
 
 ---
 
-*Ready to embrace the AI-First future? Start with this toolkit and build your path to exponential productivity. Learn more about the AI-First DevOps revolution in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html).* 
+*Ready to embrace the AI-First future? Start with this toolkit and build your path to exponential productivity. Learn more about the AI-First DevOps revolution in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html).*
