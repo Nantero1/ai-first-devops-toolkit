@@ -22,7 +22,7 @@
 ### Simple structured output example
 
 ```bash
-uv run llm_runner.py --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
+uv run llm_ci_runner.py --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
 ```
 ![Structured output of the PR review example](./examples/02-devops/pr-description/output.png)
 
@@ -79,8 +79,12 @@ Otherwise, you can specify the API key in the environment variable `AZURE_OPENAI
 
 ```bash
 # Run directly with UV (recommended for CI/CD)
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/01-basic/simple-chat/input.json
+
+# Or install and use as a package
+pip install llm-ci-runner
+llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
 ```
 
 ## Real-World Examples
@@ -123,7 +127,7 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 When you provide a `--schema-file`, the runner guarantees perfect schema compliance:
 
 ```bash
-uv run llm_runner.py \
+uv run llm_ci_runner.py \
   --input-file examples/01-basic/sentiment-analysis/input.json \
   --schema-file examples/01-basic/sentiment-analysis/schema.json
 ```
@@ -144,7 +148,18 @@ uv run llm_runner.py \
 ```yaml
 - name: Generate PR Review with Schema Enforcement
   run: |
-    uv run --frozen llm_runner.py \
+    uv run --frozen llm_ci_runner.py \
+      --input-file examples/02-devops/pr-description/input.json \
+      --schema-file examples/02-devops/pr-description/schema.json \
+      --log-level WARNING
+  env:
+    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+
+# Or using the installed package
+- name: Generate PR Review with Schema Enforcement
+  run: |
+    llm-ci-runner \
       --input-file examples/02-devops/pr-description/input.json \
       --schema-file examples/02-devops/pr-description/schema.json \
       --log-level WARNING
@@ -176,6 +191,38 @@ uv run pytest tests/unit/ -v          # 69 unit tests
 uv run pytest tests/integration/ -v   # End-to-end examples
 uv run pytest acceptance/ -v          # LLM-as-judge evaluation
 ```
+
+## Releasing
+
+### Manual Release Process
+
+1. **Test locally first**:
+   ```bash
+   python scripts/release.py 1.0.0
+   ```
+
+2. **Trigger GitHub Actions release**:
+   - Go to Actions → Manual Release
+   - Click "Run workflow"
+   - Enter version (e.g., `1.0.0`)
+   - Add release notes (optional)
+   - Choose whether to publish to PyPI
+   - Click "Run workflow"
+
+The workflow will:
+- ✅ Run all tests
+- ✅ Update version in `pyproject.toml`
+- ✅ Build the package
+- ✅ Create Git tag and push
+- ✅ Create GitHub release
+- ✅ Publish to PyPI (if selected)
+- ✅ Verify package installation
+
+### Package Naming Convention
+
+- **Package name**: `llm-ci-runner` (kebab-case for PyPI)
+- **Module name**: `llm_ci_runner.py` (snake_case for Python)
+- **CLI command**: `llm-ci-runner` (kebab-case for CLI)
 
 ## Use Cases
 

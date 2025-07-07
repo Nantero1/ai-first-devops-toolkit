@@ -1,5 +1,5 @@
 """
-Unit tests for schema-related functions in llm_runner.py
+Unit tests for schema-related functions in llm_ci_runner.py
 
 Tests create_dynamic_model_from_schema and load_json_schema functions
 with heavy mocking following the Given-When-Then pattern.
@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from llm_runner import (
+from llm_ci_runner import (
     InputValidationError,
     SchemaValidationError,
     create_dynamic_model_from_schema,
@@ -21,7 +21,7 @@ from llm_runner import (
 class TestCreateDynamicModelFromSchema:
     """Tests for create_dynamic_model_from_schema function."""
 
-    @patch("llm_runner.create_model_from_schema")
+    @patch("llm_ci_runner.create_model_from_schema")
     def test_create_valid_model_with_all_field_types(self, mock_create_model):
         """Test creating a dynamic model with various field types."""
         # given
@@ -75,7 +75,7 @@ class TestCreateDynamicModelFromSchema:
         # Verify it's a type
         assert isinstance(result_model, type)
 
-    @patch("llm_runner.create_model_from_schema")
+    @patch("llm_ci_runner.create_model_from_schema")
     def test_create_model_with_empty_properties_succeeds(self, mock_create_model):
         """Test that empty properties creates a valid model."""
         # given
@@ -97,7 +97,7 @@ class TestCreateDynamicModelFromSchema:
         assert result is not None
         mock_create_model.assert_called_once_with(schema_dict)
 
-    @patch("llm_runner.create_model_from_schema")
+    @patch("llm_ci_runner.create_model_from_schema")
     def test_create_model_with_non_object_type_succeeds(self, mock_create_model):
         """Test that non-object type is handled by the library."""
         # given
@@ -138,7 +138,7 @@ class TestCreateDynamicModelFromSchema:
         }
 
         # when & then
-        with patch("llm_runner.create_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.create_model_from_schema") as mock_create_model:
             mock_create_model.side_effect = Exception("Library error")
 
             with pytest.raises(
@@ -155,7 +155,7 @@ class TestCreateDynamicModelFromSchema:
             ([], "field1", False),
         ],
     )
-    @patch("llm_runner.create_model_from_schema")
+    @patch("llm_ci_runner.create_model_from_schema")
     def test_required_field_handling(self, mock_create_model, required_fields, field_name, expected_required):
         """Test that required fields are handled correctly."""
         # given
@@ -193,7 +193,7 @@ class TestLoadJsonSchema:
         schema_file = temp_schema_file
 
         # when
-        with patch("llm_runner.create_dynamic_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.create_dynamic_model_from_schema") as mock_create_model:
             mock_model = Mock()
             mock_model.__name__ = "TestModel"
             mock_create_model.return_value = mock_model
@@ -241,7 +241,7 @@ class TestLoadJsonSchema:
         schema_file = temp_schema_file
 
         # when & then
-        with patch("llm_runner.create_dynamic_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.create_dynamic_model_from_schema") as mock_create_model:
             mock_create_model.side_effect = Exception("Model creation failed")
 
             with pytest.raises(InputValidationError, match="Error loading schema file"):

@@ -1,0 +1,325 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes (optional)'
+        required: false
+        type: string
+      publish_to_pypi:
+        description: 'Publish to PyPI'
+        required: false
+        type: boolean
+        default: true
+      dry_run:
+        description: 'Dry run (skip actual release)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Check semantic versioning format
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]]; then
+            echo "❌ Invalid version format. Must follow semantic versioning (e.g., 1.0.0, 1.0.0-alpha.1)"
+            exit 1
+          fi
+          
+          # Check if tag already exists
+          if git tag -l "v$VERSION" | grep -q "v$VERSION"; then
+            echo "❌ Tag v$VERSION already exists"
+            exit 1
+          fi
+          
+          echo "✅ Version validation passed"
+
+      - name: Run tests
+        run: |
+          uv run pytest tests/unit/ -v
+
+      - name: Run linting
+        run: |
+          uv run ruff check *.py
+          uv run ruff format --check *.py
+          uv run mypy llm_ci_runner.py
+
+      - name: Check for security vulnerabilities
+        run: |
+          uv run pip-audit
+
+      - name: Validate package metadata
+        run: |
+          # Check if pyproject.toml is valid
+          uv run python -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
+          echo "✅ pyproject.toml is valid"
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    # Required permissions for release operations
+    permissions:
+      contents: write      # Push commits and tags to main branch
+      packages: write      # Publish to GitHub Packages (if needed)
+      id-token: write      # OIDC for PyPI authentication
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN_WRITE }}
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Update version in pyproject.toml
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Use Python to update version more precisely - only target the project version
+          python -c "
+          import re
+          import sys
+          
+          # Get version from command line argument
+          version = '${{ github.event.inputs.version }}'
+          
+          with open('pyproject.toml', 'r') as f:
+              content = f.read()
+          
+          # More precise approach: find the [project] section and update version there
+          # This ensures we only update the project version, not dependency versions
+          
+          # Split content into lines for easier processing
+          lines = content.split('\n')
+          updated_lines = []
+          in_project_section = False
+          version_updated = False
+          
+          for line in lines:
+              # Check if we're entering the [project] section
+              if line.strip() == '[project]':
+                  in_project_section = True
+                  updated_lines.append(line)
+              # Check if we're leaving the [project] section
+              elif line.strip().startswith('[') and line.strip() != '[project]':
+                  in_project_section = False
+                  updated_lines.append(line)
+              # If we're in the [project] section and this is the version line
+              elif in_project_section and line.strip().startswith('version ='):
+                  # Update the version
+                  updated_lines.append(f'version = \"{version}\"')
+                  version_updated = True
+                  print(f'Found and updated version line: {line.strip()} -> version = \"{version}\"')
+              else:
+                  updated_lines.append(line)
+          
+          if not version_updated:
+              print('Error: Project version line not found in [project] section')
+              sys.exit(1)
+          
+          # Write the updated content back
+          updated_content = '\n'.join(updated_lines)
+          
+          with open('pyproject.toml', 'w') as f:
+              f.write(updated_content)
+          
+          print(f'Successfully updated project version to {version}')
+          "
+
+      - name: Commit and tag
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Add the version change
+          git add pyproject.toml
+          git commit -m "chore: bump version to $VERSION [skip ci]"
+          
+          # Create and push the tag
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          
+          # Push both commit and tag
+          # This works because we're using GH_TOKEN_WRITE which has bypass permissions
+          git push origin main
+          git push origin "v$VERSION"
+          
+          echo "Tagged and pushed v$VERSION"
+
+      - name: Build package
+        run: |
+          uv run python -m build
+
+      - name: Verify package
+        run: |
+          # Test that the package can be built and installed
+          uv run python -c "
+          import subprocess
+          import sys
+          from pathlib import Path
+          
+          # Find the wheel file
+          dist_dir = Path('dist')
+          wheel_files = list(dist_dir.glob('*.whl'))
+          
+          if not wheel_files:
+              print('No wheel files found in dist/')
+              sys.exit(1)
+          
+          wheel_file = wheel_files[0]
+          print(f'Testing installation of {wheel_file}')
+          
+          # Test installation
+          result = subprocess.run([
+              'uv', 'run', 'pip', 'install', str(wheel_file), '--force-reinstall'
+          ], capture_output=True, text=True)
+          
+          if result.returncode != 0:
+              print(f'Installation failed: {result.stderr}')
+              sys.exit(1)
+          
+          print('Package installation test passed')
+          "
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_WRITE }}
+        with:
+          tag_name: "v${{ github.event.inputs.version }}"
+          release_name: "Release v${{ github.event.inputs.version }}"
+          body: |
+            ## What's Changed
+            
+            ${{ github.event.inputs.release_notes || format('Release v{0}', github.event.inputs.version) }}
+            
+            ## Installation
+            
+            ```bash
+            pip install llm-ci-runner==${{ github.event.inputs.version }}
+            ```
+            
+            ## Usage
+            
+            ```bash
+            llm-ci-runner --input-file input.json --schema-file schema.json
+            ```
+            
+            ## Changelog
+            
+            For detailed changes, see the [commit history](https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0)...v${{ github.event.inputs.version }}).
+          draft: false
+          prerelease: false
+
+      - name: Publish to PyPI
+        if: ${{ github.event.inputs.publish_to_pypi }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          # Upload to PyPI
+          uv run twine upload dist/*
+          
+          echo "✅ Published to PyPI successfully"
+
+      - name: Verify PyPI installation
+        if: ${{ github.event.inputs.publish_to_pypi }}
+        run: |
+          # Wait a moment for PyPI to process the upload
+          sleep 30
+          
+          # Test installation from PyPI
+          uv run python -c "
+          import subprocess
+          import sys
+          
+          print('Testing installation from PyPI...')
+          result = subprocess.run([
+              'uv', 'run', 'pip', 'install', 
+              'llm-ci-runner==${{ github.event.inputs.version }}',
+              '--index-url', 'https://pypi.org/simple/'
+          ], capture_output=True, text=True)
+          
+          if result.returncode != 0:
+              print(f'PyPI installation failed: {result.stderr}')
+              sys.exit(1)
+          
+          # Test that the command works
+          result = subprocess.run([
+              'uv', 'run', 'llm-ci-runner', '--help'
+          ], capture_output=True, text=True)
+          
+          if result.returncode != 0:
+              print(f'Command test failed: {result.stderr}')
+              sys.exit(1)
+          
+          print('✅ PyPI installation and command test passed')
+          "
+
+      - name: Cleanup and summary
+        if: always()
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          echo "🎉 Release workflow completed!"
+          echo "📋 Summary:"
+          echo "- Version: v$VERSION"
+          echo "- Tag: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+          echo "- Release: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+          
+          if [[ "${{ github.event.inputs.publish_to_pypi }}" == "true" ]]; then
+            echo "- PyPI: https://pypi.org/project/llm-ci-runner/$VERSION/"
+          fi
+          
+          echo ""
+          echo "✅ Release v$VERSION is now available!" 

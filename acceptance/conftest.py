@@ -77,17 +77,17 @@ def temp_files():
 
 
 @pytest.fixture
-def llm_runner():
+def llm_ci_runner():
     """Execute LLM runner with proper error handling and logging."""
 
-    def _run_llm_runner(
+    def _run_llm_ci_runner(
         input_file: str, output_file: str, schema_file: str = None, timeout: int = 60
     ) -> tuple[int, str, str]:
         """Run the LLM runner and return result code, stdout, stderr."""
         cmd = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             input_file,
             "--output-file",
@@ -107,7 +107,7 @@ def llm_runner():
         except Exception as e:
             return -1, "", str(e)
 
-    return _run_llm_runner
+    return _run_llm_ci_runner
 
 
 @pytest.fixture
@@ -117,7 +117,7 @@ def judgment_schema_path():
 
 
 @pytest.fixture
-def llm_judge(llm_runner, temp_files, judgment_schema_path):
+def llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
     """LLM-as-judge evaluator using structured output."""
 
     async def _evaluate_response(query: str, response: str, criteria: str, input_context: str = "") -> dict[str, Any]:
@@ -170,7 +170,7 @@ Use objective criteria and provide specific reasoning for your assessment.""",
         judgment_output_file = temp_files()
 
         # Run LLM runner with structured output
-        returncode, stdout, stderr = llm_runner(judgment_input_file, judgment_output_file, judgment_schema_path)
+        returncode, stdout, stderr = llm_ci_runner(judgment_input_file, judgment_output_file, judgment_schema_path)
 
         if returncode != 0:
             return {"error": f"Judgment failed: {stderr}", "pass": False}

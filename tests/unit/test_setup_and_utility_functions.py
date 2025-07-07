@@ -1,5 +1,5 @@
 """
-Unit tests for setup and utility functions in llm_runner.py
+Unit tests for setup and utility functions in llm_ci_runner.py
 
 Tests setup_logging function and other utility functions
 with heavy mocking following the Given-When-Then pattern.
@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from llm_runner import setup_logging
+from llm_ci_runner import setup_logging
 
 
 class TestSetupLogging:
@@ -58,7 +58,7 @@ class TestSetupLogging:
         # when
         with (
             patch("logging.basicConfig") as mock_basic_config,
-            patch("llm_runner.RichHandler") as mock_rich_handler,
+            patch("llm_ci_runner.RichHandler") as mock_rich_handler,
         ):
             logger = setup_logging(log_level)
 
@@ -132,7 +132,7 @@ class TestSetupLogging:
 
         # then
         assert isinstance(logger, logging.Logger)
-        assert logger.name == "llm_runner"
+        assert logger.name == "llm_ci_runner"
 
     def test_setup_logging_uses_global_console(self, mock_console):
         """Test that setup_logging uses the global CONSOLE instance."""
@@ -142,7 +142,7 @@ class TestSetupLogging:
         # when
         with (
             patch("logging.basicConfig"),
-            patch("llm_runner.RichHandler") as mock_rich_handler,
+            patch("llm_ci_runner.RichHandler") as mock_rich_handler,
         ):
             logger = setup_logging(log_level)
 
@@ -161,11 +161,11 @@ class TestMainFunction:
         # given
         # when & then
         with (
-            patch("llm_runner.parse_arguments") as mock_parse,
-            patch("llm_runner.setup_logging") as mock_setup_log,
-            patch("llm_runner.load_input_json", side_effect=KeyboardInterrupt()),
+            patch("llm_ci_runner.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.setup_logging") as mock_setup_log,
+            patch("llm_ci_runner.load_input_json", side_effect=KeyboardInterrupt()),
         ):
-            from llm_runner import main
+            from llm_ci_runner import main
 
             with pytest.raises(SystemExit) as exc_info:
                 await main()
@@ -173,16 +173,19 @@ class TestMainFunction:
             assert exc_info.value.code == 1
 
     @pytest.mark.asyncio
-    async def test_main_function_with_llm_runner_error_exits_with_error_code(self):
+    async def test_main_function_with_llm_ci_runner_error_exits_with_error_code(self):
         """Test that LLMRunnerError causes exit with error code 1."""
         # given
-        from llm_runner import LLMRunnerError, main
+        from llm_ci_runner import LLMRunnerError, main
 
         # when & then
         with (
-            patch("llm_runner.parse_arguments") as mock_parse,
-            patch("llm_runner.setup_logging") as mock_setup_log,
-            patch("llm_runner.load_input_json", side_effect=LLMRunnerError("Test error")),
+            patch("llm_ci_runner.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.setup_logging") as mock_setup_log,
+            patch(
+                "llm_ci_runner.load_input_json",
+                side_effect=LLMRunnerError("Test error"),
+            ),
         ):
             with pytest.raises(SystemExit) as exc_info:
                 await main()
@@ -193,13 +196,16 @@ class TestMainFunction:
     async def test_main_function_with_unexpected_error_exits_with_error_code(self):
         """Test that unexpected errors cause exit with error code 1."""
         # given
-        from llm_runner import main
+        from llm_ci_runner import main
 
         # when & then
         with (
-            patch("llm_runner.parse_arguments") as mock_parse,
-            patch("llm_runner.setup_logging") as mock_setup_log,
-            patch("llm_runner.load_input_json", side_effect=Exception("Unexpected error")),
+            patch("llm_ci_runner.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.setup_logging") as mock_setup_log,
+            patch(
+                "llm_ci_runner.load_input_json",
+                side_effect=Exception("Unexpected error"),
+            ),
         ):
             with pytest.raises(SystemExit) as exc_info:
                 await main()
@@ -210,18 +216,18 @@ class TestMainFunction:
     async def test_main_function_success_path_completes_without_error(self):
         """Test that successful execution completes without raising SystemExit."""
         # given
-        from llm_runner import main
+        from llm_ci_runner import main
 
         # when
         with (
-            patch("llm_runner.parse_arguments") as mock_parse,
-            patch("llm_runner.setup_logging") as mock_setup_log,
-            patch("llm_runner.load_input_json") as mock_load_input,
-            patch("llm_runner.create_chat_history") as mock_create_history,
-            patch("llm_runner.setup_azure_service") as mock_setup_azure,
-            patch("llm_runner.load_json_schema") as mock_load_schema,
-            patch("llm_runner.execute_llm_task") as mock_execute,
-            patch("llm_runner.write_output_file") as mock_write_output,
+            patch("llm_ci_runner.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.setup_logging") as mock_setup_log,
+            patch("llm_ci_runner.load_input_json") as mock_load_input,
+            patch("llm_ci_runner.create_chat_history") as mock_create_history,
+            patch("llm_ci_runner.setup_azure_service") as mock_setup_azure,
+            patch("llm_ci_runner.load_json_schema") as mock_load_schema,
+            patch("llm_ci_runner.execute_llm_task") as mock_execute,
+            patch("llm_ci_runner.write_output_file") as mock_write_output,
         ):
             # Setup mocks
             mock_args = Mock()
@@ -233,7 +239,10 @@ class TestMainFunction:
 
             mock_load_input.return_value = {"messages": [{"role": "user", "content": "test"}]}
             mock_create_history.return_value = Mock()
-            mock_setup_azure.return_value = (Mock(), Mock())  # Return tuple (service, credential)
+            mock_setup_azure.return_value = (
+                Mock(),
+                Mock(),
+            )  # Return tuple (service, credential)
             mock_load_schema.return_value = None
             mock_execute.return_value = "Test response"
 

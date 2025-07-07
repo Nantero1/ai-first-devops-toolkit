@@ -1,5 +1,5 @@
 """
-Unit tests for input/output functions in llm_runner.py
+Unit tests for input/output functions in llm_ci_runner.py
 
 Tests load_input_json, write_output_file, and parse_arguments functions
 with heavy mocking following the Given-When-Then pattern.
@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from llm_runner import (
+from llm_ci_runner import (
     InputValidationError,
     LLMRunnerError,
     load_input_json,
@@ -143,7 +143,7 @@ class TestWriteOutputFile:
         assert written_data["success"] is True
         assert written_data["response"] == response
         assert "metadata" in written_data
-        assert written_data["metadata"]["runner"] == "llm_runner.py"
+        assert written_data["metadata"]["runner"] == "llm_ci_runner.py"
 
     def test_write_text_response(self, temp_output_file):
         """Test writing text response to output file."""
@@ -208,7 +208,7 @@ class TestParseArguments:
         test_args = ["--input-file", "input.json"]  # Only input-file is required
 
         # when
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             args = parse_arguments()
 
         # then
@@ -232,7 +232,7 @@ class TestParseArguments:
         ]
 
         # when
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             args = parse_arguments()
 
         # then
@@ -247,7 +247,7 @@ class TestParseArguments:
         test_args = []  # Missing input-file (the only required argument)
 
         # when & then
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             with pytest.raises(SystemExit):
                 parse_arguments()
 
@@ -265,7 +265,7 @@ class TestParseArguments:
         ]
 
         # when
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             args = parse_arguments()
 
         # then
@@ -284,7 +284,7 @@ class TestParseArguments:
         ]
 
         # when & then
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             with pytest.raises(SystemExit):
                 parse_arguments()
 
@@ -294,7 +294,7 @@ class TestParseArguments:
         test_args = ["--input-file", "input.json"]  # No output-file specified
 
         # when
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             args = parse_arguments()
 
         # then
@@ -309,6 +309,6 @@ class TestParseArguments:
         test_args = ["--help"]
 
         # when & then
-        with patch("sys.argv", ["llm_runner.py"] + test_args):
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             with pytest.raises(SystemExit):
                 parse_arguments()

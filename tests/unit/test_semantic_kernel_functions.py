@@ -1,5 +1,5 @@
 """
-Unit tests for Semantic Kernel related functions in llm_runner.py
+Unit tests for Semantic Kernel related functions in llm_ci_runner.py
 
 Tests create_chat_history, setup_azure_service, and execute_llm_task functions
 with heavy mocking following the Given-When-Then pattern.
@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from llm_runner import (
+from llm_ci_runner import (
     AuthenticationError,
     InputValidationError,
     LLMExecutionError,
@@ -149,7 +149,7 @@ class TestSetupAzureService:
             clear=True,
         ):
             # when
-            with patch("llm_runner.DefaultAzureCredential") as mock_credential:
+            with patch("llm_ci_runner.DefaultAzureCredential") as mock_credential:
                 service, credential = await setup_azure_service()
 
         # then
@@ -194,7 +194,7 @@ class TestSetupAzureService:
 
         # when & then
         with patch(
-            "llm_runner.AzureChatCompletion",
+            "llm_ci_runner.AzureChatCompletion",
             side_effect=ClientAuthenticationError("Auth failed"),
         ):
             with pytest.raises(AuthenticationError, match="Azure authentication failed"):
@@ -205,7 +205,7 @@ class TestSetupAzureService:
         """Test that generic errors are wrapped in AuthenticationError."""
         # given
         # when & then
-        with patch("llm_runner.AzureChatCompletion", side_effect=Exception("Generic error")):
+        with patch("llm_ci_runner.AzureChatCompletion", side_effect=Exception("Generic error")):
             with pytest.raises(AuthenticationError, match="Error setting up Azure service"):
                 await setup_azure_service()
 

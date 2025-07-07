@@ -1,0 +1,47 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies with locked versions
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Build package
+        run: |
+          uv run build
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          uv run twine upload dist/*
+
+      - name: Verify package installation
+        run: |
+          # Test that the package can be installed from PyPI
+          pip install llm-ci-runner --index-url https://pypi.org/simple/
+          llm-ci-runner --help 

@@ -1,0 +1,19 @@
+include README.md
+include LICENSE
+include NOTICE
+include examples/**/*
+recursive-include examples *.json *.md *.py
+recursive-exclude examples __pycache__ *.pyc
+recursive-exclude tests __pycache__ *.pyc
+recursive-exclude acceptance __pycache__ *.pyc
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude .git*
+global-exclude .venv
+global-exclude .mypy_cache
+global-exclude .ruff_cache
+global-exclude .pytest_cache
+global-exclude *.lock
+global-exclude result.json
+global-exclude *-output.json 
+global-exclude .cursor

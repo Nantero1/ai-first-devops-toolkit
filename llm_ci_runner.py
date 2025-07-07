@@ -7,7 +7,7 @@ This script provides a zero-friction interface for running arbitrary LLM-driven 
 in CI/CD pipelines, supporting structured outputs and enterprise authentication.
 
 Usage:
-    python llm_runner.py \
+    python llm_ci_runner.py \
         --input-file pr-context.json \
         --output-file review-result.json \
         --schema-file review-schema.json \
@@ -85,7 +85,7 @@ install_rich_traceback()
 
 # Global CONSOLE for rich output
 CONSOLE = Console()
-LOGGER = logging.getLogger("llm_runner")
+LOGGER = logging.getLogger("llm_ci_runner")
 
 
 class LLMRunnerError(Exception):
@@ -229,16 +229,16 @@ def parse_arguments() -> argparse.Namespace:
         epilog="""
 Examples:
     # Basic usage (output defaults to result.json)
-    python llm_runner.py --input-file input.json
+    python llm_ci_runner.py --input-file input.json
 
     # With structured output schema
-    python llm_runner.py --input-file input.json --schema-file schema.json
+    python llm_ci_runner.py --input-file input.json --schema-file schema.json
 
     # With custom output file
-    python llm_runner.py --input-file input.json --output-file custom-output.json
+    python llm_ci_runner.py --input-file input.json --output-file custom-output.json
 
     # With debug logging
-    python llm_runner.py --input-file input.json --log-level DEBUG
+    python llm_ci_runner.py --input-file input.json --log-level DEBUG
 
 Environment Variables:
     AZURE_OPENAI_ENDPOINT    Azure OpenAI endpoint URL
@@ -649,7 +649,7 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
             "success": True,
             "response": response,
             "metadata": {
-                "runner": "llm_runner.py",
+                "runner": "llm_ci_runner.py",
                 "timestamp": "auto-generated",  # You could add actual timestamp
             },
         }
@@ -734,5 +734,10 @@ async def main() -> None:
                 # Don't raise - this is cleanup, not critical
 
 
-if __name__ == "__main__":
+def cli_main() -> None:
+    """Synchronous wrapper for the async main function."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    cli_main()

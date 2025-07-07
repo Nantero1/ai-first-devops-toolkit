@@ -33,18 +33,18 @@ Choose an example based on your needs:
 
 ```bash
 # Basic text interaction
-uv run llm_runner.py \
+uv run llm_ci_runner.py \
   --input-file examples/01-basic/simple-chat/input.json \
   --output-file result.json
 
 # Structured output with schema
-uv run llm_runner.py \
+uv run llm_ci_runner.py \
   --input-file examples/01-basic/sentiment-analysis/input.json \
   --output-file result.json \
   --schema-file examples/01-basic/sentiment-analysis/schema.json
 
 # AI-First development planning
-uv run llm_runner.py \
+uv run llm_ci_runner.py \
   --input-file examples/04-ai-first/autonomous-development-plan/input.json \
   --output-file plan.json \
   --schema-file examples/04-ai-first/autonomous-development-plan/schema.json

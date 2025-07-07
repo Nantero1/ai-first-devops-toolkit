@@ -45,9 +45,9 @@ def temp_output_dir():
 
 
 @pytest.fixture
-def llm_runner_path():
-    """Get path to llm_runner.py."""
-    return Path("llm_runner.py")
+def llm_ci_runner_path():
+    """Get path to llm_ci_runner.py."""
+    return Path("llm_ci_runner.py")
 
 
 @pytest.fixture
@@ -60,13 +60,13 @@ class ExampleTestFramework:
     """Core framework for running and validating examples."""
 
     @staticmethod
-    def run_example(llm_runner_path: Path, input_file: Path, output_file: Path) -> ExampleTestResult:
+    def run_example(llm_ci_runner_path: Path, input_file: Path, output_file: Path) -> ExampleTestResult:
         """Run example without schema enforcement."""
         try:
             cmd = [
                 "uv",
                 "run",
-                str(llm_runner_path),
+                str(llm_ci_runner_path),
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -91,14 +91,14 @@ class ExampleTestFramework:
 
     @staticmethod
     def run_example_with_schema(
-        llm_runner_path: Path, input_file: Path, output_file: Path, schema_file: Path
+        llm_ci_runner_path: Path, input_file: Path, output_file: Path, schema_file: Path
     ) -> ExampleTestResult:
         """Run example with schema enforcement."""
         try:
             cmd = [
                 "uv",
                 "run",
-                str(llm_runner_path),
+                str(llm_ci_runner_path),
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -219,7 +219,7 @@ def generate_example_tests():
     def create_test_function(input_file: Path, schema_file: Optional[Path], example_name: str):
         """Create a test function for a specific example."""
 
-        def test_example(temp_output_dir, llm_runner_path, examples_dir):
+        def test_example(temp_output_dir, llm_ci_runner_path, examples_dir):
             """Test a specific example."""
             # given
             output_file = temp_output_dir / f"{input_file.stem}-output.json"
@@ -227,10 +227,10 @@ def generate_example_tests():
             # when
             if schema_file and schema_file.exists():
                 result = ExampleTestFramework.run_example_with_schema(
-                    llm_runner_path, input_file, output_file, schema_file
+                    llm_ci_runner_path, input_file, output_file, schema_file
                 )
             else:
-                result = ExampleTestFramework.run_example(llm_runner_path, input_file, output_file)
+                result = ExampleTestFramework.run_example(llm_ci_runner_path, input_file, output_file)
 
             # then
             assert result.success, f"{example_name} failed: {result.error}"

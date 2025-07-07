@@ -24,7 +24,7 @@ class TestTextResponseQuality:
     async def test_simple_text_response_quality(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         llm_judge,
         example_files,
@@ -50,7 +50,7 @@ class TestTextResponseQuality:
         """
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, "Simple Text Response")
@@ -77,7 +77,7 @@ class TestStructuredOutputCompliance:
     def test_structured_output_schema_compliance(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         example_files,
         assert_execution_success,
@@ -91,7 +91,7 @@ class TestStructuredOutputCompliance:
         output_file = temp_files()
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file, schema_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file, schema_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, "Structured Output")
@@ -145,7 +145,7 @@ class TestCodeReviewQuality:
     async def test_pr_review_quality(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         llm_judge,
         example_files,
@@ -174,7 +174,7 @@ class TestCodeReviewQuality:
         """
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, "PR Review")
@@ -202,7 +202,7 @@ class TestSystemReliability:
     def test_example_execution_reliability(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         example_files,
         assert_execution_success,
@@ -216,7 +216,7 @@ class TestSystemReliability:
         output_file = temp_files()
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, f"{example_name.title()} Example")
@@ -234,7 +234,7 @@ class TestSystemReliability:
     def test_concurrent_execution_stability(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         example_files,
         assert_execution_success,
@@ -251,7 +251,7 @@ class TestSystemReliability:
             input_file = example_files[example_name]
             output_file = temp_files()
 
-            returncode, stdout, stderr = llm_runner(input_file, output_file)
+            returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
             results.append((example_name, returncode, stdout, stderr, output_file))
 
         # then - verify all succeeded
@@ -285,7 +285,7 @@ class TestQualityBenchmarks:
     async def test_quality_benchmarks(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         llm_judge,
         example_files,
@@ -327,7 +327,7 @@ class TestQualityBenchmarks:
         criteria = criteria_map.get(example_name, "General quality assessment")
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, f"{example_name.title()} Benchmark")
@@ -360,7 +360,7 @@ class TestCustomScenarios:
     async def test_mathematical_reasoning_quality(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         llm_judge,
         assert_execution_success,
@@ -391,7 +391,7 @@ class TestCustomScenarios:
         """
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, "Mathematical Reasoning")
@@ -421,7 +421,7 @@ class TestCustomScenarios:
     async def test_technical_expertise_topics(
         self,
         environment_check,
-        llm_runner,
+        llm_ci_runner,
         temp_files,
         llm_judge,
         assert_execution_success,
@@ -453,7 +453,7 @@ class TestCustomScenarios:
         """
 
         # when
-        returncode, stdout, stderr = llm_runner(input_file, output_file)
+        returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
 
         # then
         assert_execution_success(returncode, stdout, stderr, f"{topic.title()} Expertise")

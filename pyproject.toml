@@ -1,6 +1,6 @@
 [project]
-name = "llm-runner"
-version = "1.0.0"
+name = "llm-ci-runner"
+version = "0.9.99"
 description = "A simple CI/CD utility for running LLM tasks with Semantic Kernel"
 readme = "README.md"
 authors = [
@@ -18,18 +18,34 @@ dependencies = [
     "tenacity>=9.1.2",
     "json-schema-to-pydantic>=0.4.0",
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+keywords = ["llm", "ai", "devops", "ci-cd", "semantic-kernel", "azure-openai", "automation"]
 
 [metadata]
 Homepage = "https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html"
 Repository = "https://github.com/Nantero1/ai-first-devops-toolkit"
 Documentation = "https://github.com/Nantero1/ai-first-devops-toolkit"
+Project-URL = {Homepage = "https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html", Repository = "https://github.com/Nantero1/ai-first-devops-toolkit", Documentation = "https://github.com/Nantero1/ai-first-devops-toolkit"}
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-llm-runner = "llm_runner:main"
+llm-ci-runner = "llm_ci_runner:cli_main"
 
 [dependency-groups]
 dev = [
@@ -39,6 +55,8 @@ dev = [
     "mypy>=1.16.0",
     "ruff>=0.12.0",
     "pip-audit>=2.8.0",
+    "build>=1.2.0",
+    "twine>=5.0.0",
 ]
 
 [tool.uv]

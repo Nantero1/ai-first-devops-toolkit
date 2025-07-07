@@ -1,5 +1,5 @@
 """
-Integration tests for all example files in llm_runner.py
+Integration tests for all example files in llm_ci_runner.py
 
 Tests the full pipeline with real file operations and JSON parsing,
 but mocked LLM service calls. Uses minimal mocking following the
@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from llm_runner import main
+from llm_ci_runner import main
 from tests.mock_factory import (
     create_minimal_response_mock,
     create_pr_review_mock,
@@ -37,11 +37,11 @@ class TestSimpleExampleIntegration:
 
         # when
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -80,11 +80,11 @@ class TestSimpleExampleIntegration:
 
         # when
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -128,11 +128,11 @@ class TestPRReviewExampleIntegration:
 
         # when
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -201,11 +201,11 @@ class TestPRReviewExampleIntegration:
 
         # when
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -248,11 +248,11 @@ class TestMinimalExampleIntegration:
 
         # when
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -297,11 +297,11 @@ class TestAllExamplesEndToEnd:
             integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
             with patch(
-                "llm_runner.setup_azure_service",
+                "llm_ci_runner.setup_azure_service",
                 return_value=integration_mock_azure_service,
             ):
                 test_args = [
-                    "llm_runner.py",
+                    "llm_ci_runner.py",
                     "--input-file",
                     str(input_file),
                     "--output-file",
@@ -340,11 +340,11 @@ class TestAllExamplesEndToEnd:
 
         # when & then
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -371,11 +371,11 @@ class TestAllExamplesEndToEnd:
 
         # when & then
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",
@@ -442,11 +442,11 @@ class TestFullPipelineIntegration:
 
         # when
         with patch(
-            "llm_runner.setup_azure_service",
+            "llm_ci_runner.setup_azure_service",
             return_value=integration_mock_azure_service,
         ):
             test_args = [
-                "llm_runner.py",
+                "llm_ci_runner.py",
                 "--input-file",
                 str(input_file),
                 "--output-file",

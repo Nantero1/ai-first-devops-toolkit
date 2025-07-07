@@ -1,5 +1,5 @@
 """
-CLI interface tests for llm_runner.py
+CLI interface tests for llm_ci_runner.py
 
 Tests the command-line interface via subprocess to ensure
 proper argument parsing, help text, and error handling.
@@ -19,7 +19,7 @@ class TestCLIArgumentParsing:
     def test_cli_help_displays_usage_information(self):
         """Test that --help displays comprehensive usage information."""
         # given
-        command = ["uv", "run", "llm_runner.py", "--help"]
+        command = ["uv", "run", "llm_ci_runner.py", "--help"]
 
         # when
         result = subprocess.run(command, capture_output=True, text=True)
@@ -37,7 +37,7 @@ class TestCLIArgumentParsing:
     def test_cli_with_missing_required_arguments_shows_error(self):
         """Test that missing required arguments shows appropriate error."""
         # given
-        command = ["uv", "run", "llm_runner.py", "--input-file", "test.json"]
+        command = ["uv", "run", "llm_ci_runner.py", "--input-file", "test.json"]
 
         # when
         result = subprocess.run(command, capture_output=True, text=True)
@@ -52,7 +52,7 @@ class TestCLIArgumentParsing:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             "test.json",
             "--output-file",
@@ -74,7 +74,7 @@ class TestCLIArgumentParsing:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             "nonexistent.json",
             "--output-file",
@@ -104,7 +104,7 @@ class TestCLIArgumentParsing:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",
@@ -148,7 +148,7 @@ class TestCLIFileHandling:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",
@@ -178,7 +178,7 @@ class TestCLIFileHandling:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",
@@ -216,7 +216,7 @@ class TestCLIFileHandling:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",
@@ -265,7 +265,7 @@ class TestCLIErrorHandling:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",
@@ -283,7 +283,7 @@ class TestCLIErrorHandling:
     def test_cli_shows_colored_output_with_rich_formatting(self, temp_dir):
         """Test that CLI uses Rich formatting for colored output."""
         # given
-        command = ["uv", "run", "llm_runner.py", "--help"]
+        command = ["uv", "run", "llm_ci_runner.py", "--help"]
 
         # when
         result = subprocess.run(command, capture_output=True, text=True)
@@ -313,7 +313,7 @@ class TestCLIIntegrationWithExamples:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             example_file,
             "--output-file",
@@ -340,7 +340,7 @@ class TestCLIIntegrationWithExamples:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             input_file,
             "--output-file",
@@ -378,7 +378,7 @@ class TestCLILoggingAndOutput:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",
@@ -408,7 +408,7 @@ class TestCLILoggingAndOutput:
         command = [
             "uv",
             "run",
-            "llm_runner.py",
+            "llm_ci_runner.py",
             "--input-file",
             str(input_file),
             "--output-file",

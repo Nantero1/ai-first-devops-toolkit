@@ -77,7 +77,7 @@ When you use this example, here is what happens step by step:
 
 **Command:**
 ```bash
-uv run llm_runner.py \
+uv run llm_ci_runner.py \
   --input-file examples/02-devops/code-review/input.json \
   --output-file code-review.json \
   --schema-file examples/02-devops/code-review/schema.json \
@@ -149,7 +149,7 @@ uv run llm_runner.py \
     }
   },
   "metadata": {
-    "runner": "llm_runner.py",
+    "runner": "llm_ci_runner.py",
     "timestamp": "auto-generated"
   }
 }

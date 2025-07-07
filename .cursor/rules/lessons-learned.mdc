@@ -134,12 +134,12 @@ settings.response_format = DynamicPydanticModel  # 100% guaranteed compliance
 
 ```python
 # ❌ WRONG - Mock objects cause metaclass conflicts
-@patch("llm_runner.create_dynamic_model_from_schema")
+@patch("llm_ci_runner.create_dynamic_model_from_schema")
 def test_schema_function(mock_create_model):
     mock_create_model.return_value = Mock()  # Fails with metaclass conflict
     
 # ✅ CORRECT - Use actual BaseModel classes
-@patch("llm_runner.create_dynamic_model_from_schema")
+@patch("llm_ci_runner.create_dynamic_model_from_schema")
 def test_schema_function(mock_create_model):
     class MockModel(BaseModel):
         test_field: str = "test"
@@ -232,13 +232,13 @@ class AcceptanceTestFramework:
         # 150+ lines of custom logic with regex parsing
         pass
     
-    def run_llm_runner(self, input_file, output_file):
+    def run_llm_ci_runner(self, input_file, output_file):
         # Custom subprocess handling
         pass
 
 # ✅ PROPER - Pytest fixtures with Rich formatting
 @pytest.fixture
-def llm_judge(llm_runner, temp_files, judgment_schema_path):
+def llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
     async def _evaluate_response(query, response, criteria):
         # Structured output, no parsing needed
         return structured_judgment
@@ -271,7 +271,7 @@ def judge_response_with_llm(self, query, response, criteria):
 # ✅ ROBUST - Structured output with schema validation
 async def _evaluate_response(query, response, criteria):
     # Use judgment_schema.json for structured output
-    returncode, stdout, stderr = llm_runner(
+    returncode, stdout, stderr = llm_ci_runner(
         judgment_input_file, 
         judgment_output_file, 
         judgment_schema_path  # Guaranteed structure!
@@ -282,7 +282,7 @@ async def _evaluate_response(query, response, criteria):
     return structured_judgment
 ```
 
-[2025-01-07 00:13] **Important**: Test Extensibility Architecture → Issue: Adding new acceptance tests requires 50+ lines of boilerplate, custom framework knowledge, and manual setup → Fix: Create pytest fixtures (environment_check, llm_runner, llm_judge, temp_files, rich_test_output) that enable new tests with ~20 lines → Why: Dramatically reduces test creation effort, follows DRY principle, enables rapid test development, maintains consistency across test suite.
+[2025-01-07 00:13] **Important**: Test Extensibility Architecture → Issue: Adding new acceptance tests requires 50+ lines of boilerplate, custom framework knowledge, and manual setup → Fix: Create pytest fixtures (environment_check, llm_ci_runner, llm_judge, temp_files, rich_test_output) that enable new tests with ~20 lines → Why: Dramatically reduces test creation effort, follows DRY principle, enables rapid test development, maintains consistency across test suite.
 
 ```python
 # ❌ HIGH BOILERPLATE - Custom framework approach
@@ -294,7 +294,7 @@ async def test_new_scenario():
             output_file = f.name
             framework.temp_files.append(output_file)
         
-        returncode, stdout, stderr = framework.run_llm_runner(input_file, output_file)
+        returncode, stdout, stderr = framework.run_llm_ci_runner(input_file, output_file)
         # ... more boilerplate
         
         judgment = await framework.judge_response_with_llm(...)
@@ -303,7 +303,7 @@ async def test_new_scenario():
 # ✅ MINIMAL BOILERPLATE - Pytest fixtures approach
 @pytest.mark.asyncio
 async def test_new_scenario(
-    self, environment_check, llm_runner, temp_files, llm_judge,
+    self, environment_check, llm_ci_runner, temp_files, llm_judge,
     assert_execution_success, assert_judgment_passed, rich_test_output
 ):
     # given - just define input and criteria (~10 lines)
@@ -311,7 +311,7 @@ async def test_new_scenario(
     output_file = temp_files()
     
     # when - single line execution
-    returncode, stdout, stderr = llm_runner(input_file, output_file)
+    returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
     
     # then - single line validation with Rich output
     assert_judgment_passed(judgment, "Test Name", rich_output=rich_test_output)
@@ -366,7 +366,7 @@ async def test_machine_learning_expertise():
 ])
 @pytest.mark.asyncio
 async def test_technical_expertise_topics(
-    self, environment_check, llm_runner, temp_files, llm_judge,
+    self, environment_check, llm_ci_runner, temp_files, llm_judge,
     assert_execution_success, assert_judgment_passed, rich_test_output,
     topic, min_score
 ):

@@ -52,7 +52,7 @@ fi
 #### Step 3: Execute with Structured Output
 ```bash
 # Create PR description with schema enforcement
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/02-devops/pr-description/input.json \
   --output-file pr-description.json \
   --schema-file examples/02-devops/pr-description/schema.json \
@@ -89,7 +89,7 @@ jobs:
     
     - name: Generate PR Description
       run: |
-        uv run --frozen llm_runner.py \
+        uv run --frozen llm_ci_runner.py \
           --input-file examples/02-devops/pr-description/input.json \
           --output-file pr-description.json \
           --schema-file examples/02-devops/pr-description/schema.json
@@ -183,7 +183,7 @@ cat > security-input.json << EOF
 EOF
 
 # Run security analysis with schema enforcement
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/03-security/vulnerability-analysis/input.json \
   --output-file security-analysis.json \
   --schema-file examples/03-security/vulnerability-analysis/schema.json \
@@ -225,7 +225,7 @@ cat > judgment-input.json << EOF
 EOF
 
 # Run LLM-as-judge evaluation
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file judgment-input.json \
   --output-file judgment-result.json \
   --schema-file acceptance/judgment_schema.json \
@@ -315,7 +315,7 @@ cat > changelog-input.json << EOF
 EOF
 
 # Generate changelog with schema
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/02-devops/changelog-generation/input.json \
   --output-file changelog.json \
   --schema-file examples/02-devops/changelog-generation/schema.json \
@@ -354,7 +354,7 @@ cat > review-input.json << EOF
 EOF
 
 # Run code review
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/02-devops/code-review/input.json \
   --output-file code-review.json \
   --schema-file examples/02-devops/code-review/schema.json \
@@ -436,19 +436,19 @@ jobs:
 # multi-stage-pipeline.sh
 
 # Stage 1: Code Analysis
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/02-devops/code-review/input.json \
   --output-file stage1-output.json \
   --schema-file examples/02-devops/code-review/schema.json
 
 # Stage 2: Quality Validation (LLM-as-Judge)
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file stage2-input.json \
   --output-file stage2-output.json \
   --schema-file acceptance/judgment_schema.json
 
 # Stage 3: Action Generation
-uv run --frozen llm_runner.py \
+uv run --frozen llm_ci_runner.py \
   --input-file examples/02-devops/pr-description/input.json \
   --output-file stage3-output.json \
   --schema-file examples/02-devops/pr-description/schema.json
@@ -478,7 +478,7 @@ jobs:
       id: analysis
       run: |
         # Determine what type of review is needed
-        uv run --frozen llm_runner.py \
+        uv run --frozen llm_ci_runner.py \
           --input-file examples/01-basic/simple-chat/input.json \
           --output-file change-analysis.json \
           --schema-file examples/01-basic/simple-chat/schema.json
@@ -496,7 +496,7 @@ jobs:
     steps:
     - name: Security Review
       run: |
-        uv run --frozen llm_runner.py \
+        uv run --frozen llm_ci_runner.py \
           --input-file examples/03-security/vulnerability-analysis/input.json \
           --output-file security-result.json \
           --schema-file examples/03-security/vulnerability-analysis/schema.json
@@ -508,7 +508,7 @@ jobs:
     steps:
     - name: Performance Review
       run: |
-        uv run --frozen llm_runner.py \
+        uv run --frozen llm_ci_runner.py \
           --input-file examples/04-ai-first/autonomous-development-plan/input.json \
           --output-file performance-result.json \
           --schema-file examples/04-ai-first/autonomous-development-plan/schema.json
@@ -524,7 +524,7 @@ jobs:
 ### 2. Error Handling
 ```bash
 # Always check return codes
-if ! uv run --frozen llm_runner.py --input-file input.json --output-file output.json; then
+if ! uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json; then
   echo "❌ LLM execution failed"
   exit 1
 fi
@@ -554,17 +554,17 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 
 # Schema validation failures
-uv run --frozen llm_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
 
 # Timeout issues
-timeout 300 uv run --frozen llm_runner.py --input-file input.json --output-file output.json
+timeout 300 uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json
 ```
 
 ### Debug Mode
 ```bash
 # Enable debug logging
 export LOG_LEVEL=DEBUG
-uv run --frozen llm_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
 ```
 
 This comprehensive guide shows how to implement AI-first DevOps practices in real-world scenarios. Each example demonstrates the power of combining structured outputs, LLM-as-judge validation, and CI/CD integration for exponential productivity gains. 
