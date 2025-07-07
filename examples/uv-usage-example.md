@@ -1,18 +1,35 @@
-# Real-World CI/CD Examples with LLM Runner
+# Real-World CI/CD Examples with LLM CI Runner
 
-This document demonstrates practical AI-first DevOps workflows using the LLM Runner in real CI/CD scenarios. Each example shows how to integrate AI-powered automation into your development pipeline.
+This document demonstrates practical AI-first DevOps workflows using the LLM CI Runner in real CI/CD scenarios. Each example shows how to integrate AI-powered automation into your development pipeline.
 
 ## Prerequisites
 
-1. **Install UV** (if not already installed):
+1. **Install LLM CI Runner**:
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install llm-ci-runner
 ```
 
 2. **Set Environment Variables**:
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-export AZURE_OPENAI_MODEL="gpt-4.1-nano"
+export AZURE_OPENAI_MODEL="gpt-4o-mini"  # or any other GPT model
+export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
+```
+
+**Authentication**: Uses Azure `DefaultAzureCredential` (RBAC) by default. Set `AZURE_OPENAI_API_KEY` if not using RBAC.
+
+## Development Setup (Optional)
+
+For contributors or those who want to run from source:
+
+```bash
+# Install UV
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Clone and setup
+git clone https://github.com/Nantero1/ai-first-devops-toolkit.git
+cd ai-first-devops-toolkit
+uv sync --frozen
 ```
 
 ## Real-World CI/CD Scenarios
@@ -52,7 +69,7 @@ fi
 #### Step 3: Execute with Structured Output
 ```bash
 # Create PR description with schema enforcement
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/02-devops/pr-description/input.json \
   --output-file pr-description.json \
   --schema-file examples/02-devops/pr-description/schema.json \
@@ -79,8 +96,13 @@ jobs:
       with:
         fetch-depth: 0  # Get full history for diff
     
-    - name: Install UV
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
     
     - name: Extract Git Context
       run: |
@@ -89,7 +111,7 @@ jobs:
     
     - name: Generate PR Description
       run: |
-        uv run --frozen llm_ci_runner.py \
+        llm-ci-runner \
           --input-file examples/02-devops/pr-description/input.json \
           --output-file pr-description.json \
           --schema-file examples/02-devops/pr-description/schema.json
@@ -109,6 +131,19 @@ jobs:
             pull_number: context.issue.number,
             body: content
           });
+```
+
+**For Development/Source Usage:**
+```yaml
+    - name: Install UV
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    - name: Generate PR Description (from source)
+      run: |
+        uv run --frozen llm_ci_runner.py \
+          --input-file examples/02-devops/pr-description/input.json \
+          --output-file pr-description.json \
+          --schema-file examples/02-devops/pr-description/schema.json
 ```
 
 ### 2. Security Analysis with LLM-as-Judge
@@ -183,7 +218,7 @@ cat > security-input.json << EOF
 EOF
 
 # Run security analysis with schema enforcement
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/03-security/vulnerability-analysis/input.json \
   --output-file security-analysis.json \
   --schema-file examples/03-security/vulnerability-analysis/schema.json \
@@ -225,7 +260,7 @@ cat > judgment-input.json << EOF
 EOF
 
 # Run LLM-as-judge evaluation
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file judgment-input.json \
   --output-file judgment-result.json \
   --schema-file acceptance/judgment_schema.json \
@@ -257,8 +292,13 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Install UV
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
     
     - name: Run Security Analysis
       run: |
@@ -315,7 +355,7 @@ cat > changelog-input.json << EOF
 EOF
 
 # Generate changelog with schema
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/02-devops/changelog-generation/input.json \
   --output-file changelog.json \
   --schema-file examples/02-devops/changelog-generation/schema.json \
@@ -354,7 +394,7 @@ cat > review-input.json << EOF
 EOF
 
 # Run code review
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/02-devops/code-review/input.json \
   --output-file code-review.json \
   --schema-file examples/02-devops/code-review/schema.json \
@@ -388,8 +428,13 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Install UV
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
     
     - name: Run Code Review
       run: |
@@ -436,19 +481,19 @@ jobs:
 # multi-stage-pipeline.sh
 
 # Stage 1: Code Analysis
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/02-devops/code-review/input.json \
   --output-file stage1-output.json \
   --schema-file examples/02-devops/code-review/schema.json
 
 # Stage 2: Quality Validation (LLM-as-Judge)
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file stage2-input.json \
   --output-file stage2-output.json \
   --schema-file acceptance/judgment_schema.json
 
 # Stage 3: Action Generation
-uv run --frozen llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/02-devops/pr-description/input.json \
   --output-file stage3-output.json \
   --schema-file examples/02-devops/pr-description/schema.json
@@ -459,6 +504,12 @@ for action in $FINAL_ACTIONS; do
   echo "Executing: $action"
   # Execute action based on type
 done
+```
+
+**For Development/Source Usage:**
+```bash
+# Use uv run for source-based execution
+uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json
 ```
 
 ### 2. Conditional Workflows
@@ -474,11 +525,19 @@ jobs:
       needs-security-review: ${{ steps.analysis.outputs.security }}
       needs-performance-review: ${{ steps.analysis.outputs.performance }}
     steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
+    
     - name: Analyze Changes
       id: analysis
       run: |
         # Determine what type of review is needed
-        uv run --frozen llm_ci_runner.py \
+        llm-ci-runner \
           --input-file examples/01-basic/simple-chat/input.json \
           --output-file change-analysis.json \
           --schema-file examples/01-basic/simple-chat/schema.json
@@ -494,9 +553,17 @@ jobs:
     if: needs.analyze-changes.outputs.needs-security-review == 'true'
     runs-on: ubuntu-latest
     steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
+    
     - name: Security Review
       run: |
-        uv run --frozen llm_ci_runner.py \
+        llm-ci-runner \
           --input-file examples/03-security/vulnerability-analysis/input.json \
           --output-file security-result.json \
           --schema-file examples/03-security/vulnerability-analysis/schema.json
@@ -506,9 +573,17 @@ jobs:
     if: needs.analyze-changes.outputs.needs-performance-review == 'true'
     runs-on: ubuntu-latest
     steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
+    
     - name: Performance Review
       run: |
-        uv run --frozen llm_ci_runner.py \
+        llm-ci-runner \
           --input-file examples/04-ai-first/autonomous-development-plan/input.json \
           --output-file performance-result.json \
           --schema-file examples/04-ai-first/autonomous-development-plan/schema.json
@@ -524,7 +599,7 @@ jobs:
 ### 2. Error Handling
 ```bash
 # Always check return codes
-if ! uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json; then
+if ! llm-ci-runner --input-file input.json --output-file output.json; then
   echo "❌ LLM execution failed"
   exit 1
 fi
@@ -532,6 +607,15 @@ fi
 # Validate output structure
 if ! jq -e '.response' output.json > /dev/null; then
   echo "❌ Invalid output structure"
+  exit 1
+fi
+```
+
+**For Development/Source Usage:**
+```bash
+# Error handling with uv run
+if ! uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json; then
+  echo "❌ LLM execution failed"
   exit 1
 fi
 ```
@@ -550,13 +634,25 @@ fi
 
 ### Common Issues
 ```bash
-# UV not found in CI/CD
+# Python/pip not found in CI/CD
 export PATH="$HOME/.local/bin:$PATH"
 
 # Schema validation failures
-uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+llm-ci-runner --input-file input.json --output-file output.json --log-level DEBUG
 
 # Timeout issues
+timeout 300 llm-ci-runner --input-file input.json --output-file output.json
+```
+
+**For Development/Source Usage:**
+```bash
+# UV not found in CI/CD
+export PATH="$HOME/.local/bin:$PATH"
+
+# Debug with source
+uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+
+# Timeout with source
 timeout 300 uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json
 ```
 
@@ -564,6 +660,12 @@ timeout 300 uv run --frozen llm_ci_runner.py --input-file input.json --output-fi
 ```bash
 # Enable debug logging
 export LOG_LEVEL=DEBUG
+llm-ci-runner --input-file input.json --output-file output.json --log-level DEBUG
+```
+
+**For Development/Source Usage:**
+```bash
+# Debug with uv run
 uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
 ```
 

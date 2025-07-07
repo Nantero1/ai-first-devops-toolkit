@@ -59,7 +59,7 @@ When you use this example, here is what happens step by step:
 
 **Command:**
 ```bash
-uv run llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/04-ai-first/autonomous-development-plan/input.json \
   --output-file development-plan.json \
   --schema-file examples/04-ai-first/autonomous-development-plan/schema.json \

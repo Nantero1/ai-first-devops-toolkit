@@ -59,7 +59,7 @@ When you use this example, here is what happens step by step:
 
 **Command:**
 ```bash
-uv run llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/02-devops/changelog-generation/input.json \
   --output-file changelog.json \
   --schema-file examples/02-devops/changelog-generation/schema.json

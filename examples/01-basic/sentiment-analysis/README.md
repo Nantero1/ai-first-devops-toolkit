@@ -49,7 +49,7 @@ When you use this example, here is what happens step by step:
 
 ## Usage
 ```bash
-uv run llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/01-basic/sentiment-analysis/input.json \
   --schema-file examples/01-basic/sentiment-analysis/schema.json
 ```

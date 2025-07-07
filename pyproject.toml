@@ -61,7 +61,7 @@ dev = [
 
 [tool.uv]
 # Use system Python instead of managing Python versions
-python-downloads = "manual"
+# python-downloads = "manual"
 # Only install main dependencies by default (no dev dependencies)
 default-groups = []
 

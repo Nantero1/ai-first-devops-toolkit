@@ -1,6 +1,6 @@
 # AI-First DevOps Toolkit: LLM-Powered CI/CD Automation
 
-[![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql)
+[![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner) [![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql)
 
 > **🚀 The Future of DevOps is AI-First**  
 > This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on the motivation.
@@ -22,7 +22,9 @@
 ### Simple structured output example
 
 ```bash
-uv run llm_ci_runner.py --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
+# Install and use immediately
+pip install llm-ci-runner
+llm-ci-runner --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
 ```
 ![Structured output of the PR review example](./examples/02-devops/pr-description/output.png)
 
@@ -48,19 +50,20 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 - 📁 **File-based I/O**: CI/CD friendly with JSON input/output
 - 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
 
-## Quick Start
-
-### 1. Install Dependencies with UV
+## Installation
 
 ```bash
-# Install UV if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install llm-ci-runner
+```
 
-# install python (optional)
-uv python install 3.12
+That's it! No complex setup, no dependency management - just install and use. Perfect for CI/CD pipelines and local development.
 
-# Install dependencies (will use pre-installed Python)
-uv sync --frozen
+## Quick Start
+
+### 1. Install from PyPI
+
+```bash
+pip install llm-ci-runner
 ```
 
 ### 2. Set Environment Variables
@@ -71,20 +74,43 @@ export AZURE_OPENAI_MODEL="gpt-4.1-mini"  # or any other GPT
 export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 ```
 
-If you don't specify an API key, it will run `DefaultAzureCredential` to use RBAC (Role Based Access Control) for authentication (best practice). See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for more details.
-
-Otherwise, you can specify the API key in the environment variable `AZURE_OPENAI_API_KEY`.
+**Authentication Options:**
+- **RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed! See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for setup.
+- **API Key**: Set `AZURE_OPENAI_API_KEY` environment variable if not using RBAC.
 
 ### 3. Basic Usage
 
 ```bash
-# Run directly with UV (recommended for CI/CD)
-uv run --frozen llm_ci_runner.py \
-  --input-file examples/01-basic/simple-chat/input.json
-
-# Or install and use as a package
-pip install llm-ci-runner
+# Simple chat example
 llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
+
+# With structured output schema
+llm-ci-runner \
+  --input-file examples/01-basic/sentiment-analysis/input.json \
+  --schema-file examples/01-basic/sentiment-analysis/schema.json
+
+# Custom output file
+llm-ci-runner \
+  --input-file examples/02-devops/pr-description/input.json \
+  --schema-file examples/02-devops/pr-description/schema.json \
+  --output-file pr-analysis.json
+```
+
+### 4. Development Setup (Optional)
+
+For contributors or advanced users who want to modify the source:
+
+```bash
+# Install UV if you haven't already
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Clone and install for development
+git clone https://github.com/Nantero1/ai-first-devops-toolkit.git
+cd ai-first-devops-toolkit
+uv sync
+
+# Run from source
+uv run llm_ci_runner.py --input-file examples/01-basic/simple-chat/input.json
 ```
 
 ## Real-World Examples
@@ -127,7 +153,7 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 When you provide a `--schema-file`, the runner guarantees perfect schema compliance:
 
 ```bash
-uv run llm_ci_runner.py \
+llm-ci-runner \
   --input-file examples/01-basic/sentiment-analysis/input.json \
   --schema-file examples/01-basic/sentiment-analysis/schema.json
 ```
@@ -146,23 +172,38 @@ uv run llm_ci_runner.py \
 ### GitHub Actions Example
 
 ```yaml
-- name: Generate PR Review with Schema Enforcement
-  run: |
-    uv run --frozen llm_ci_runner.py \
-      --input-file examples/02-devops/pr-description/input.json \
-      --schema-file examples/02-devops/pr-description/schema.json \
-      --log-level WARNING
-  env:
-    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-    AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+- name: Setup Python
+  uses: actions/setup-python@v5
+  with:
+    python-version: '3.12'
 
-# Or using the installed package
+- name: Install LLM CI Runner
+  run: pip install llm-ci-runner
+
 - name: Generate PR Review with Schema Enforcement
   run: |
     llm-ci-runner \
       --input-file examples/02-devops/pr-description/input.json \
       --schema-file examples/02-devops/pr-description/schema.json \
+      --output-file pr-analysis.json \
       --log-level WARNING
+  env:
+    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+
+- name: Use the structured output
+  run: |
+    # The output is now in pr-analysis.json with guaranteed schema compliance
+    cat pr-analysis.json | jq '.summary'
+```
+
+**For Development/Source Usage:**
+```yaml
+- name: Generate PR Review (from source)
+  run: |
+    uv run --frozen llm_ci_runner.py \
+      --input-file examples/02-devops/pr-description/input.json \
+      --schema-file examples/02-devops/pr-description/schema.json
   env:
     AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
@@ -183,13 +224,21 @@ Uses Azure's `DefaultAzureCredential` supporting:
 We maintain comprehensive test coverage with **100% success rate**:
 
 ```bash
-# Install development dependencies, without frozen to be up to date
+# For package users - install test dependencies
+pip install llm-ci-runner[dev]
+
+# For development - install from source with test dependencies
 uv sync --group dev
 
 # Run specific test categories
-uv run pytest tests/unit/ -v          # 69 unit tests
-uv run pytest tests/integration/ -v   # End-to-end examples
-uv run pytest acceptance/ -v          # LLM-as-judge evaluation
+pytest tests/unit/ -v          # 70 unit tests
+pytest tests/integration/ -v   # End-to-end examples
+pytest acceptance/ -v          # LLM-as-judge evaluation
+
+# Or with uv for development
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
+uv run pytest acceptance/ -v
 ```
 
 ## Releasing
