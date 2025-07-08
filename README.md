@@ -42,13 +42,18 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 
 ## Features
 
-- 🎯 **100% Schema Enforcement**: Token-level constraint enforcement with guaranteed compliance
-- 🚀 **Zero-Friction CLI**: Single script, minimal configuration for CI/CD integration
-- 🔐 **Enterprise Security**: Azure RBAC via DefaultAzureCredential
-- 📋 **Dynamic Schema Support**: Runtime conversion of JSON schemas to Pydantic models
+- 🎯 **100% Schema Enforcement**: Your pipeline never gets invalid data. Token-level schema enforcement with guaranteed compliance
+- 🔄 **Resilient execution**: Retries with exponential back-off and jitter plus a clear exception hierarchy keep transient cloud faults from breaking your CI.
+- 🚀 **Zero-Friction CLI**: Single script, minimal configuration for pipeline integration and automation
+- 🔐 **Enterprise Security**: Azure RBAC via DefaultAzureCredential with fallback to API Key
+- 📋 **CI-friendly CLI**: Stateless command that reads JSON, writes JSON, and exits with proper codes
 - 🎨 **Beautiful Logging**: Rich console output with timestamps and colors
 - 📁 **File-based I/O**: CI/CD friendly with JSON input/output
 - 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
+- 🤖 **Semantic Kernel foundation**: async, service-oriented design ready for skills, memories, orchestration, and future model upgrades
+- 📚 **Documentation**: Comprehensive documentation for all features and usage examples. Use your semantic kernel skills to extend the functionality.
+- 🧑‍⚖️ **Acceptance Tests**: pytest framework with the LLM-as-Judge pattern for quality gates. Test your scripts before you run them in production.
+- 💰 **Coming soon**: token usage and cost estimation appended to each result for budgeting and optimisation
 
 ## Installation
 
