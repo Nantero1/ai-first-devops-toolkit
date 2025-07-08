@@ -5,6 +5,20 @@ package:
     installed: true
 
 command:
+  # Test Azure CLI is installed
+  az --version:
+    exit-status: 0
+    title: az cli ist installiert
+    timeout: 60000
+    stderr: []
+
+  yq --version:
+    exit-status: 0
+    title: yq is installed
+    timeout: 60000
+    stdout:
+      - "yq"
+
   # Test Python version and environment
   python --version:
     exit-status: 0

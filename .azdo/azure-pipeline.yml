@@ -62,3 +62,8 @@ extends:
                 ARTIFACTORY_PSW: $(ARTIFACTORY-DELIVERY-TOKEN)
               ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
                 publish: false
+              artifacts:
+                - path: github-proxy/mikefarah/yq/releases/latest/download/yq_linux_amd64
+                  target: yq_amd64
+                - path: github-proxy/mikefarah/yq/releases/latest/download/yq_linux_arm64
+                  target: yq_arm64

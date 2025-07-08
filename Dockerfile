@@ -1,5 +1,8 @@
 # Multi-stage build following uv Docker best practices
 # Base: Custom miniconda RHEL 8 image with Python 3.12 and uv
+# ================================
+# System and Azure DevOps dependencies:
+# ================================
 
 FROM teambank.jfrog.io/cdos-base-images-docker/miniconda:rhel8-4.11.0 AS base
 ARG TARGETARCH
@@ -12,6 +15,36 @@ RUN arch=$(arch); \
     [ "$arch" = "x86_64" ]  && arch=amd64; \
     [ "$arch" = "arm64" ] && arch=arm64; \
     [ "$TARGETARCH" = "$arch" ] || { echo "ERROR! Image build is running on $arch but $TARGETARCH was requested! Quitting!" && false; }
+
+COPY yq_$TARGETARCH /usr/local/bin/yq
+
+# Install system dependencies including essential tools for Azure DevOps
+RUN chmod +x /usr/local/bin/yq && \
+    microdnf update -y && \
+    microdnf install -y \
+    jq \
+    curl \
+    wget \
+    git \
+    openssh-clients \
+    tar \
+    gzip \
+    unzip \
+    gettext && \
+    microdnf clean all
+
+# Install Azure CLI (required for most Azure DevOps pipelines)
+RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc && \
+    echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/rhel/8/prod\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo && \
+    microdnf install -y azure-cli && \
+    microdnf clean all
+
+# Install Azure DevOps CLI extension
+RUN az extension add -n azure-devops --system
+
+# ================================
+# Python specific stuff:
+# ================================
 
 # Enable uv optimizations for Docker
 ENV UV_COMPILE_BYTECODE=1
@@ -38,11 +71,6 @@ RUN --mount=type=secret,id=ARTIFACTORY_USR \
 # Activate conda environment for all subsequent commands
 ENV PATH="/opt/conda/envs/$CONDA_DEFAULT_ENV/bin:$PATH"
 
-# Install system dependencies including jq for JSON processing
-RUN microdnf update -y && \
-    microdnf install -y jq && \
-    microdnf clean all
-
 # Intermediate layer: Install dependencies only
 # This layer will be cached until pyproject.toml or uv.lock changes
 RUN --mount=type=cache,target=/opt/uv-cache/ \
@@ -61,7 +89,7 @@ RUN --mount=type=cache,target=/opt/uv-cache/ \
 # Performance optimization: Disable uv sync, code is already compiled
 ENV UV_NO_SYNC=true
 
-# Temporary set to sane defaults
+# Set to sane defaults during POC
 ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-dev-swecen-001.openai.azure.com/
 ENV AZURE_OPENAI_MODEL=gpt-4.1-nano
 ENV AZURE_OPENAI_API_VERSION=2024-12-01-preview
