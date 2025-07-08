@@ -12,6 +12,14 @@ from unittest.mock import Mock, patch
 import pytest
 
 from llm_ci_runner import setup_logging
+import os
+import pytest
+from unittest.mock import patch, Mock
+from llm_ci_runner import (
+    setup_openai_service,
+    get_llm_service,
+    AuthenticationError,
+)
 
 
 class TestSetupLogging:
@@ -150,6 +158,59 @@ class TestSetupLogging:
         # Verify RichHandler was called with the global CONSOLE
         handler_call_kwargs = mock_rich_handler.call_args[1]
         assert handler_call_kwargs["console"] == mock_console
+
+
+class TestOpenAIServiceSetup:
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_success(self):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "OPENAI_CHAT_MODEL_ID": "gpt-4o"}, clear=True):
+            service, credential = await setup_openai_service()
+            assert service is not None
+            assert credential is None
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_missing_api_key(self):
+        with patch.dict(os.environ, {"OPENAI_CHAT_MODEL_ID": "gpt-4o"}, clear=True):
+            with pytest.raises(AuthenticationError, match="OPENAI_API_KEY environment variable not set"):
+                await setup_openai_service()
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_missing_model(self):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+            with pytest.raises(AuthenticationError, match="OPENAI_CHAT_MODEL_ID environment variable not set"):
+                await setup_openai_service()
+
+class TestProviderSelection:
+    def test_llm_provider_env_openai_success(self):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "openai", "OPENAI_API_KEY": "k", "OPENAI_CHAT_MODEL_ID": "m"}, clear=True):
+            assert get_llm_service() == "openai"
+
+    def test_llm_provider_env_openai_missing_vars(self):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "openai"}, clear=True):
+            with pytest.raises(AuthenticationError, match="LLM_PROVIDER=openai but required OpenAI env vars are missing"):
+                get_llm_service()
+
+    def test_llm_provider_env_azure_success(self):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "azure", "AZURE_OPENAI_ENDPOINT": "e", "AZURE_OPENAI_MODEL": "m"}, clear=True):
+            assert get_llm_service() == "azure"
+
+    def test_llm_provider_env_azure_missing_vars(self):
+        with patch.dict(os.environ, {"LLM_PROVIDER": "azure"}, clear=True):
+            with pytest.raises(AuthenticationError, match="LLM_PROVIDER=azure but required Azure env vars are missing"):
+                get_llm_service()
+
+    def test_auto_discovery_prefers_azure(self):
+        with patch.dict(os.environ, {"AZURE_OPENAI_ENDPOINT": "e", "AZURE_OPENAI_MODEL": "m", "OPENAI_API_KEY": "k", "OPENAI_CHAT_MODEL_ID": "m"}, clear=True):
+            assert get_llm_service() == "azure"
+
+    def test_auto_discovery_openai_only(self):
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "k", "OPENAI_CHAT_MODEL_ID": "m"}, clear=True):
+            assert get_llm_service() == "openai"
+
+    def test_auto_discovery_none(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(AuthenticationError, match="No LLM provider is properly configured"):
+                get_llm_service()
 
 
 class TestMainFunction:

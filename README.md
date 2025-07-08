@@ -69,25 +69,41 @@ pip install llm-ci-runner
 ### 2. Set Environment Variables
 
 ```bash
+# For Azure OpenAI (default if both are set)
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 export AZURE_OPENAI_MODEL="gpt-4.1-nano"  # or any other GPT deployment name
 export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
+# For OpenAI (ChatGPT API)
+export OPENAI_API_KEY="sk-..."  # Your OpenAI API key
+export OPENAI_CHAT_MODEL_ID="gpt-4o"  # or any other OpenAI chat model
+export OPENAI_ORG_ID="org-..."  # Optional, only if your account uses orgs
 ```
 
-**Authentication Options:**
+**Provider Selection:**
+- By default, the runner auto-discovers the provider:
+  - If both Azure and OpenAI env vars are set, **Azure is preferred**.
+  - If only OpenAI vars are set, OpenAI is used.
+- You can force a provider by setting `LLM_PROVIDER`:
+  - `export LLM_PROVIDER=azure` or `export LLM_PROVIDER=openai`
+  - If required env vars for the selected provider are missing, the runner will fail with a clear error.
+
+**Authentication Options (Azure):**
 - **RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed! See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for setup.
 - **API Key**: Set `AZURE_OPENAI_API_KEY` environment variable if not using RBAC.
 
 ### 3. Basic Usage
 
 ```bash
-# Simple chat example
+# Simple chat example (auto-detects provider)
 llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
 
 # With structured output schema
 llm-ci-runner \
   --input-file examples/01-basic/sentiment-analysis/input.json \
   --schema-file examples/01-basic/sentiment-analysis/schema.json
+
+# Force OpenAI provider
+LLM_PROVIDER=openai llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
 
 # Custom output file
 llm-ci-runner \

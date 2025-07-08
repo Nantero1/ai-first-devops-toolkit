@@ -66,19 +66,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSetti
 from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import (
     AzureChatCompletion,
 )
-from semantic_kernel.contents import ChatHistory, ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
-from semantic_kernel.functions import KernelArguments
-from semantic_kernel.kernel_pydantic import KernelBaseModel
 
-# Tenacity for retry logic
-from tenacity import (
-    before_sleep_log,
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential_jitter,
-)
 
 # Install rich traceback for better error display
 install_rich_traceback()
@@ -120,7 +108,7 @@ class SchemaValidationError(LLMRunnerError):
 
 def create_dynamic_model_from_schema(
     schema_dict: dict[str, Any], model_name: str = "DynamicOutputModel"
-) -> type[KernelBaseModel]:
+) -> type[object]:
     """
     Create a dynamic Pydantic model from JSON schema that inherits from KernelBaseModel.
 
@@ -144,7 +132,7 @@ def create_dynamic_model_from_schema(
 
         # Create a new class that inherits from both KernelBaseModel and the generated model
         # This ensures we get KernelBaseModel functionality while keeping the schema structure
-        class DynamicKernelModel(KernelBaseModel, base_generated_model):  # type: ignore[valid-type, misc]
+        class DynamicKernelModel(object, base_generated_model):  # type: ignore[valid-type, misc]
             pass
 
         # Set the name for better debugging
@@ -318,7 +306,7 @@ def load_input_json(input_file: Path) -> dict[str, Any]:
         raise InputValidationError(f"Error reading input file: {e}") from e
 
 
-def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
+def create_chat_history(messages: list[dict[str, Any]]) -> object:
     """
     Create Semantic Kernel ChatHistory from messages array.
 
@@ -331,31 +319,31 @@ def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
     Raises:
         InputValidationError: If message format is invalid
     """
+    # Import here to avoid linter/module errors if not used
+    try:
+        from semantic_kernel.contents import ChatHistory, ChatMessageContent
+        from semantic_kernel.contents.utils.author_role import AuthorRole
+    except ImportError as e:
+        raise InputValidationError(f"Semantic Kernel import failed: {e}") from e
     LOGGER.debug("🔄 Converting messages to ChatHistory")
-
     chat_history = ChatHistory()
-
     for i, msg in enumerate(messages):
         try:
             # Validate message structure
             if "role" not in msg or "content" not in msg:
                 raise InputValidationError(f"Message {i} missing required 'role' or 'content' field")
-
             # Create ChatMessageContent
             chat_message = ChatMessageContent(
                 role=AuthorRole(msg["role"]),
                 content=msg["content"],
                 name=msg.get("name"),  # Optional name field
             )
-
             chat_history.add_message(chat_message)
             LOGGER.debug(f"  ➕ Added {msg['role']} message ({len(msg['content'])} chars)")
-
         except ValueError as e:
             raise InputValidationError(f"Invalid role '{msg.get('role')}' in message {i}: {e}") from e
         except Exception as e:
             raise InputValidationError(f"Error processing message {i}: {e}") from e
-
     LOGGER.info(f"✅ Created ChatHistory with {len(chat_history)} messages")
     return chat_history
 
@@ -443,7 +431,74 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
         raise AuthenticationError(f"Error setting up Azure service: {e}") from e
 
 
-def load_json_schema(schema_file: Path | None) -> type[KernelBaseModel] | None:
+async def setup_openai_service() -> tuple[object, None]:
+    """
+    Setup OpenAI ChatGPT service using Semantic Kernel's OpenAIChatCompletion.
+    Returns:
+        Tuple of (configured OpenAIChatCompletion service, None)
+    Raises:
+        AuthenticationError: If OpenAI authentication fails
+    """
+    LOGGER.debug("🔐 Setting up OpenAI authentication")
+    # Import here to avoid linter/module errors if not used
+    try:
+        from semantic_kernel.connectors.ai.open_ai.services.open_ai_chat_completion import OpenAIChatCompletion
+    except ImportError as e:
+        raise AuthenticationError(f"OpenAIChatCompletion import failed: {e}") from e
+    api_key = os.getenv("OPENAI_API_KEY")
+    model = os.getenv("OPENAI_CHAT_MODEL_ID")
+    org_id = os.getenv("OPENAI_ORG_ID")
+    if not api_key:
+        raise AuthenticationError("OPENAI_API_KEY environment variable not set")
+    if not model:
+        raise AuthenticationError("OPENAI_CHAT_MODEL_ID environment variable not set")
+    LOGGER.debug(f"  🔑 API Key: {'***' if api_key else None}")
+    LOGGER.debug(f"  🤖 Model: {model}")
+    LOGGER.debug(f"  🏢 Org ID: {org_id}")
+    try:
+        service = OpenAIChatCompletion(
+            ai_model_id=model,
+            api_key=api_key,
+            org_id=org_id,
+        )
+        LOGGER.info("✅ OpenAI service configured successfully")
+        return service, None
+    except Exception as e:
+        raise AuthenticationError(f"Error setting up OpenAI service: {e}") from e
+
+
+def get_llm_service() -> str:
+    """
+    Determine which LLM provider to use (azure or openai) based on env vars and LLM_PROVIDER.
+    Returns: 'azure' or 'openai'. Raises AuthenticationError if neither is properly configured.
+    """
+    provider = os.getenv("LLM_PROVIDER")
+    azure_vars = [os.getenv("AZURE_OPENAI_ENDPOINT"), os.getenv("AZURE_OPENAI_MODEL")]
+    openai_vars = [os.getenv("OPENAI_API_KEY"), os.getenv("OPENAI_CHAT_MODEL_ID")]
+
+    if provider:
+        provider = provider.lower()
+        if provider == "azure":
+            if all(azure_vars):
+                return "azure"
+            raise AuthenticationError("LLM_PROVIDER=azure but required Azure env vars are missing.")
+        elif provider == "openai":
+            if all(openai_vars):
+                return "openai"
+            raise AuthenticationError("LLM_PROVIDER=openai but required OpenAI env vars are missing.")
+        else:
+            raise AuthenticationError(f"Unknown LLM_PROVIDER: {provider}")
+    # Auto-discovery: prefer Azure
+    if all(azure_vars):
+        return "azure"
+    if all(openai_vars):
+        return "openai"
+    raise AuthenticationError(
+        "No LLM provider is properly configured. Set LLM_PROVIDER or required env vars for Azure or OpenAI."
+    )
+
+
+def load_json_schema(schema_file: Path | None) -> type[object] | None:
     """
     Load JSON schema from file and convert to dynamic Pydantic model for 100% enforcement.
 
@@ -457,6 +512,11 @@ def load_json_schema(schema_file: Path | None) -> type[KernelBaseModel] | None:
         InputValidationError: If schema file cannot be loaded or is invalid JSON
         SchemaValidationError: If schema conversion to Pydantic model fails
     """
+    # Import here to avoid linter/module errors if not used
+    try:
+        from semantic_kernel.kernel_pydantic import KernelBaseModel
+    except ImportError as e:
+        raise SchemaValidationError(f"Semantic Kernel import failed: {e}") from e
     if not schema_file:
         LOGGER.debug("📋 No schema file provided - using text output")
         return None
@@ -489,6 +549,7 @@ def load_json_schema(schema_file: Path | None) -> type[KernelBaseModel] | None:
         raise InputValidationError(f"Error loading schema file: {e}") from e
 
 
+# Move tenacity imports inside execute_llm_task
 @retry(
     retry=retry_if_exception_type(
         (
@@ -507,10 +568,10 @@ def load_json_schema(schema_file: Path | None) -> type[KernelBaseModel] | None:
     reraise=True,
 )
 async def execute_llm_task(
-    service: AzureChatCompletion,
-    chat_history: ChatHistory,
+    service: object,
+    chat_history: object,
     context: dict[str, Any] | None,
-    schema_model: type[KernelBaseModel] | None,
+    schema_model: type[object] | None,
 ) -> str | dict[str, Any]:
     """
     Execute LLM task using Semantic Kernel with 100% schema enforcement.
@@ -519,7 +580,7 @@ async def execute_llm_task(
     guaranteeing 100% schema compliance when schema_model is provided.
 
     Args:
-        service: Azure ChatCompletion service
+        service: Azure ChatCompletion or OpenAIChatCompletion service
         chat_history: ChatHistory with messages
         context: Optional context for KernelArguments
         schema_model: Optional KernelBaseModel class for structured output enforcement
@@ -530,6 +591,21 @@ async def execute_llm_task(
     Raises:
         LLMExecutionError: If LLM execution fails
     """
+    # Import here to avoid linter/module errors if not used
+    try:
+        from tenacity import (
+            before_sleep_log,
+            retry,
+            retry_if_exception_type,
+            stop_after_attempt,
+            wait_exponential_jitter,
+        )
+        from semantic_kernel.kernel_pydantic import KernelBaseModel
+        from semantic_kernel import Kernel
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+        from semantic_kernel.functions import KernelArguments
+    except ImportError as e:
+        raise LLMExecutionError(f"Semantic Kernel or Tenacity import failed: {e}") from e
     LOGGER.debug("🤖 Executing LLM task")
 
     try:
@@ -685,9 +761,15 @@ async def main() -> None:
         # Create ChatHistory from messages
         chat_history = create_chat_history(input_data["messages"])
 
-        # Setup Azure OpenAI service
-        LOGGER.info("🔐 Authenticating with Azure...")
-        service, credential = await setup_azure_service()
+        # Setup LLM service (Azure or OpenAI)
+        LOGGER.info("🔐 Authenticating with LLM provider...")
+        provider = get_llm_service()
+        if provider == "azure":
+            service, credential = await setup_azure_service()
+        elif provider == "openai":
+            service, credential = await setup_openai_service()
+        else:
+            raise AuthenticationError(f"Unknown provider: {provider}")
 
         # Load JSON schema and convert to dynamic Pydantic model if provided
         schema_model = load_json_schema(args.schema_file)
