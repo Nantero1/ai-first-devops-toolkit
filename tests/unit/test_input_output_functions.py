@@ -14,14 +14,14 @@ import pytest
 from llm_ci_runner import (
     InputValidationError,
     LLMRunnerError,
-    load_input_json,
+    load_input_file,
     parse_arguments,
     write_output_file,
 )
 
 
-class TestLoadInputJson:
-    """Tests for load_input_json function."""
+class TestLoadInputFile:
+    """Tests for load_input_file function."""
 
     def test_load_valid_input_file(self, temp_input_file):
         """Test loading a valid input JSON file."""
@@ -29,7 +29,7 @@ class TestLoadInputJson:
         input_file = temp_input_file
 
         # when
-        result = load_input_json(input_file)
+        result = load_input_file(input_file)
 
         # then
         assert isinstance(result, dict)
@@ -46,7 +46,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="Input file not found"):
-            load_input_json(nonexistent_file)
+            load_input_file(nonexistent_file)
 
     def test_load_invalid_json_raises_error(self, temp_dir):
         """Test that invalid JSON raises InputValidationError."""
@@ -57,7 +57,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="Invalid JSON in input file"):
-            load_input_json(invalid_json_file)
+            load_input_file(invalid_json_file)
 
     def test_load_file_without_messages_raises_error(self, temp_dir):
         """Test that file without messages field raises InputValidationError."""
@@ -67,8 +67,8 @@ class TestLoadInputJson:
             json.dump({"context": {"session_id": "test"}}, f)
 
         # when & then
-        with pytest.raises(InputValidationError, match="Input JSON must contain 'messages' field"):
-            load_input_json(no_messages_file)
+        with pytest.raises(InputValidationError, match="Input file must contain 'messages' field"):
+            load_input_file(no_messages_file)
 
     def test_load_file_with_empty_messages_raises_error(self, temp_dir):
         """Test that file with empty messages array raises InputValidationError."""
@@ -79,7 +79,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="'messages' must be a non-empty array"):
-            load_input_json(empty_messages_file)
+            load_input_file(empty_messages_file)
 
     def test_load_file_with_non_array_messages_raises_error(self, temp_dir):
         """Test that file with non-array messages raises InputValidationError."""
@@ -90,7 +90,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="'messages' must be a non-empty array"):
-            load_input_json(non_array_messages_file)
+            load_input_file(non_array_messages_file)
 
     def test_load_file_with_context_shows_debug_info(self, temp_input_file, mock_logger):
         """Test that file with context logs debug information."""
@@ -98,7 +98,7 @@ class TestLoadInputJson:
         input_file = temp_input_file
 
         # when
-        result = load_input_json(input_file)
+        result = load_input_file(input_file)
 
         # then
         assert "context" in result
@@ -116,7 +116,46 @@ class TestLoadInputJson:
             patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
             with pytest.raises(InputValidationError, match="Error reading input file"):
-                load_input_json(error_file)
+                load_input_file(error_file)
+
+    def test_load_valid_yaml_file(self, temp_dir):
+        """Test loading a valid YAML input file."""
+        # given
+        yaml_file = temp_dir / "input.yaml"
+        yaml_content = """
+messages:
+  - role: system
+    content: You are a helpful assistant.
+  - role: user
+    content: Hello world
+context:
+  session_id: test-yaml
+"""
+        with open(yaml_file, "w") as f:
+            f.write(yaml_content)
+
+        # when
+        result = load_input_file(yaml_file)
+
+        # then
+        assert isinstance(result, dict)
+        assert "messages" in result
+        assert isinstance(result["messages"], list)
+        assert len(result["messages"]) == 2
+        assert result["messages"][0]["role"] == "system"
+        assert result["messages"][1]["role"] == "user"
+        assert result["context"]["session_id"] == "test-yaml"
+
+    def test_load_invalid_yaml_raises_error(self, temp_dir):
+        """Test that invalid YAML raises InputValidationError."""
+        # given
+        invalid_yaml_file = temp_dir / "invalid.yaml"
+        with open(invalid_yaml_file, "w") as f:
+            f.write("messages:\n  - role: user\n    content: test\n  invalid_key: {\n")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Invalid YAML in input file"):
+            load_input_file(invalid_yaml_file)
 
 
 class TestWriteOutputFile:
@@ -197,6 +236,51 @@ class TestWriteOutputFile:
         # when & then
         with pytest.raises(LLMRunnerError, match="Error writing output file"):
             write_output_file(output_file, response)
+
+    def test_write_yaml_structured_response(self, temp_dir):
+        """Test writing structured response to YAML output file."""
+        # given
+        output_file = temp_dir / "output.yaml"
+        response = {
+            "sentiment": "neutral",
+            "confidence": 0.95,
+            "summary": "Test response",
+        }
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        import yaml
+
+        with open(output_file) as f:
+            written_data = yaml.safe_load(f)
+
+        assert written_data["success"] is True
+        assert written_data["response"] == response
+        assert "metadata" in written_data
+        assert written_data["metadata"]["runner"] == "llm_ci_runner.py"
+
+    def test_write_yaml_text_response(self, temp_dir):
+        """Test writing text response to YAML output file."""
+        # given
+        output_file = temp_dir / "output.yml"  # Test .yml extension too
+        response = "This is a simple text response."
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        import yaml
+
+        with open(output_file) as f:
+            written_data = yaml.safe_load(f)
+
+        assert written_data["success"] is True
+        assert written_data["response"] == response
+        assert "metadata" in written_data
 
 
 class TestParseArguments:
@@ -307,6 +391,59 @@ class TestParseArguments:
         """Test that help argument raises SystemExit."""
         # given
         test_args = ["--help"]
+
+        # when & then
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            with pytest.raises(SystemExit):
+                parse_arguments()
+
+    def test_parse_template_arguments(self):
+        """Test parsing template-related arguments."""
+        # given
+        test_args = [
+            "--template-file",
+            "template.yaml",
+            "--template-vars",
+            "vars.json",
+            "--schema-file",
+            "schema.yaml",
+        ]
+
+        # when
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.template_file == Path("template.yaml")
+        assert args.template_vars == Path("vars.json")
+        assert args.input_file is None
+        assert args.schema_file == Path("schema.yaml")
+
+    def test_parse_template_file_without_vars_is_allowed(self):
+        """Test that template-file without template-vars is now allowed (optional)."""
+        # given
+        test_args = ["--template-file", "template.yaml"]  # No template-vars (optional)
+
+        # when
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.template_file == Path("template.yaml")
+        assert args.template_vars is None  # Should be None when not provided
+        assert args.input_file is None
+
+    def test_parse_mutually_exclusive_input_methods_raises_error(self):
+        """Test that providing both input-file and template-file raises error."""
+        # given
+        test_args = [
+            "--input-file",
+            "input.json",
+            "--template-file",
+            "template.yaml",
+            "--template-vars",
+            "vars.json",
+        ]
 
         # when & then
         with patch("sys.argv", ["llm_ci_runner.py"] + test_args):

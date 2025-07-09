@@ -1,0 +1,56 @@
+expertise:
+  domain: "security and code quality"
+  focus_areas: "security vulnerabilities, code maintainability, performance implications"
+
+impact_levels: "low, medium, high, critical"
+
+repository:
+  name: "secure-auth-service"
+  pr_number: 789
+  branch: "fix/security-improvements"
+  files_changed:
+    - "auth/authentication.py"
+    - "auth/session_manager.py"
+    - "tests/test_auth.py"
+
+review_context:
+  priority_areas: "SQL injection prevention, input validation, error handling"
+  focus_areas:
+    - "SQL injection vulnerabilities"
+    - "Input validation and sanitization"
+    - "Error handling and logging"
+    - "Authentication security best practices"
+    - "Session management security"
+  related_issues: [456, 789]
+  deployment_env: "production"
+
+code_diff: |
+  --- a/auth/authentication.py
+  +++ b/auth/authentication.py
+  @@ -15,8 +15,12 @@ class AuthenticationService:
+       def authenticate_user(self, username: str, password: str) -> Optional[User]:
+           """Authenticate user with username and password."""
+  +        # Input validation
+  +        if not username or not password:
+  +            logger.warning("Authentication attempted with empty credentials")
+  +            return None
+  +            
+  -        query = f"SELECT * FROM users WHERE username = '{username}'"
+  +        query = "SELECT * FROM users WHERE username = %s AND active = true"
+  -        result = self.db.execute(query)
+  +        result = self.db.execute(query, (username,))
+           
+           if not result:
+               return None
+  @@ -35,6 +39,10 @@ class AuthenticationService:
+       def create_session(self, user_id: int) -> str:
+           """Create a new session for authenticated user."""
+  +        if not isinstance(user_id, int) or user_id <= 0:
+  +            raise ValueError("Invalid user_id provided")
+  +            
+           session_token = secrets.token_urlsafe(32)
+           expiry = datetime.now() + timedelta(hours=24)
+           
+  +        # Use parameterized query for session creation
+           query = "INSERT INTO sessions (user_id, token, expiry) VALUES (%s, %s, %s)"
+           self.db.execute(query, (user_id, session_token, expiry)) 

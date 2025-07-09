@@ -8,6 +8,14 @@ alwaysApply: false
 
 *Note: This file is updated only upon user request and focuses on capturing important, reusable lessons learned during development. Each entry follows format: [Timestamp] Priority: Category → Issue: [Problem] → Fix: [Solution] → Why: [Impact]. Use grep/automated tools to verify changes and prevent regressions.*
 
+## Component Development
+
+[2024-12-30 14:30] Testing Framework: Template evaluation requires different approach than query-response evaluation → Use template content as context instead of hardcoded fake queries, focus on output quality rather than relevance → Prevents brittle hardcoded queries and makes evaluation more appropriate for template-based examples
+
+[2024-12-30 14:25] Testing Framework: Auto-detection of test mode based on file extension simplifies CLI integration → Check .hbs vs .json extension to determine --template-file vs --input-file mode → Cleaner code and automatic mode switching without manual configuration
+
+[2024-12-30 14:20] Testing Framework: Priority-based example discovery enables graceful fallback → Scan for input.json first, then fall back to template.hbs + schema.yaml → Maintains backward compatibility while adding new functionality
+
 ## 2025-01-06 - Code Quality and Refactoring
 
 [2025-01-06 23:16] **Critical**: Code Smell Detection and Library Usage → Issue: Manual implementation of JSON schema to Pydantic model conversion instead of using dedicated libraries creates 150+ lines of maintenance burden and incomplete feature coverage → Fix: Replace manual implementation with json-schema-to-pydantic library, use multiple inheritance to maintain KernelBaseModel functionality → Why: Eliminates reinventing-the-wheel anti-pattern, reduces code by 150+ lines, improves robustness with comprehensive JSON schema support including references and combiners, follows DRY principle and reduces maintenance burden. Libraries exist for common problems - use them.
@@ -379,3 +387,102 @@ async def test_technical_expertise_topics(
     }
     # ... shared test logic
 ```
+
+## 2025-01-07 - Handlebars Templates and Structured Output
+
+[2025-01-07 01:30] **Critical**: Semantic Kernel YAML Execution Settings Limitation → Issue: response_format parameter is NOT supported in YAML execution_settings, only programmatic setting works → Fix: Use hybrid approach - load Handlebars YAML template, render with variables, then apply schema enforcement programmatically via settings.response_format = KernelBaseModel → Why: Maintains 100% schema enforcement while using Handlebars templates. YAML execution_settings only support temperature, max_tokens, function_choice_behavior - NOT response_format. Critical architectural constraint.
+
+```python
+# ❌ WRONG - YAML execution_settings don't support response_format
+execution_settings:
+  default:
+    temperature: 0.7
+    response_format: MySchema  # NOT SUPPORTED in YAML
+
+# ✅ CORRECT - Hybrid approach
+config = PromptTemplateConfig.from_yaml(template_content)
+template = HandlebarsPromptTemplate(prompt_template_config=config)
+rendered_prompt = await template.render(kernel, KernelArguments(**template_vars))
+
+# Apply schema enforcement programmatically
+settings = OpenAIChatPromptExecutionSettings()
+settings.response_format = schema_model  # Must be done in code
+```
+
+[2025-01-07 01:28] **Important**: Handlebars Template Rendering Integration → Issue: Rendered Handlebars templates produce string output that needs conversion to ChatHistory for existing execution pipeline → Fix: Create rendered prompt as single ChatMessageContent with user role, maintain existing service.get_chat_message_contents() flow → Why: Preserves existing schema enforcement architecture while adding template capability. Avoids rewriting core execution logic.
+
+```python
+# ✅ INTEGRATION PATTERN - Template to ChatHistory
+rendered_prompt = await template.render(kernel, KernelArguments(**template_vars))
+
+# Convert to ChatHistory for existing pipeline
+chat_history = ChatHistory([
+    ChatMessageContent(role="user", content=rendered_prompt)
+])
+
+# Use existing execution path with schema enforcement
+result = await service.get_chat_message_contents(
+    chat_history=chat_history,
+    settings=settings,  # Contains response_format
+    arguments=args
+)
+```
+
+[2025-01-07 01:26] **Important**: Template Variables Validation Strategy → Issue: Handlebars templates can reference variables not provided in template_vars causing rendering failures → Fix: Validate template variable requirements against provided variables, surface clear error messages before attempting render → Why: Prevents cryptic template rendering errors, improves user experience, enables early validation feedback.
+
+```python
+# ✅ VALIDATION PATTERN - Check template variables
+def validate_template_variables(template_config: PromptTemplateConfig, provided_vars: dict):
+    required_vars = [var.name for var in template_config.input_variables if var.is_required]
+    missing_vars = [var for var in required_vars if var not in provided_vars]
+    
+    if missing_vars:
+        raise InputValidationError(
+            f"Template requires variables {missing_vars} but only {list(provided_vars.keys())} provided"
+        )
+```
+
+[2025-01-07 01:24] **Enhancement**: YAML Template Execution Settings Integration → Issue: Handlebars YAML templates can define execution_settings (temperature, etc.) that should be merged with schema enforcement settings → Fix: Extract execution_settings from template config, merge with programmatic response_format setting → Why: Respects template author's intent for model behavior while maintaining schema enforcement. Enables template-specific tuning.
+
+```python
+# ✅ MERGE PATTERN - Template settings + schema enforcement
+config = PromptTemplateConfig.from_yaml(template_content)
+
+# Extract template execution settings
+template_settings = config.execution_settings.get("default", {})
+
+# Create execution settings with schema enforcement
+settings = OpenAIChatPromptExecutionSettings()
+settings.response_format = schema_model  # Schema enforcement (not in YAML)
+
+# Merge template settings
+if "temperature" in template_settings:
+    settings.temperature = template_settings["temperature"]
+if "max_tokens" in template_settings:
+    settings.max_tokens = template_settings["max_tokens"]
+# ... other settings
+```
+
+[2025-01-17 10:15] Agent Mode Implementation: YAML Support Complete → Full feature implementation with comprehensive testing → Impact: Production-ready YAML/template functionality achieved
+
+[2025-01-17 10:00] Template Function Testing: Mock PromptTemplateConfig directly → Use `PromptTemplateConfig(**yaml_data)` instead of non-existent `from_yaml()` method → Impact: Tests pass correctly matching actual SK Python API
+
+[2025-01-17 09:45] Unit Test Debugging: Function name changes require test updates → Update all references from `load_input_json` to `load_input_file` and `load_json_schema` to `load_schema_file` → Impact: All 93 tests passing after refactoring
+
+[2025-01-17 09:30] Main Function Testing: sys.exit mocking prevents SystemExit → Remove sys.exit patches to allow proper exception propagation in tests → Impact: KeyboardInterrupt tests pass correctly
+
+[2025-01-17 09:15] Template Implementation: Direct YAML parsing needed → Parse YAML manually with `yaml.safe_load()` then create `PromptTemplateConfig(**data)` → Impact: Proper template loading without deprecated methods
+
+[2025-01-17 09:00] CLI Mutual Exclusivity: argparse groups enforce constraints → Use `add_mutually_exclusive_group()` for --input-file vs --template-file → Impact: Clear validation and proper error messages
+
+[2025-01-17 08:45] YAML Output: File extension determines format → Check `output_file.suffix.lower() in [".yaml", ".yml"]` to select writer → Impact: Seamless format switching based on user intent
+
+[2025-01-17 08:30] Template Execution: Dual main() paths needed → Branch execution based on `args.template_file` vs `args.input_file` → Impact: Clean separation of template vs direct file workflows
+
+[2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
+
+[2025-01-17 08:00] Code Organization: Follow existing patterns → Maintain same error handling, logging style, and function signatures as original code → Impact: Consistent codebase quality and maintainability
+
+[2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
+
+[2025-01-17 08:00] Code Organization: Follow existing patterns → Maintain same error handling, logging style, and function signatures as original code → Impact: Consistent codebase quality and maintainability

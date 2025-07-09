@@ -14,6 +14,10 @@ pip install llm-ci-runner
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 export AZURE_OPENAI_MODEL="gpt-4.1-nano"  # or any other GPT deployment name
 export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
+
+# expert tip to enforce rich colors and better formatting:
+export FORCE_COLOR=1
+export COLUMNS=120
 ```
 
 **Authentication**: Uses Azure `DefaultAzureCredential` (RBAC) by default. Set `AZURE_OPENAI_API_KEY` if not using RBAC.
@@ -588,6 +592,292 @@ jobs:
           --output-file performance-result.json \
           --schema-file examples/04-ai-first/autonomous-development-plan/schema.json
 ```
+
+## Template-Based Workflows
+
+The LLM CI Runner now supports dynamic prompt generation using YAML configuration and Handlebars templates, making your AI workflows more maintainable and reusable.
+
+### 1. Template-Based PR Analysis
+
+**Scenario**: Use templates to create dynamic, context-aware PR reviews that adapt to different repositories and teams.
+
+#### Step 1: Create Reusable Template
+```handlebars
+{{#message role="system"}}
+You are a {{team.role}} specialist for {{team.name}}.
+Focus on {{team.priorities}} in your analysis.
+Your experience level: {{team.experience_level}}
+{{/message}}
+
+{{#message role="user"}}
+Analyze this {{repository.type}} pull request:
+
+**Repository**: {{repository.name}} ({{repository.language}})
+**PR**: #{{pr.number}} - {{pr.title}}
+**Branch**: {{pr.source_branch}} → {{pr.target_branch}}
+**Author**: {{pr.author}}
+
+**Files Changed** ({{pr.files_count}} files):
+{{#each pr.files_changed}}
+- `{{this.path}}` ({{this.change_type}})
+{{/each}}
+
+**Code Changes**:
+```diff
+{{pr.diff}}
+```
+
+**Analysis Requirements**:
+{{#each analysis.requirements}}
+- {{this}}
+{{/each}}
+
+{{#if pr.related_issues}}
+**Related Issues**: {{#each pr.related_issues}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
+
+Please provide analysis according to the defined schema.
+{{/message}}
+```
+
+#### Step 2: Create Dynamic Configuration
+```yaml
+# pr-context.yaml
+team:
+  name: "Platform Security Team"
+  role: "security engineer"
+  experience_level: "senior"
+  priorities: "security vulnerabilities, authentication, authorization, data protection"
+
+repository:
+  name: "auth-service"
+  type: "microservice"
+  language: "Python"
+
+pr:
+  number: 456
+  title: "Fix SQL injection vulnerability in authentication"
+  source_branch: "fix/sql-injection" 
+  target_branch: "main"
+  author: "@security-dev"
+  files_count: 3
+  files_changed:
+    - path: "auth/models.py"
+      change_type: "modified"
+    - path: "auth/views.py" 
+      change_type: "modified"
+    - path: "tests/test_auth.py"
+      change_type: "added"
+  related_issues: [123, 124]
+  diff: |
+    --- a/auth/models.py
+    +++ b/auth/models.py
+    @@ -45,7 +45,7 @@ class UserManager:
+         def authenticate(self, username, password):
+    -        query = f"SELECT * FROM users WHERE username = '{username}'"
+    +        query = "SELECT * FROM users WHERE username = %s"
+    -        cursor.execute(query)
+    +        cursor.execute(query, (username,))
+
+analysis:
+  requirements:
+    - "Identify all security vulnerabilities"
+    - "Assess impact on authentication flow"
+    - "Review test coverage adequacy"
+    - "Check for additional hardening opportunities"
+```
+
+#### Step 3: Execute Template-Based Analysis
+```bash
+# Generate dynamic PR analysis
+llm-ci-runner \
+  --template-file templates/pr-security-review.hbs \
+  --template-vars pr-context.yaml \
+  --schema-file schemas/security-analysis.yaml \
+  --output-file pr-security-analysis.yaml \
+  --log-level INFO
+```
+
+#### Step 4: GitHub Actions with Templates
+```yaml
+name: Template-Based PR Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  template-pr-analysis:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    
+    - name: Install LLM CI Runner
+      run: pip install llm-ci-runner
+    
+    - name: Extract PR Context
+      run: |
+        # Generate dynamic context file
+        cat > pr-context.yaml << EOF
+        team:
+          name: "${{ github.repository_owner }}"
+          role: "development team member"
+          experience_level: "intermediate"
+          priorities: "code quality, security, maintainability"
+        
+        repository:
+          name: "${{ github.repository }}"
+          type: "application"
+          language: "Python"
+        
+        pr:
+          number: ${{ github.event.number }}
+          title: "${{ github.event.pull_request.title }}"
+          source_branch: "${{ github.event.pull_request.head.ref }}"
+          target_branch: "${{ github.event.pull_request.base.ref }}"
+          author: "${{ github.event.pull_request.user.login }}"
+          diff: |
+        $(git diff origin/${{ github.event.pull_request.base.ref }}...HEAD)
+        EOF
+    
+    - name: Template-Based Analysis
+      run: |
+        llm-ci-runner \
+          --template-file .github/templates/pr-analysis.hbs \
+          --template-vars pr-context.yaml \
+          --schema-file .github/schemas/pr-analysis.yaml \
+          --output-file pr-analysis-result.yaml
+      env:
+        AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+        AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+    
+    - name: Post Analysis Results
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const yaml = require('js-yaml');
+          const fs = require('fs');
+          const result = yaml.load(fs.readFileSync('pr-analysis-result.yaml', 'utf8'));
+          
+          const comment = `## 🤖 AI-Powered PR Analysis
+          
+          **Summary**: ${result.response.summary}
+          
+          **Security Rating**: ${result.response.security_rating}
+          
+          **Key Findings**:
+          ${result.response.findings.map(f => `- **${f.severity}**: ${f.description}`).join('\n')}
+          
+          **Recommendations**:
+          ${result.response.recommendations.map(r => `- ${r}`).join('\n')}
+          `;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+```
+
+### 2. Multi-Repository Template System
+
+**Scenario**: Create a template system that works across different repositories with team-specific configurations.
+
+#### Repository-Specific Configuration
+```yaml
+# .github/llm-config.yaml
+team:
+  name: "Backend API Team"
+  expertise: "microservices, performance, security"
+  review_focus:
+    - "API design and compatibility"
+    - "Database query optimization"
+    - "Security best practices"
+    - "Error handling and logging"
+
+repository:
+  type: "api_service"
+  primary_language: "Python"
+  framework: "FastAPI"
+  criticality: "high"
+  compliance_requirements:
+    - "SOX"
+    - "PCI-DSS"
+    - "GDPR"
+
+analysis_templates:
+  security: ".github/templates/security-review.hbs"
+  performance: ".github/templates/performance-review.hbs"
+  compatibility: ".github/templates/api-compatibility.hbs"
+```
+
+#### Universal Analysis Pipeline
+```bash
+#!/bin/bash
+# universal-analysis.sh
+
+REPO_CONFIG=".github/llm-config.yaml"
+ANALYSIS_TYPE=${1:-"security"}
+
+# Extract template path from config
+TEMPLATE_PATH=$(yq eval ".analysis_templates.$ANALYSIS_TYPE" $REPO_CONFIG)
+
+# Create context combining repo config with PR data
+yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' \
+  $REPO_CONFIG pr-context.yaml > merged-context.yaml
+
+# Run template-based analysis
+llm-ci-runner \
+  --template-file "$TEMPLATE_PATH" \
+  --template-vars merged-context.yaml \
+  --schema-file ".github/schemas/${ANALYSIS_TYPE}-analysis.yaml" \
+  --output-file "${ANALYSIS_TYPE}-result.yaml"
+
+# Process results based on type
+case $ANALYSIS_TYPE in
+  "security")
+    if [ "$(yq eval '.response.security_rating' ${ANALYSIS_TYPE}-result.yaml)" = "critical" ]; then
+      echo "❌ Critical security issues found!"
+      exit 1
+    fi
+    ;;
+  "performance")
+    if [ "$(yq eval '.response.performance_impact' ${ANALYSIS_TYPE}-result.yaml)" = "high" ]; then
+      echo "⚠️ High performance impact detected"
+    fi
+    ;;
+esac
+```
+
+### 3. Benefits of Template-Based Workflows
+
+#### 🎯 **Reusability**
+- Single template works across multiple PRs and repositories
+- Team-specific configurations without template changes
+- Consistent analysis structure organization-wide
+
+#### 🔧 **Maintainability**
+- Separate template logic from configuration data
+- Version control templates independently from configurations
+- Easy to update analysis requirements without changing templates
+
+#### 🚀 **Flexibility**
+- Dynamic content based on PR context (files changed, author, etc.)
+- Conditional sections based on repository type or criticality
+- Easy A/B testing of different prompt strategies
+
+#### 📋 **Consistency**
+- Standardized analysis across all repositories
+- Enforced schema compliance organization-wide
+- Predictable output format for downstream automation
 
 ## Best Practices
 
