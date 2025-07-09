@@ -8,6 +8,14 @@ alwaysApply: false
 
 *Note: This file is updated only upon user request and focuses on capturing important, reusable lessons learned during development. Each entry follows format: [Timestamp] Priority: Category → Issue: [Problem] → Fix: [Solution] → Why: [Impact]. Use grep/automated tools to verify changes and prevent regressions.*
 
+## Component Development
+
+[2024-12-30 14:30] Testing Framework: Template evaluation requires different approach than query-response evaluation → Use template content as context instead of hardcoded fake queries, focus on output quality rather than relevance → Prevents brittle hardcoded queries and makes evaluation more appropriate for template-based examples
+
+[2024-12-30 14:25] Testing Framework: Auto-detection of test mode based on file extension simplifies CLI integration → Check .hbs vs .json extension to determine --template-file vs --input-file mode → Cleaner code and automatic mode switching without manual configuration
+
+[2024-12-30 14:20] Testing Framework: Priority-based example discovery enables graceful fallback → Scan for input.json first, then fall back to template.hbs + schema.yaml → Maintains backward compatibility while adding new functionality
+
 ## 2025-01-06 - Code Quality and Refactoring
 
 [2025-01-06 23:16] **Critical**: Code Smell Detection and Library Usage → Issue: Manual implementation of JSON schema to Pydantic model conversion instead of using dedicated libraries creates 150+ lines of maintenance burden and incomplete feature coverage → Fix: Replace manual implementation with json-schema-to-pydantic library, use multiple inheritance to maintain KernelBaseModel functionality → Why: Eliminates reinventing-the-wheel anti-pattern, reduces code by 150+ lines, improves robustness with comprehensive JSON schema support including references and combiners, follows DRY principle and reduces maintenance burden. Libraries exist for common problems - use them.
@@ -470,6 +478,10 @@ if "max_tokens" in template_settings:
 [2025-01-17 08:45] YAML Output: File extension determines format → Check `output_file.suffix.lower() in [".yaml", ".yml"]` to select writer → Impact: Seamless format switching based on user intent
 
 [2025-01-17 08:30] Template Execution: Dual main() paths needed → Branch execution based on `args.template_file` vs `args.input_file` → Impact: Clean separation of template vs direct file workflows
+
+[2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
+
+[2025-01-17 08:00] Code Organization: Follow existing patterns → Maintain same error handling, logging style, and function signatures as original code → Impact: Consistent codebase quality and maintainability
 
 [2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
 

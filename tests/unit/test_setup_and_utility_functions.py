@@ -67,11 +67,11 @@ class TestSetupLogging:
         # Verify RichHandler was configured properly
         handler_call_kwargs = mock_rich_handler.call_args[1]
         assert "console" in handler_call_kwargs
-        assert handler_call_kwargs["show_time"] is True
-        assert handler_call_kwargs["show_level"] is True
-        assert handler_call_kwargs["show_path"] is True
-        assert handler_call_kwargs["markup"] is True
-        assert handler_call_kwargs["rich_tracebacks"] is True
+        assert handler_call_kwargs["show_time"] is True, "show_time should be True"
+        assert handler_call_kwargs["show_level"] is True, "show_level should be True"
+        assert handler_call_kwargs["show_path"] is False, "show_path should be False"
+        assert handler_call_kwargs["markup"] is True, "markup should be True"
+        assert handler_call_kwargs["rich_tracebacks"] is True, "rich_tracebacks should be True"
 
     def test_setup_logging_sets_correct_format(self, mock_console):
         """Test that logging format is set correctly."""

@@ -71,7 +71,10 @@ from semantic_kernel.contents import ChatHistory, ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.kernel_pydantic import KernelBaseModel
-from semantic_kernel.prompt_template import HandlebarsPromptTemplate, PromptTemplateConfig
+from semantic_kernel.prompt_template import (
+    HandlebarsPromptTemplate,
+    PromptTemplateConfig,
+)
 
 # Tenacity for retry logic
 from tenacity import (
@@ -194,7 +197,7 @@ def setup_logging(log_level: str) -> logging.Logger:
                 console=CONSOLE,
                 show_time=True,
                 show_level=True,
-                show_path=True,
+                show_path=False,
                 markup=True,
                 rich_tracebacks=True,
             )
@@ -267,7 +270,7 @@ Environment Variables:
     input_group.add_argument(
         "--template-file",
         type=Path,
-        help="Handlebars YAML template file for prompt generation",
+        help="Handlebars .hbs template file for prompt generation",
     )
 
     parser.add_argument(
@@ -577,10 +580,10 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
 
 def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
     """
-    Load Handlebars YAML template and create PromptTemplate instance.
+    Load Handlebars template from .hbs file and create PromptTemplate instance.
 
     Args:
-        template_file: Path to Handlebars YAML template file
+        template_file: Path to Handlebars .hbs template file
 
     Returns:
         Configured HandlebarsPromptTemplate instance
@@ -595,14 +598,18 @@ def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
             raise InputValidationError(f"Template file not found: {template_file}")
 
         with open(template_file, encoding="utf-8") as f:
-            yaml_content = f.read()
+            template_content = f.read()
 
-        # Parse YAML content and create PromptTemplateConfig
+        # Create PromptTemplateConfig with raw Handlebars template content
         try:
-            yaml_data = yaml.safe_load(yaml_content)
-            template_config = PromptTemplateConfig(**yaml_data)
+            template_config = PromptTemplateConfig(
+                template=template_content,
+                template_format="handlebars",
+                name=template_file.stem,
+                description=f"Handlebars template loaded from {template_file.name}",
+            )
         except Exception as e:
-            raise InputValidationError(f"Invalid Handlebars template YAML: {e}") from e
+            raise InputValidationError(f"Invalid Handlebars template content: {e}") from e
 
         # Create HandlebarsPromptTemplate instance
         template = HandlebarsPromptTemplate(prompt_template_config=template_config)
@@ -876,7 +883,13 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
         with open(output_file, "w", encoding="utf-8") as f:
             if output_file.suffix.lower() in [".yaml", ".yml"]:
                 LOGGER.debug("🔍 Writing YAML output format")
-                yaml.dump(output_data, f, default_flow_style=False, allow_unicode=True, indent=2)
+                yaml.dump(
+                    output_data,
+                    f,
+                    default_flow_style=False,
+                    allow_unicode=True,
+                    indent=2,
+                )
             else:
                 LOGGER.debug("🔍 Writing JSON output format")
                 json.dump(output_data, f, indent=2, ensure_ascii=False)

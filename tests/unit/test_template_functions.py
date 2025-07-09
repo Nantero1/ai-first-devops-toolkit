@@ -125,22 +125,19 @@ class TestLoadHandlebarsTemplate:
     """Tests for load_handlebars_template function."""
 
     def test_load_valid_handlebars_template(self, temp_dir):
-        """Test loading a valid Handlebars YAML template."""
+        """Test loading a valid Handlebars .hbs template."""
         # given
-        template_file = temp_dir / "template.yaml"
-        template_content = """
-name: ContosoChatPrompt
-template: |
-    <message role="system">
-        You are an AI agent for {{company_name}}.
-        Customer: {{customer.first_name}} {{customer.last_name}}
-    </message>
-    {{#each history}}
-    <message role="{{role}}">
-        {{content}}
-    </message>
-    {{/each}}
-"""
+        template_file = temp_dir / "template.hbs"
+        template_content = """{{#message role="system"}}
+You are an AI agent for {{company_name}}.
+Customer: {{customer.first_name}} {{customer.last_name}}
+{{/message}}
+
+{{#each history}}
+{{#message role="{{role}}"}}
+{{content}}
+{{/message}}
+{{/each}}"""
         with open(template_file, "w") as f:
             f.write(template_content)
 
@@ -150,7 +147,7 @@ template: |
             patch("llm_ci_runner.HandlebarsPromptTemplate") as mock_template_class,
         ):
             mock_config = MagicMock()
-            mock_config.name = "ContosoChatPrompt"
+            mock_config.name = "template"
             mock_config_class.return_value = mock_config
 
             mock_template = MagicMock()
@@ -159,7 +156,12 @@ template: |
             result = load_handlebars_template(template_file)
 
         # then
-        mock_config_class.assert_called_once()
+        mock_config_class.assert_called_once_with(
+            template=template_content,
+            template_format="handlebars",
+            name="template",
+            description="Handlebars template loaded from template.hbs",
+        )
         mock_template_class.assert_called_once_with(prompt_template_config=mock_config)
         assert result == mock_template
 
@@ -172,16 +174,19 @@ template: |
         with pytest.raises(InputValidationError, match="Template file not found"):
             load_handlebars_template(nonexistent_file)
 
-    def test_load_invalid_template_yaml_raises_error(self, temp_dir):
-        """Test that invalid template YAML raises InputValidationError."""
+    def test_load_invalid_template_content_raises_error(self, temp_dir):
+        """Test that invalid template content raises InputValidationError."""
         # given
-        template_file = temp_dir / "invalid_template.yaml"
+        template_file = temp_dir / "invalid_template.hbs"
         with open(template_file, "w") as f:
-            f.write("invalid yaml content")
+            f.write("invalid template content")
 
         # when & then
-        with patch("llm_ci_runner.PromptTemplateConfig", side_effect=Exception("Invalid YAML")):
-            with pytest.raises(InputValidationError, match="Invalid Handlebars template YAML"):
+        with patch(
+            "llm_ci_runner.PromptTemplateConfig",
+            side_effect=Exception("Invalid template"),
+        ):
+            with pytest.raises(InputValidationError, match="Invalid Handlebars template content"):
                 load_handlebars_template(template_file)
 
 

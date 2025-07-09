@@ -14,6 +14,10 @@ pip install llm-ci-runner
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 export AZURE_OPENAI_MODEL="gpt-4.1-nano"  # or any other GPT deployment name
 export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
+
+# expert tip to enforce rich colors and better formatting:
+export FORCE_COLOR=1
+export COLUMNS=120
 ```
 
 **Authentication**: Uses Azure `DefaultAzureCredential` (RBAC) by default. Set `AZURE_OPENAI_API_KEY` if not using RBAC.
