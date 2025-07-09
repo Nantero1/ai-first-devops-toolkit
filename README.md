@@ -1,6 +1,59 @@
+# Docker Image for LLM-powered CI/CD pipeline steps
+
+[![Generic badge](https://img.shields.io/badge/Miniconda-4.1.1_rhel8-green.svg)](https://teambank.jfrog.io/ui/packages/docker:%2F%2Fminiconda?name=miniconda&type=packages)
+[![Build Status](https://dev.azure.com/teambankag/CDOS/_apis/build/status%2Fbase-images%2Fdocker-image-llm-runtime?repoName=docker-image-llm-runtime&branchName=main)](https://dev.azure.com/teambankag/CDOS/_build/latest?definitionId=3770&repoName=docker-image-llm-runtime&branchName=main)
+[![Generic badge](https://img.shields.io/badge/Cloud_allowed-Yes-green)](https://wiki.teambank.de/confluence/x/bR9zHw)
+
+### Available platforms
+![Platform linux/amd64](https://img.shields.io/badge/linux/amd64-ready-green)
+![Platform linux/arm64](https://img.shields.io/badge/linux/arm64-ready-green)
+
+## This repo is a fork of [ai-first-devops-toolkit](https://github.com/Nantero1/ai-first-devops-toolkit) and the resulting pypi package [llm-ci-runner repository](https://pypi.org/project/llm-ci-runner/).
+
+Is is built uppon version `1.0.4` and currently used to run AI-powered CI/CD pipeline steps. For usage refer to the [pipeline templates](https://dev.azure.com/teambankag/CDOS/_git/azure-devops-pipeline).
+
+You can use this Docker image directly as a container in your Azure DevOps pipeline jobs to enable AI-powered automation steps. When your pipeline runs inside this image, all the required dependencies for LLM-based automation are pre-installed and ready to use.
+
+**Example: Using this image in Azure DevOps pipeline**
+
+```yaml
+jobs:
+  - job: ai_automation
+    displayName: "Run AI Automation with LLM Runtime"
+    container: 
+      image: teambank.jfrog.io/cdos-marketplace-docker/llm-runtime:latest
+    steps:
+      - script: |
+          uv run llm_ci_runner.py \
+            --input-file examples/02-devops/pr-description/input.json \
+            --schema-file examples/02-devops/pr-description/schema.json \
+            --output-file pr-analysis.json
+          pr_description=$(cat pr-analysis.json | jq '.response.description')
+          echo vso[task.setvariable variable=pr_description]$pr_description
+        displayName: "Run LLM CI Runner for PR Analysis"
+# if not set sane defaults are used at the moment
+#        env:
+#          AZURE_OPENAI_ENDPOINT: $(AZURE_OPENAI_ENDPOINT)
+#          AZURE_OPENAI_MODEL: $(AZURE_OPENAI_MODEL)
+#          AZURE_OPENAI_API_VERSION: $(AZURE_OPENAI_API_VERSION)
+
+```
+
+This approach allows you to:
+- Run AI-powered code review, changelog generation, security analysis, and more as part of your CI/CD pipeline
+- Guarantee schema-compliant outputs for downstream automation
+- Leverage Azure RBAC or API key authentication for secure access to Azure OpenAI
+- Use all features of the `llm-ci-runner` CLI and Python module out-of-the-box
+
+See the [pipeline templates](https://dev.azure.com/teambankag/CDOS/_git/azure-devops-pipeline) for more details on how this image is used to automate CI/CD workflows.
+
+Below is the original README.md:
+
+---
+
 # AI-First DevOps Toolkit: LLM-Powered CI/CD Automation
 
-[![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner) [![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql)
+[![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner)
 
 > **🚀 The Future of DevOps is AI-First**  
 > This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on the motivation.

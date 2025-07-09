@@ -1,0 +1,113 @@
+package:
+  curl:
+    installed: true
+  jq:
+    installed: true
+
+command:
+  # Test Python version and environment
+  python --version:
+    exit-status: 0
+    title: Python 3.12 is installed
+    stdout:
+      - "Python 3.12"
+
+  # Test conda environment
+  conda --version:
+    exit-status: 0
+    title: Anaconda is installed
+
+  conda env list:
+    exit-status: 0
+    title: llm-runtime conda environment exists
+    timeout: 60000
+    stdout:
+      - "llm-runtime"
+
+  conda env export:
+    exit-status: 0
+    title: llm-runtime environment is active
+    timeout: 60000
+    stdout:
+      - "name: llm-runtime"
+
+  # Test uv package manager
+  uv --version:
+    exit-status: 0
+    title: uv package manager is installed
+
+  # Test main application
+  uv run llm_ci_runner.py --help:
+    exit-status: 0
+    title: LLM CI Runner is installed and accessible
+    timeout: 60000
+    stdout:
+      - "LLM Runner - Simple CI/CD utility for LLM tasks"
+
+  # Test Python packages are installed
+  uv run python -c "import semantic_kernel; print('semantic-kernel available')":
+    exit-status: 0
+    title: semantic-kernel package is installed
+    timeout: 60000
+    stdout:
+      - "semantic-kernel available"
+
+  # Test environment variables
+  echo $CONDA_DEFAULT_ENV:
+    exit-status: 0
+    title: CONDA_DEFAULT_ENV is set to llm-runtime
+    stdout:
+      - "llm-runtime"
+
+  echo $UV_COMPILE_BYTECODE:
+    exit-status: 0
+    title: UV_COMPILE_BYTECODE is set to 1
+    stdout:
+      - "1"
+
+  echo $UV_NO_SYNC:
+    exit-status: 0
+    title: UV_NO_SYNC is set to true
+    stdout:
+      - "true"
+
+  # Test PATH includes conda environment
+  echo $PATH:
+    exit-status: 0
+    title: PATH includes llm-runtime conda environment
+    stdout:
+      - "/opt/conda/envs/llm-runtime/bin"
+
+  echo $AZURE_OPENAI_MODEL:
+    exit-status: 0
+    title: AZURE_OPENAI_MODEL is set to gpt-4.1-nano
+    stdout:
+      - "gpt-4.1-nano"
+
+file:
+  # Test key files exist
+  /app/llm_ci_runner.py:
+    exists: true
+    title: Main application file exists
+
+  /app/pyproject.toml:
+    exists: true
+    title: Project configuration exists
+
+  /app/uv.lock:
+    exists: true
+    title: Lock file exists
+
+  /entrypoint.sh:
+    exists: true
+    title: Entrypoint script exists
+    mode: "0755"
+
+  # Test conda environment files
+  /opt/conda/envs/llm-runtime/bin/python:
+    exists: true
+    title: Python executable in conda environment exists
+
+  /opt/conda/envs/llm-runtime/bin/uv:
+    exists: true
+    title: uv executable in conda environment exists
