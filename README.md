@@ -1,4 +1,4 @@
-# AI-First DevOps Toolkit: LLM-Powered CI/CD Automation
+# AI-First Toolkit: LLM-Powered Automation
 
 [![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner) [![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql)
 
@@ -7,7 +7,7 @@
 
 ## TLDR: What This Tool Does
 
-**Purpose**: Zero-friction LLM integration for CI/CD pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first integration practices.
+**Purpose**: Zero-friction LLM integration for pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first integration practices.
 
 **Perfect For**:
 - 🤖 **AI-Generated Code Reviews**: Automated PR analysis with structured findings
