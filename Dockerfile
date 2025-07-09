@@ -1,105 +1,137 @@
-# Multi-stage build following uv Docker best practices
-# Base: Custom miniconda RHEL 8 image with Python 3.12 and uv
-# ================================
-# System and Azure DevOps dependencies:
-# ================================
-
-FROM teambank.jfrog.io/cdos-base-images-docker/miniconda:rhel8-4.11.0 AS base
+# ============================
+# STAGE 1: Build Environment
+# ============================
+FROM teambank.jfrog.io/cdos-base-images-docker/rhel:8 AS builder
 ARG TARGETARCH
 
-# https://github.com/docker/buildx/issues/844
-# it's apparently a feature to silently keep building with the wrong arch if the
-# upstream image is not a multiarch image and is not available in the requested arch
+# Validate architecture match to prevent silent wrong-arch builds
 RUN arch=$(arch); \
     [ "$arch" = "aarch64" ] && arch=arm64; \
     [ "$arch" = "x86_64" ]  && arch=amd64; \
     [ "$arch" = "arm64" ] && arch=arm64; \
     [ "$TARGETARCH" = "$arch" ] || { echo "ERROR! Image build is running on $arch but $TARGETARCH was requested! Quitting!" && false; }
 
-COPY yq_$TARGETARCH /usr/local/bin/yq
+USER 0
 
-# Install system dependencies including essential tools for Azure DevOps
-RUN chmod +x /usr/local/bin/yq && \
+# Install build dependencies and clean cache
+RUN microdnf clean all && \
     microdnf update -y && \
-    microdnf install -y \
-    jq \
-    curl \
-    wget \
-    git \
-    openssh-clients \
-    tar \
-    gzip \
-    unzip \
-    gettext && \
+    microdnf install --nodocs -y \
+    python3.12 \
+    python3.12-pip \
+    python3.12-devel && \
     microdnf clean all
 
-# Install Azure CLI (required for most Azure DevOps pipelines)
-RUN rpm --import https://packages.microsoft.com/keys/microsoft.asc && \
-    echo -e "[azure-cli]\nname=Azure CLI\nbaseurl=https://packages.microsoft.com/rhel/8/prod\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/azure-cli.repo && \
-    microdnf install -y azure-cli && \
-    microdnf clean all
+COPY ./files/.netrc.tpl /root/.netrc.tpl
+COPY ./files/pip.conf /root/.pip/pip.conf
 
-# Install Azure DevOps CLI extension
-RUN az extension add -n azure-devops --system
-
-# ================================
-# Python specific stuff:
-# ================================
-
-# Enable uv optimizations for Docker
+# Configure Python and uv
+ENV PATH="/root/.local/bin:$PATH"
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV UV_CACHE_DIR=/opt/uv-cache/
 ENV PYTHONOPTIMIZE=2
 
-# Create conda environment with Python 3.12
-ENV CONDA_DEFAULT_ENV=llm-runtime
-COPY environment.yml /tmp/environment.yml
+# Set Python 3.12 as default python
+RUN alternatives --set python3 /usr/bin/python3.12 && \
+    alternatives --set python /usr/bin/python3.12
 
+# Copy dependency files and install Python packages
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+
+# Setup .netrc for private repository access during build
 RUN --mount=type=secret,id=ARTIFACTORY_USR \
     --mount=type=secret,id=ARTIFACTORY_PSW \
-    export DEVOPS_USER=not_needed && \
-    export DEVOPS_PWD=any_value && \
+    --mount=type=cache,target=/opt/uv-cache/ \
     export ARTIFACTORY_USER=$(cat /run/secrets/ARTIFACTORY_USR) && \
     export ARTIFACTORY_PWD=$(cat /run/secrets/ARTIFACTORY_PSW) && \
     envsubst < ~/.netrc.tpl > ~/.netrc && \
-    conda env create -f /tmp/environment.yml --quiet && \
-    echo "source activate $CONDA_DEFAULT_ENV" > ~/.bashrc && \
-    conda clean -afy && \
-    rm /tmp/environment.yml
+    python -m pip install uv && \
+    uv sync --locked --no-install-project --compile-bytecode && \
+    rm ~/.netrc
 
-# Activate conda environment for all subsequent commands
-ENV PATH="/opt/conda/envs/$CONDA_DEFAULT_ENV/bin:$PATH"
-
-# Intermediate layer: Install dependencies only
-# This layer will be cached until pyproject.toml or uv.lock changes
+# Copy application code and install the project
+COPY llm_ci_runner.py README.md LICENSE NOTICE ./
+COPY scripts/optimize_venv.py /tmp/optimize_venv.py
 RUN --mount=type=cache,target=/opt/uv-cache/ \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --compile-bytecode
+    uv sync --locked --compile-bytecode && \
+# Optimize image size by removing source files for packages with compiled bytecode
+# Keep essential modules and packages that are needed for imports
+    python /tmp/optimize_venv.py /app/.venv && \
+    rm /tmp/optimize_venv.py
 
-# Copy the entire project
-COPY . /app
+# ============================
+# STAGE 2: Runtime Environment  
+# ============================
+FROM teambank.jfrog.io/cdos-base-images-docker/rhel:8 AS runtime
+ARG TARGETARCH
+
+# Validate architecture match in runtime stage too
+RUN arch=$(arch); \
+    [ "$arch" = "aarch64" ] && arch=arm64; \
+    [ "$arch" = "x86_64" ]  && arch=amd64; \
+    [ "$arch" = "arm64" ] && arch=arm64; \
+    [ "$TARGETARCH" = "$arch" ] || { echo "ERROR! Image build is running on $arch but $TARGETARCH was requested! Quitting!" && false; }
+
+USER 0
+
+# Install runtime dependencies and Python 3.12
+COPY yq_$TARGETARCH /usr/local/bin/yq
+RUN chmod +x /usr/local/bin/yq && \
+    microdnf update -y && \
+    microdnf install --nodocs -y \
+    python3.12 \
+    jq \
+    curl \
+    wget \
+    tar \
+    gzip \
+    unzip \
+    gettext \
+    shadow-utils \
+    sudo \
+    util-linux && \
+    microdnf clean all
+
+# Set Python 3.12 as default python
+RUN alternatives --set python3 /usr/bin/python3.12 && \
+    alternatives --set python /usr/bin/python3.12
+
+# Create AzDevOps_azpcontainer user with UID 1001 and configure sudo privileges
+RUN useradd -m -u 1001 AzDevOps_azpcontainer 2>/dev/null || true && \
+    usermod -aG wheel AzDevOps_azpcontainer && \
+    echo "AzDevOps_azpcontainer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/azdevops && \
+    chmod 0440 /etc/sudoers.d/azdevops
+
+# Configure environment paths
+ENV PATH="/root/.local/bin:$PATH"
+
+# Copy the Python virtual environment and application from builder
+COPY --from=builder /app /app
+COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=builder /usr/local/lib64/python3.12/site-packages/uv /usr/local/lib64/python3.12/site-packages/uv
+
 WORKDIR /app
 
-# Final sync: Install the project itself
-RUN --mount=type=cache,target=/opt/uv-cache/ \
-    uv sync --locked --compile-bytecode
+# Set up Python virtual environment
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Performance optimization: Disable uv sync, code is already compiled
+# Performance optimizations for runtime
 ENV UV_NO_SYNC=true
+ENV UV_COMPILE_BYTECODE=1
+ENV PYTHONOPTIMIZE=2
 
-# Set to sane defaults during POC
+# Set default Azure OpenAI configuration for POC
 ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-dev-swecen-001.openai.azure.com/
-ENV AZURE_OPENAI_MODEL=gpt-4.1-nano
+ENV AZURE_OPENAI_MODEL=gpt-4.1-nano-stable
 ENV AZURE_OPENAI_API_VERSION=2024-12-01-preview
 
-# Copy and set up entrypoint script
+# Copy and configure entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Set the entrypoint to activate conda environment
+# Set entrypoint and default command
 ENTRYPOINT ["/entrypoint.sh"]
-
-# Default command to run the main application
 CMD ["uv", "run", "llm_ci_runner.py", "--help"] 

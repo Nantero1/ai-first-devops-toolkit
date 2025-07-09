@@ -3,21 +3,33 @@ package:
     installed: true
   jq:
     installed: true
+  python3.12:
+    installed: true
+  sudo:
+    installed: true
+  util-linux:
+    installed: true
 
 command:
-  # Test Azure CLI is installed
-  az --version:
-    exit-status: 0
-    title: az cli ist installiert
-    timeout: 60000
-    stderr: []
-
+  # Test yq is installed
   yq --version:
     exit-status: 0
     title: yq is installed
     timeout: 60000
     stdout:
       - "yq"
+
+  # Test useradd is available (shadow-utils)
+  useradd --help:
+    exit-status: 0
+    title: useradd is installed
+    timeout: 60000
+
+  # Test su command is available (util-linux)
+  su --help:
+    exit-status: 0
+    title: su command is available
+    timeout: 60000
 
   # Test Python version and environment
   python --version:
@@ -26,24 +38,12 @@ command:
     stdout:
       - "Python 3.12"
 
-  # Test conda environment
-  conda --version:
+  # Test Python 3.12 specifically
+  python3.12 --version:
     exit-status: 0
-    title: Anaconda is installed
-
-  conda env list:
-    exit-status: 0
-    title: llm-runtime conda environment exists
-    timeout: 60000
+    title: Python 3.12 executable is available
     stdout:
-      - "llm-runtime"
-
-  conda env export:
-    exit-status: 0
-    title: llm-runtime environment is active
-    timeout: 60000
-    stdout:
-      - "name: llm-runtime"
+      - "Python 3.12"
 
   # Test uv package manager
   uv --version:
@@ -66,12 +66,19 @@ command:
     stdout:
       - "semantic-kernel available"
 
-  # Test environment variables
-  echo $CONDA_DEFAULT_ENV:
+  # Test virtual environment is active
+  echo $VIRTUAL_ENV:
     exit-status: 0
-    title: CONDA_DEFAULT_ENV is set to llm-runtime
+    title: VIRTUAL_ENV is set to /app/.venv
     stdout:
-      - "llm-runtime"
+      - "/app/.venv"
+
+  # Test environment variables
+  echo $UV_NO_SYNC:
+    exit-status: 0
+    title: UV_NO_SYNC is set to true
+    stdout:
+      - "true"
 
   echo $UV_COMPILE_BYTECODE:
     exit-status: 0
@@ -79,24 +86,47 @@ command:
     stdout:
       - "1"
 
-  echo $UV_NO_SYNC:
-    exit-status: 0
-    title: UV_NO_SYNC is set to true
-    stdout:
-      - "true"
-
-  # Test PATH includes conda environment
+  # Test PATH includes virtual environment
   echo $PATH:
     exit-status: 0
-    title: PATH includes llm-runtime conda environment
+    title: PATH includes virtual environment
     stdout:
-      - "/opt/conda/envs/llm-runtime/bin"
+      - "/app/.venv/bin"
 
   echo $AZURE_OPENAI_MODEL:
     exit-status: 0
     title: AZURE_OPENAI_MODEL is set to gpt-4.1-nano
     stdout:
       - "gpt-4.1-nano"
+
+  # Test AzDevOps_azpcontainer user exists
+  id AzDevOps_azpcontainer:
+    exit-status: 0
+    title: AzDevOps_azpcontainer user exists
+    stdout:
+      - "uid=1001"
+
+  # Test AzDevOps_azpcontainer user is in wheel group
+  groups AzDevOps_azpcontainer:
+    exit-status: 0
+    title: AzDevOps_azpcontainer is in wheel group
+    stdout:
+      - "wheel"
+
+  # Test sudo configuration for AzDevOps_azpcontainer
+  sudo -l -U AzDevOps_azpcontainer:
+    exit-status: 0
+    title: AzDevOps_azpcontainer has sudo privileges
+    stdout:
+      - "ALL"
+      - "NOPASSWD"
+
+  # Test that AzDevOps_azpcontainer can run sudo without password
+  sudo -u AzDevOps_azpcontainer sudo -n whoami:
+    exit-status: 0
+    title: AzDevOps_azpcontainer can run sudo without password
+    stdout:
+      - "root"
 
 file:
   # Test key files exist
@@ -117,11 +147,18 @@ file:
     title: Entrypoint script exists
     mode: "0755"
 
-  # Test conda environment files
-  /opt/conda/envs/llm-runtime/bin/python:
+  # Test virtual environment files
+  /app/.venv/bin/python:
     exists: true
-    title: Python executable in conda environment exists
+    title: Python executable in virtual environment exists
 
-  /opt/conda/envs/llm-runtime/bin/uv:
+  # Test Python 3.12 system installation
+  /usr/bin/python3.12:
     exists: true
-    title: uv executable in conda environment exists
+    title: System Python 3.12 executable exists
+
+  # Test sudoers configuration file
+  /etc/sudoers.d/azdevops:
+    exists: true
+    title: AzDevOps sudoers configuration exists
+    mode: "0440"

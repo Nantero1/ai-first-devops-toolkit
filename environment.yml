@@ -1,6 +1,0 @@
-name: llm-runtime
-dependencies:
-  - python=3.12
-  - pip 
-  - pip:
-    - uv

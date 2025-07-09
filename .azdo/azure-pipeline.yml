@@ -50,13 +50,14 @@ extends:
           - template: Jobs/docker.yml@Templates
             parameters:
               imageName: llm-runtime
-              latestTag: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
+               # ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
+              latestTag: true
               dgoss: true
               xrayScan: true
               xrayFailBuild: false
               buildArch:
                 - linux/amd64
-                - linux/arm64
+#                - linux/arm64
               secretArgs:
                 ARTIFACTORY_USR: cdos-write
                 ARTIFACTORY_PSW: $(ARTIFACTORY-DELIVERY-TOKEN)
