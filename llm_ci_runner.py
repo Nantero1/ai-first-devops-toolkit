@@ -412,7 +412,21 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
         # Setup async Azure credential
         credential = DefaultAzureCredential()
 
-        # Define a callable token provider with better error handling
+        @retry(
+            retry=retry_if_exception_type(
+                (
+                    # Network-related exceptions that should be retried
+                    ConnectionError,
+                    TimeoutError,
+                    # Generic exceptions that might be transient
+                    RuntimeError,
+                )
+            ),
+            stop=stop_after_attempt(3),
+            wait=wait_exponential_jitter(initial=1, max=10, jitter=2),
+            before_sleep=before_sleep_log(LOGGER, logging.WARNING),
+            reraise=True,
+        )
         async def token_provider(scopes: list[str] | None = None) -> str:
             if scopes is None:
                 scopes = ["https://cognitiveservices.azure.com/.default"]
@@ -421,7 +435,7 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
                 token = await credential.get_token(*scopes)
                 LOGGER.debug(f"✅ Token acquired successfully, expires: {token.expires_on}")
                 return token.token
-            except Exception as e:
+            except ClientAuthenticationError as e:
                 LOGGER.error(f"❌ Failed to acquire Azure token: {e}")
                 LOGGER.info("💡 Ensure you're logged in with 'az login' or have proper managed identity permissions")
                 raise AuthenticationError(f"Azure token acquisition failed: {e}") from e
