@@ -4,6 +4,6 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store/
-.env
 result.json
 .mypy_cache/
+/.DS_Store

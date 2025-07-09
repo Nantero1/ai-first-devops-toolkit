@@ -47,6 +47,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import yaml
 from azure.core.exceptions import ClientAuthenticationError
 
 # Azure authentication
@@ -70,6 +71,7 @@ from semantic_kernel.contents import ChatHistory, ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.kernel_pydantic import KernelBaseModel
+from semantic_kernel.prompt_template import HandlebarsPromptTemplate, PromptTemplateConfig
 
 # Tenacity for retry logic
 from tenacity import (
@@ -228,14 +230,20 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    # Basic usage (output defaults to result.json)
+    # Basic usage with JSON input (output defaults to result.json)
     python llm_ci_runner.py --input-file input.json
 
     # With structured output schema
     python llm_ci_runner.py --input-file input.json --schema-file schema.json
 
-    # With custom output file
-    python llm_ci_runner.py --input-file input.json --output-file custom-output.json
+    # With YAML files
+    python llm_ci_runner.py --input-file input.yaml --output-file result.yaml
+
+    # Using Handlebars templates with variables
+    python llm_ci_runner.py --template-file prompt.hbs --template-vars vars.yaml --schema-file schema.yaml
+
+    # Using Handlebars templates without variables (static template)
+    python llm_ci_runner.py --template-file static-prompt.hbs --schema-file schema.yaml
 
     # With debug logging
     python llm_ci_runner.py --input-file input.json --log-level DEBUG
@@ -247,24 +255,38 @@ Environment Variables:
         """,
     )
 
-    parser.add_argument(
+    # Create mutually exclusive group for input methods
+    input_group = parser.add_mutually_exclusive_group(required=True)
+
+    input_group.add_argument(
         "--input-file",
-        required=True,
         type=Path,
-        help="JSON file containing messages and optional context",
+        help="JSON/YAML file containing messages and optional context",
+    )
+
+    input_group.add_argument(
+        "--template-file",
+        type=Path,
+        help="Handlebars YAML template file for prompt generation",
+    )
+
+    parser.add_argument(
+        "--template-vars",
+        type=Path,
+        help="JSON/YAML file containing template variables (optional with --template-file)",
     )
 
     parser.add_argument(
         "--output-file",
         type=Path,
         default=Path("result.json"),
-        help="Output file for LLM response (JSON format, default: result.json)",
+        help="Output file for LLM response (JSON/YAML format based on extension, default: result.json)",
     )
 
     parser.add_argument(
         "--schema-file",
         type=Path,
-        help="Optional JSON schema file for structured output",
+        help="Optional JSON/YAML schema file for structured output",
     )
 
     parser.add_argument(
@@ -274,21 +296,26 @@ Environment Variables:
         help="Logging level (default: INFO)",
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Note: template-vars is optional when template-file is used
+    # Templates may not require variables (e.g., static templates)
+
+    return args
 
 
-def load_input_json(input_file: Path) -> dict[str, Any]:
+def load_input_file(input_file: Path) -> dict[str, Any]:
     """
-    Load and parse input JSON file containing messages and optional context.
+    Load and parse input JSON or YAML file containing messages and optional context.
 
     Args:
-        input_file: Path to input JSON file
+        input_file: Path to input JSON or YAML file
 
     Returns:
-        Parsed JSON data
+        Parsed data
 
     Raises:
-        InputValidationError: If file doesn't exist or JSON is invalid
+        InputValidationError: If file doesn't exist or format is invalid
     """
     LOGGER.debug(f"📂 Loading input file: {input_file}")
 
@@ -297,11 +324,17 @@ def load_input_json(input_file: Path) -> dict[str, Any]:
 
     try:
         with open(input_file, encoding="utf-8") as f:
-            data = json.load(f)
+            # Detect format based on file extension
+            if input_file.suffix.lower() in [".yaml", ".yml"]:
+                LOGGER.debug("🔍 Detected YAML format")
+                data = yaml.safe_load(f)
+            else:
+                LOGGER.debug("🔍 Detected JSON format")
+                data = json.load(f)
 
         # Validate required 'messages' field
         if "messages" not in data:
-            raise InputValidationError("Input JSON must contain 'messages' field")
+            raise InputValidationError("Input file must contain 'messages' field")
 
         if not isinstance(data["messages"], list) or len(data["messages"]) == 0:
             raise InputValidationError("'messages' must be a non-empty array")
@@ -312,6 +345,8 @@ def load_input_json(input_file: Path) -> dict[str, Any]:
 
         return data  # type: ignore[no-any-return]
 
+    except yaml.YAMLError as e:
+        raise InputValidationError(f"Invalid YAML in input file: {e}") from e
     except json.JSONDecodeError as e:
         raise InputValidationError(f"Invalid JSON in input file: {e}") from e
     except Exception as e:
@@ -443,50 +478,234 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
         raise AuthenticationError(f"Error setting up Azure service: {e}") from e
 
 
-def load_json_schema(schema_file: Path | None) -> type[KernelBaseModel] | None:
+def load_schema_file(schema_file: Path | None) -> type[KernelBaseModel] | None:
     """
-    Load JSON schema from file and convert to dynamic Pydantic model for 100% enforcement.
+    Load JSON or YAML schema from file and convert to dynamic Pydantic model for 100% enforcement.
 
     Args:
-        schema_file: Optional path to JSON schema file
+        schema_file: Optional path to JSON or YAML schema file
 
     Returns:
         Dynamic KernelBaseModel class or None if no schema
 
     Raises:
-        InputValidationError: If schema file cannot be loaded or is invalid JSON
+        InputValidationError: If schema file cannot be loaded or is invalid format
         SchemaValidationError: If schema conversion to Pydantic model fails
     """
     if not schema_file:
         LOGGER.debug("📋 No schema file provided - using text output")
         return None
 
-    LOGGER.debug(f"📋 Loading JSON schema from: {schema_file}")
+    LOGGER.debug(f"📋 Loading schema from: {schema_file}")
 
     try:
         if not schema_file.exists():
             raise InputValidationError(f"Schema file not found: {schema_file}")
 
         with open(schema_file, encoding="utf-8") as f:
-            schema_content = f.read().strip()
+            # Detect format based on file extension
+            if schema_file.suffix.lower() in [".yaml", ".yml"]:
+                LOGGER.debug("🔍 Detected YAML schema format")
+                schema_dict = yaml.safe_load(f)
+            else:
+                LOGGER.debug("🔍 Detected JSON schema format")
+                schema_content = f.read().strip()
+                schema_dict = json.loads(schema_content)
 
-        # Parse and validate JSON schema
-        try:
-            schema_dict = json.loads(schema_content)
-        except json.JSONDecodeError as e:
-            raise InputValidationError(f"Invalid JSON in schema file: {e}") from e
+        if not isinstance(schema_dict, dict):
+            raise InputValidationError("Schema must be a valid JSON object")
 
         # Create dynamic Pydantic model from schema
         model_name = f"Schema_{schema_file.stem.title().replace('-', '').replace('_', '')}"
         dynamic_model = create_dynamic_model_from_schema(schema_dict, model_name)
 
-        LOGGER.info(f"✅ JSON schema converted to Pydantic model: {model_name}")
+        LOGGER.info(f"✅ Schema converted to Pydantic model: {model_name}")
         return dynamic_model
 
+    except yaml.YAMLError as e:
+        raise InputValidationError(f"Invalid YAML in schema file: {e}") from e
+    except json.JSONDecodeError as e:
+        raise InputValidationError(f"Invalid JSON in schema file: {e}") from e
     except (InputValidationError, SchemaValidationError):
         raise
     except Exception as e:
         raise InputValidationError(f"Error loading schema file: {e}") from e
+
+
+def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
+    """
+    Load template variables from JSON or YAML file.
+
+    Args:
+        template_vars_file: Path to template variables file
+
+    Returns:
+        Dictionary of template variables
+
+    Raises:
+        InputValidationError: If file cannot be loaded or is invalid format
+    """
+    LOGGER.debug(f"📋 Loading template variables from: {template_vars_file}")
+
+    try:
+        if not template_vars_file.exists():
+            raise InputValidationError(f"Template variables file not found: {template_vars_file}")
+
+        with open(template_vars_file, encoding="utf-8") as f:
+            # Detect format based on file extension
+            if template_vars_file.suffix.lower() in [".yaml", ".yml"]:
+                LOGGER.debug("🔍 Detected YAML template variables format")
+                vars_dict = yaml.safe_load(f)
+            else:
+                LOGGER.debug("🔍 Detected JSON template variables format")
+                vars_dict = json.load(f)
+
+        if not isinstance(vars_dict, dict):
+            raise InputValidationError("Template variables must be a valid object")
+
+        LOGGER.info(f"✅ Loaded {len(vars_dict)} template variables")
+        LOGGER.debug(f"   Variables: {list(vars_dict.keys())}")
+        return vars_dict
+
+    except yaml.YAMLError as e:
+        raise InputValidationError(f"Invalid YAML in template variables file: {e}") from e
+    except json.JSONDecodeError as e:
+        raise InputValidationError(f"Invalid JSON in template variables file: {e}") from e
+    except Exception as e:
+        raise InputValidationError(f"Error loading template variables file: {e}") from e
+
+
+def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
+    """
+    Load Handlebars YAML template and create PromptTemplate instance.
+
+    Args:
+        template_file: Path to Handlebars YAML template file
+
+    Returns:
+        Configured HandlebarsPromptTemplate instance
+
+    Raises:
+        InputValidationError: If template file cannot be loaded or is invalid
+    """
+    LOGGER.debug(f"📋 Loading Handlebars template from: {template_file}")
+
+    try:
+        if not template_file.exists():
+            raise InputValidationError(f"Template file not found: {template_file}")
+
+        with open(template_file, encoding="utf-8") as f:
+            yaml_content = f.read()
+
+        # Parse YAML content and create PromptTemplateConfig
+        try:
+            yaml_data = yaml.safe_load(yaml_content)
+            template_config = PromptTemplateConfig(**yaml_data)
+        except Exception as e:
+            raise InputValidationError(f"Invalid Handlebars template YAML: {e}") from e
+
+        # Create HandlebarsPromptTemplate instance
+        template = HandlebarsPromptTemplate(prompt_template_config=template_config)
+
+        LOGGER.info(f"✅ Loaded Handlebars template: {template_config.name or 'unnamed'}")
+        return template
+
+    except InputValidationError:
+        raise
+    except Exception as e:
+        raise InputValidationError(f"Error loading template file: {e}") from e
+
+
+async def render_handlebars_template(
+    template: HandlebarsPromptTemplate,
+    template_vars: dict[str, Any],
+    kernel: Kernel,
+) -> str:
+    """
+    Render Handlebars template with provided variables.
+
+    Args:
+        template: HandlebarsPromptTemplate instance
+        template_vars: Dictionary of template variables
+        kernel: Semantic Kernel instance
+
+    Returns:
+        Rendered template content
+
+    Raises:
+        InputValidationError: If template rendering fails
+    """
+    LOGGER.debug("🔄 Rendering Handlebars template")
+
+    try:
+        # Create KernelArguments from template variables
+        arguments = KernelArguments(**template_vars)
+
+        # Render template
+        rendered_content = await template.render(kernel, arguments)
+
+        LOGGER.info("✅ Handlebars template rendered successfully")
+        LOGGER.debug(f"📄 Rendered content length: {len(rendered_content)} characters")
+
+        return rendered_content
+
+    except Exception as e:
+        raise InputValidationError(f"Error rendering Handlebars template: {e}") from e
+
+
+def parse_rendered_template_to_chat_history(rendered_content: str) -> ChatHistory:
+    """
+    Parse rendered Handlebars template content into ChatHistory.
+
+    Expects the rendered content to contain <message role="...">content</message> blocks.
+
+    Args:
+        rendered_content: Rendered template content with <message> blocks
+
+    Returns:
+        ChatHistory object ready for Semantic Kernel
+
+    Raises:
+        InputValidationError: If message parsing fails
+    """
+    import re
+
+    LOGGER.debug("🔄 Parsing rendered template to ChatHistory")
+
+    try:
+        # Find all <message> blocks using regex
+        message_pattern = r'<message\s+role="([^"]+)"[^>]*>(.*?)</message>'
+        matches = re.findall(message_pattern, rendered_content, re.DOTALL | re.IGNORECASE)
+
+        if not matches:
+            raise InputValidationError("No <message> blocks found in rendered template")
+
+        chat_history = ChatHistory()
+
+        for i, (role, content) in enumerate(matches):
+            try:
+                # Clean up content (strip whitespace)
+                cleaned_content = content.strip()
+
+                # Create ChatMessageContent
+                chat_message = ChatMessageContent(
+                    role=AuthorRole(role.lower()),
+                    content=cleaned_content,
+                )
+
+                chat_history.add_message(chat_message)
+                LOGGER.debug(f"  ➕ Added {role} message ({len(cleaned_content)} chars)")
+
+            except ValueError as e:
+                raise InputValidationError(f"Invalid role '{role}' in message {i}: {e}") from e
+
+        LOGGER.info(f"✅ Parsed {len(chat_history)} messages from rendered template")
+        return chat_history
+
+    except InputValidationError:
+        raise
+    except Exception as e:
+        raise InputValidationError(f"Error parsing rendered template: {e}") from e
 
 
 @retry(
@@ -628,12 +847,11 @@ async def execute_llm_task(
 
 def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None:
     """
-    Write LLM response to output file in JSON format.
+    Write LLM response to output file in JSON or YAML format based on file extension.
 
     Args:
         output_file: Path to output file
         response: LLM response to write
-        logger: Logger instance
 
     Raises:
         LLMRunnerError: If file writing fails
@@ -654,9 +872,14 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
             },
         }
 
-        # Write to file
+        # Write to file based on extension
         with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
+            if output_file.suffix.lower() in [".yaml", ".yml"]:
+                LOGGER.debug("🔍 Writing YAML output format")
+                yaml.dump(output_data, f, default_flow_style=False, allow_unicode=True, indent=2)
+            else:
+                LOGGER.debug("🔍 Writing JSON output format")
+                json.dump(output_data, f, indent=2, ensure_ascii=False)
 
         LOGGER.info(f"✅ Output written to: {output_file}")
 
@@ -669,6 +892,7 @@ async def main() -> None:
     Main entry point for LLM Runner.
 
     Orchestrates the entire pipeline from input parsing to output generation.
+    Supports both direct input files and Handlebars template rendering.
     """
     credential = None
     try:
@@ -678,26 +902,63 @@ async def main() -> None:
         # Setup logging with Rich
         setup_logging(args.log_level)
 
-        # Load and validate input JSON
-        LOGGER.info("📥 Loading input data...")
-        input_data = load_input_json(args.input_file)
-
-        # Create ChatHistory from messages
-        chat_history = create_chat_history(input_data["messages"])
-
         # Setup Azure OpenAI service
         LOGGER.info("🔐 Authenticating with Azure...")
         service, credential = await setup_azure_service()
 
-        # Load JSON schema and convert to dynamic Pydantic model if provided
-        schema_model = load_json_schema(args.schema_file)
+        # Load schema and convert to dynamic Pydantic model if provided
+        schema_model = load_schema_file(args.schema_file)
+
+        # Choose execution path based on input method
+        if args.template_file:
+            # Template-based execution path
+            LOGGER.info("📝 Using Handlebars template mode...")
+
+            # Load template variables (optional)
+            if args.template_vars:
+                LOGGER.info("📥 Loading template variables...")
+                template_vars = load_template_vars(args.template_vars)
+            else:
+                LOGGER.info("📝 No template variables provided - using empty variables")
+                template_vars = {}
+
+            # Load Handlebars template
+            LOGGER.info("📋 Loading Handlebars template...")
+            template = load_handlebars_template(args.template_file)
+
+            # Create kernel for rendering
+            kernel = Kernel()
+            kernel.add_service(service)
+
+            # Render template with variables
+            LOGGER.info("🔄 Rendering template...")
+            rendered_content = await render_handlebars_template(template, template_vars, kernel)
+
+            # Parse rendered content to ChatHistory
+            chat_history = parse_rendered_template_to_chat_history(rendered_content)
+
+            # No additional context in template mode
+            context = None
+
+        else:
+            # Direct input file execution path
+            LOGGER.info("📥 Using direct input file mode...")
+
+            # Load and validate input file
+            input_data = load_input_file(args.input_file)
+
+            # Create ChatHistory from messages
+            chat_history = create_chat_history(input_data["messages"])
+
+            # Extract context if provided
+            context = input_data.get("context")
 
         # Execute LLM task with 100% schema enforcement
         LOGGER.info("🤖 Processing with LLM...")
         response = await execute_llm_task(
             service=service,
             chat_history=chat_history,
-            context=input_data.get("context"),
+            context=context,
             schema_model=schema_model,
         )
 

@@ -1,0 +1,64 @@
+type: object
+required:
+  - quality_score
+  - analysis
+  - issues
+  - suggestions
+properties:
+  quality_score:
+    type: integer
+    minimum: 1
+    maximum: 10
+    description: "Overall code quality score from 1-10"
+  
+  analysis:
+    type: object
+    required: ["readability", "maintainability", "performance"]
+    properties:
+      readability:
+        type: string
+        enum: ["poor", "fair", "good", "excellent"]
+      maintainability:
+        type: string  
+        enum: ["poor", "fair", "good", "excellent"]
+      performance:
+        type: string
+        enum: ["poor", "fair", "good", "excellent"]
+  
+  issues:
+    type: array
+    description: "List of identified issues or potential bugs"
+    items:
+      type: object
+      required: ["severity", "description", "location"]
+      properties:
+        severity:
+          type: string
+          enum: ["low", "medium", "high", "critical"]
+        description:
+          type: string
+          minLength: 10
+        location:
+          type: string
+          description: "Function or line reference"
+        
+  suggestions:
+    type: array
+    description: "Improvement suggestions"
+    minItems: 1
+    items:
+      type: object
+      required: ["category", "description", "impact"]
+      properties:
+        category:
+          type: string
+          enum: ["performance", "readability", "maintainability", "security", "best_practice"]
+        description:
+          type: string
+          minLength: 15
+        impact:
+          type: string
+          enum: ["low", "medium", "high"]
+        code_example:
+          type: string
+          description: "Optional improved code example" 

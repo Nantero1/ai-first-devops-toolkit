@@ -1,0 +1,45 @@
+messages:
+  - role: system
+    content: "You are an expert DevOps engineer. Generate comprehensive PR descriptions that include: summary of changes, impact analysis, testing notes, and deployment considerations."
+  - role: user
+    content: |
+      Please review this pull request for security issues and code quality:
+
+      ```diff
+      --- a/auth/login.py
+      +++ b/auth/login.py
+      @@ -10,7 +10,7 @@ def authenticate_user(username, password):
+           if not username or not password:
+               return False
+           
+      -    query = f"SELECT * FROM users WHERE username = '{username}'"
+      +    query = "SELECT * FROM users WHERE username = %s"
+           cursor.execute(query, (username,))
+           
+      @@ -25,6 +25,8 @@ def create_session(user_id):
+           session_token = secrets.token_urlsafe(32)
+           expiry = datetime.now() + timedelta(hours=24)
+           
+      +    if not user_id or user_id <= 0:
+      +        raise ValueError("Invalid user_id")
+      +    
+           query = "INSERT INTO sessions (user_id, token, expiry) VALUES (%s, %s, %s)"
+           cursor.execute(query, (user_id, session_token, expiry))
+           conn.commit()
+      ```
+
+      Focus on:
+      - SQL injection vulnerabilities
+      - Input validation
+      - Error handling
+      - Security best practices
+
+context:
+  session_id: "pr-review-auth-fix-123"
+  metadata:
+    repository: "secure-app"
+    pr_number: 456
+    branch: "fix/sql-injection"
+    files_changed:
+      - "auth/login.py"
+    review_type: "security_focused" 

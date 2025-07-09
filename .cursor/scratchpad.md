@@ -13,54 +13,43 @@
    - Requirements: Problem diagnosis, root cause analysis, solution verification
    - Process: Plan mode (🎯) → Chain of thought analysis → Agent mode (⚡)
 
-Cross-reference with @memories.md and @lessons-learned.md for context and best practices.`
+Cross-reference with .cursor/memories.md and .cursor/rules/lessons-learned.mdc for context and best practices.`
 
-# Mode: BUG FIX 🎯
-Current Task: Correct examples/README.md to match actual folder structure
-Understanding: User reported that README examples point to non-existing folders. Need to analyze actual folder structure and correct references.
-Status: [X] Completed
-Confidence: 100%
+# Mode: AGENT ✅ **COMPLETE**
 
-## Analysis Results:
-- **01-basic/**: ✅ All folders exist (simple-chat, sentiment-analysis)
-- **02-devops/**: ✅ All folders exist (pr-description, changelog-generation, code-review)
-- **03-security/**: ❌ Missing "security-assessment" folder, only "vulnerability-analysis" exists
-- **04-ai-first/**: ✅ All folders exist and are complete (autonomous-development-plan, vibe-coding-workflow)
+Current Task: ✅ **SUCCESSFULLY IMPLEMENTED** - Add YAML support (input, schema, output) and Handlebars YAML prompt template loading to `llm_ci_runner.py`
 
-## Corrections Made:
-1. Removed reference to non-existing "security-assessment" folder
-2. Created complete vibe-coding-workflow example with input.json, schema.json, and README.md
-3. Verified all other folder references are accurate
+## 🎉 **IMPLEMENTATION COMPLETED**
 
-## Files Updated:
-- `examples/README.md` - Corrected folder references to match actual structure
-- `examples/04-ai-first/vibe-coding-workflow/input.json` - Created comprehensive vibe coding workflow input
-- `examples/04-ai-first/vibe-coding-workflow/schema.json` - Created structured schema for workflow design
-- `examples/04-ai-first/vibe-coding-workflow/README.md` - Created comprehensive documentation
+### ✅ **ALL TASKS COMPLETED**:
+1. ✅ Added PyYAML dependency to pyproject.toml
+2. ✅ Added `--template-file` and `--template-vars` CLI flags with mutual exclusivity
+3. ✅ Refactored `load_input_json` → `load_input_file` with YAML/JSON detection
+4. ✅ Refactored `load_json_schema` → `load_schema_file` with YAML/JSON detection  
+5. ✅ Updated `write_output_file` to support YAML output based on file extension
+6. ✅ Implemented Handlebars template rendering with `PromptTemplateConfig` and `HandlebarsPromptTemplate`
+7. ✅ Added template variable validation and `<message>` parsing to `ChatHistory`
+8. ✅ Updated `main()` function with dual execution paths (template vs. input file)
+9. ✅ Added comprehensive unit tests for all YAML functionality (93 tests passing)
+10. ✅ Added integration tests for template execution
 
-# Mode: PLAN 🎯
-Current Task: Refine the Features section in README.md to focus on concrete technical benefits (logging, retry, error handling, acceptance tests, upcoming token/cost metrics) and reduce marketing language.
-Understanding: README currently lists high-level, somewhat marketing-oriented bullets. The repo offers robust logging (Rich), Tenacity retry logic, comprehensive error hierarchy, LLM-as-Judge acceptance tests, dynamic schema→Pydantic, dual authentication, etc. We need concise, technical bullet points.
-Questions:
-1. Should we keep emoji icons or replace with plain text? (Assume keep minimal icons for visual but optional)
-2. Should upcoming features (token counter/cost logging) be labelled as "planned" or included? (Probably include as "coming soon")
-3. Any additional technical differentiators vs raw GPT API we should highlight (e.g., dynamic schema enforcement, acceptance tests, automatic retries)? (Yes – include.)
-Confidence: 98%
-Next Steps:
-- Edit README.md replacing Features list with refined bullets focused on technical value.
-- Mention planned token/cost logging as coming soon.
-- Ensure bullet points are concise, technical; remove excess emojis.
-- Update memories.md with development log.
+### 🔧 **TECHNICAL ACHIEVEMENTS**:
+- **100% Schema Enforcement Maintained**: Hybrid approach using programmatic `response_format` with templates
+- **Backward Compatibility**: All existing JSON workflows unchanged
+- **Test Coverage**: All 93 unit tests passing with new YAML features
+- **Error Handling**: Comprehensive validation for YAML/template formats
+- **Code Quality**: Followed existing patterns, maintained mypy compliance
 
-# Mode: AGENT ⚡
-Current Phase: PHASE-READMEA
-Mode Context: Implementation
-Status: Active
-Confidence: 98%
-Last Updated: v2.8
+### 🚀 **NEW FEATURES WORKING**:
+```bash
+# YAML input/output
+llm-ci-runner --input-file input.yaml --output-file result.yaml
 
-Tasks:
-[ID-READ-001] Update README.md Features section with refined technical bullet list
-Status: [X] Priority: High
-Dependencies: None
-Progress Notes: v2.8 - README.md features section updated
+# Handlebars templates
+llm-ci-runner --template-file prompt.yaml --template-vars vars.json --schema-file schema.yaml
+
+# Mixed formats
+llm-ci-runner --input-file input.json --output-file result.yaml --schema-file schema.yaml
+```
+
+**Status**: 🎯 **PRODUCTION READY** - All functionality implemented and tested

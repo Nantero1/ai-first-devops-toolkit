@@ -46,9 +46,11 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 - 🔄 **Resilient execution**: Retries with exponential back-off and jitter plus a clear exception hierarchy keep transient cloud faults from breaking your CI.
 - 🚀 **Zero-Friction CLI**: Single script, minimal configuration for pipeline integration and automation
 - 🔐 **Enterprise Security**: Azure RBAC via DefaultAzureCredential with fallback to API Key
-- 📋 **CI-friendly CLI**: Stateless command that reads JSON, writes JSON, and exits with proper codes
+- 📦 **CI-friendly CLI**: Stateless command that reads JSON/YAML, writes JSON/YAML, and exits with proper codes
 - 🎨 **Beautiful Logging**: Rich console output with timestamps and colors
-- 📁 **File-based I/O**: CI/CD friendly with JSON input/output
+- 📁 **File-based I/O**: CI/CD friendly with JSON/YAML input/output
+- 📋 **Template-Driven Workflows**: Handlebars templates with YAML variables for dynamic prompt generation
+- 📄 **YAML Support**: Use YAML for schemas, input files, and output files - more readable than JSON
 - 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
 - 🤖 **Semantic Kernel foundation**: async, service-oriented design ready for skills, memories, orchestration, and future model upgrades
 - 📚 **Documentation**: Comprehensive documentation for all features and usage examples. Use your semantic kernel skills to extend the functionality.
@@ -101,6 +103,31 @@ llm-ci-runner \
   --output-file pr-analysis.json
 ```
 
+### 3a. Template-Based Workflows
+
+**Dynamic prompt generation with YAML and Handlebars templates:**
+
+```bash
+# Template-based approach with YAML configuration
+llm-ci-runner \
+  --template-file examples/05-templates/pr-review-template/template.hbs \
+  --template-vars examples/05-templates/pr-review-template/template-vars.yaml \
+  --schema-file examples/05-templates/pr-review-template/schema.yaml \
+  --output-file pr-review-result.yaml
+
+# YAML input files (alternative to JSON)
+llm-ci-runner \
+  --input-file config.yaml \
+  --schema-file schema.yaml \
+  --output-file result.yaml
+```
+
+**Benefits of Template Approach:**
+- 🎯 **Reusable Templates**: Create once, use across multiple scenarios
+- 📝 **YAML Configuration**: More readable than JSON for complex setups
+- 🔄 **Dynamic Content**: Variables and conditional rendering
+- 🚀 **CI/CD Ready**: Perfect for parameterized pipeline workflows
+
 ### 4. Development Setup (Optional)
 
 For contributors or advanced users who want to modify the source:
@@ -130,7 +157,9 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 - 🤖 **Code Review Automation**: Automated reviews with structured findings and quality gates
 - 🔗 **Multi-Stage AI Pipelines**: Chain multiple AI operations for complex workflows
 
-## Input Format
+## Input Formats
+
+### Traditional JSON Input
 
 ```json
 {
@@ -151,6 +180,54 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
     }
   }
 }
+```
+
+### YAML Input
+
+```yaml
+messages:
+  - role: system
+    content: "You are a helpful assistant."
+  - role: user
+    content: "Your task description here"
+context:
+  session_id: "optional-session-id"
+  metadata:
+    any: "additional context"
+```
+
+### Template-Based Input
+
+**Handlebars Template** (`template.hbs`):
+```handlebars
+{{#message role="system"}}
+You are an expert {{expertise.domain}} engineer.
+Focus on {{expertise.focus_areas}}.
+{{/message}}
+
+{{#message role="user"}}
+Analyze this {{task.type}}:
+
+{{#each task.items}}
+- {{this}}
+{{/each}}
+
+Requirements: {{task.requirements}}
+{{/message}}
+```
+
+**Template Variables** (`vars.yaml`):
+```yaml
+expertise:
+  domain: "DevOps"
+  focus_areas: "security, performance, maintainability"
+task:
+  type: "pull request"
+  items:
+    - "Changed authentication logic"
+    - "Updated database queries"
+    - "Added input validation"
+  requirements: "Focus on security vulnerabilities"
 ```
 
 ## Structured Outputs with 100% Schema Enforcement
@@ -200,6 +277,20 @@ llm-ci-runner \
   run: |
     # The output is now in pr-analysis.json with guaranteed schema compliance
     cat pr-analysis.json | jq '.summary'
+```
+
+**Template-Based CI/CD:**
+```yaml
+- name: Generate PR Review with Templates
+  run: |
+    llm-ci-runner \
+      --template-file .github/templates/pr-review.hbs \
+      --template-vars pr-context.yaml \
+      --schema-file .github/schemas/pr-review.yaml \
+      --output-file pr-analysis.yaml
+  env:
+    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
 ```
 
 **For Development/Source Usage:**

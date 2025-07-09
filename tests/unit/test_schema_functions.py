@@ -14,7 +14,7 @@ from llm_ci_runner import (
     InputValidationError,
     SchemaValidationError,
     create_dynamic_model_from_schema,
-    load_json_schema,
+    load_schema_file,
 )
 
 
@@ -184,8 +184,8 @@ class TestCreateDynamicModelFromSchema:
         assert result_model is not None
 
 
-class TestLoadJsonSchema:
-    """Tests for load_json_schema function."""
+class TestLoadSchemaFile:
+    """Tests for load_schema_file function."""
 
     def test_load_valid_schema_file(self, temp_schema_file):
         """Test loading a valid JSON schema file."""
@@ -198,7 +198,7 @@ class TestLoadJsonSchema:
             mock_model.__name__ = "TestModel"
             mock_create_model.return_value = mock_model
 
-            result = load_json_schema(schema_file)
+            result = load_schema_file(schema_file)
 
         # then
         assert result is not None
@@ -210,7 +210,7 @@ class TestLoadJsonSchema:
         schema_file = None
 
         # when
-        result = load_json_schema(schema_file)
+        result = load_schema_file(schema_file)
 
         # then
         assert result is None
@@ -222,7 +222,7 @@ class TestLoadJsonSchema:
 
         # when & then
         with pytest.raises(InputValidationError, match="Schema file not found"):
-            load_json_schema(schema_file)
+            load_schema_file(schema_file)
 
     def test_load_invalid_json_raises_error(self, temp_dir):
         """Test that invalid JSON raises InputValidationError."""
@@ -233,7 +233,7 @@ class TestLoadJsonSchema:
 
         # when & then
         with pytest.raises(InputValidationError, match="Invalid JSON in schema file"):
-            load_json_schema(invalid_json_file)
+            load_schema_file(invalid_json_file)
 
     def test_load_schema_with_create_model_error_raises_schema_error(self, temp_schema_file):
         """Test that model creation errors are wrapped in InputValidationError."""
@@ -245,7 +245,7 @@ class TestLoadJsonSchema:
             mock_create_model.side_effect = Exception("Model creation failed")
 
             with pytest.raises(InputValidationError, match="Error loading schema file"):
-                load_json_schema(schema_file)
+                load_schema_file(schema_file)
 
     def test_load_schema_with_file_read_error_raises_schema_error(self):
         """Test that file read errors are wrapped in InputValidationError."""
@@ -258,4 +258,54 @@ class TestLoadJsonSchema:
             patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
             with pytest.raises(InputValidationError, match="Error loading schema file"):
-                load_json_schema(schema_file)
+                load_schema_file(schema_file)
+
+    def test_load_valid_yaml_schema_file(self, temp_dir):
+        """Test loading a valid YAML schema file."""
+        # given
+        schema_file = temp_dir / "schema.yaml"
+        schema_content = """
+type: object
+properties:
+  sentiment:
+    type: string
+    enum: [positive, negative, neutral]
+    description: Sentiment classification
+  confidence:
+    type: number
+    minimum: 0
+    maximum: 1
+    description: Confidence score
+required: [sentiment, confidence]
+additionalProperties: false
+"""
+        with open(schema_file, "w") as f:
+            f.write(schema_content)
+
+        # when
+        with patch("llm_ci_runner.create_dynamic_model_from_schema") as mock_create_model:
+            mock_model = Mock()
+            mock_model.__name__ = "TestModel"
+            mock_create_model.return_value = mock_model
+
+            result = load_schema_file(schema_file)
+
+        # then
+        assert result == mock_model
+        mock_create_model.assert_called_once()
+        # Verify the YAML was parsed correctly
+        call_args = mock_create_model.call_args[0][0]
+        assert call_args["type"] == "object"
+        assert "sentiment" in call_args["properties"]
+        assert call_args["required"] == ["sentiment", "confidence"]
+
+    def test_load_invalid_yaml_schema_raises_error(self, temp_dir):
+        """Test that invalid YAML schema raises InputValidationError."""
+        # given
+        invalid_yaml_file = temp_dir / "invalid.yaml"
+        with open(invalid_yaml_file, "w") as f:
+            f.write("type: object\nproperties:\n  field: {\n")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Invalid YAML in schema file"):
+            load_schema_file(invalid_yaml_file)
