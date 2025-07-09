@@ -192,7 +192,7 @@ def setup_logging(log_level: str) -> logging.Logger:
                 console=CONSOLE,
                 show_time=True,
                 show_level=True,
-                show_path=True,
+                show_path=False,
                 markup=True,
                 rich_tracebacks=True,
             )

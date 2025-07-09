@@ -69,7 +69,7 @@ class TestSetupLogging:
         assert "console" in handler_call_kwargs
         assert handler_call_kwargs["show_time"] is True
         assert handler_call_kwargs["show_level"] is True
-        assert handler_call_kwargs["show_path"] is True
+        assert handler_call_kwargs["show_path"] is False
         assert handler_call_kwargs["markup"] is True
         assert handler_call_kwargs["rich_tracebacks"] is True
 

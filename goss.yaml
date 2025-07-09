@@ -9,6 +9,8 @@ package:
     installed: true
   util-linux:
     installed: true
+  git:
+    installed: true
 
 command:
   # Test yq is installed

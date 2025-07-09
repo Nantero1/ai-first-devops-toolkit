@@ -88,6 +88,7 @@ RUN chmod +x /usr/local/bin/yq && \
     tar \
     gzip \
     unzip \
+    git \
     gettext \
     shadow-utils \
     sudo \
@@ -122,6 +123,12 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV UV_NO_SYNC=true
 ENV UV_COMPILE_BYTECODE=1
 ENV PYTHONOPTIMIZE=2
+
+# Color support for Azure DevOps
+ENV TERM=xterm-256color
+ENV FORCE_COLOR=1
+ENV COLORTERM=truecolor
+ENV COLUMNS=120
 
 # Set default Azure OpenAI configuration for POC
 ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-dev-swecen-001.openai.azure.com/
