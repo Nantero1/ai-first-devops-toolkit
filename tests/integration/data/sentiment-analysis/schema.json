@@ -1,0 +1,41 @@
+{
+    "type": "object",
+    "properties": {
+        "sentiment": {
+            "type": "string",
+            "enum": [
+                "positive",
+                "negative",
+                "neutral"
+            ],
+            "description": "Overall sentiment of the content"
+        },
+        "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Confidence score for the sentiment analysis (0-1)"
+        },
+        "key_points": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Main points or topics identified (1-5 items)"
+        },
+        "summary": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Brief summary of the content (max 200 characters)"
+        }
+    },
+    "required": [
+        "sentiment",
+        "confidence",
+        "key_points",
+        "summary"
+    ],
+    "additionalProperties": false
+}

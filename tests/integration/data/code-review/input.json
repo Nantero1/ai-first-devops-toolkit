@@ -1,0 +1,21 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are a senior software engineer conducting code reviews. Focus on code quality, best practices, security, performance, and maintainability."
+        },
+        {
+            "role": "user",
+            "content": "Review this code for quality, security, and best practices:\n\n```python\nimport os\nimport subprocess\nfrom flask import Flask, request, jsonify\n\napp = Flask(__name__)\n\n@app.route('/execute', methods=['POST'])\ndef execute_command():\n    command = request.json.get('command')\n    if not command:\n        return jsonify({'error': 'No command provided'}), 400\n    \n    # Execute the command directly\n    result = subprocess.run(command, shell=True, capture_output=True, text=True)\n    \n    return jsonify({\n        'stdout': result.stdout,\n        'stderr': result.stderr,\n        'return_code': result.returncode\n    })\n\n@app.route('/file', methods=['GET'])\ndef read_file():\n    filename = request.args.get('file')\n    if not filename:\n        return jsonify({'error': 'No filename provided'}), 400\n    \n    # Read file directly without path validation\n    with open(filename, 'r') as f:\n        content = f.read()\n    \n    return jsonify({'content': content})\n\nif __name__ == '__main__':\n    app.run(debug=True, host='0.0.0.0')\n```\n\nProvide detailed feedback with specific issues, suggestions, and overall assessment."
+        }
+    ],
+    "context": {
+        "session_id": "code-review-security-001",
+        "metadata": {
+            "task_type": "code_review",
+            "domain": "security",
+            "language": "python",
+            "framework": "flask"
+        }
+    }
+}

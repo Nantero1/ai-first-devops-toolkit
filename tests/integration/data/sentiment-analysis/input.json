@@ -1,0 +1,19 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an expert sentiment analysis tool. Analyze the sentiment of the given text and provide structured analysis."
+        },
+        {
+            "role": "user",
+            "content": "Analyze the sentiment of this text: 'I absolutely love this new AI-first development approach! The productivity gains are incredible and the team is really excited about the possibilities. The only concern is the learning curve, but we're confident we can overcome it.'"
+        }
+    ],
+    "context": {
+        "session_id": "sentiment-analysis-001",
+        "metadata": {
+            "task_type": "sentiment_analysis",
+            "domain": "text_analysis"
+        }
+    }
+}

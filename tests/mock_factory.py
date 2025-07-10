@@ -191,6 +191,20 @@ def create_error_response_mock(
     return ClientAuthenticationError(error_message)
 
 
+def create_jinja2_template_mock() -> list[Mock]:
+    """
+    Create mock for Jinja2 template response based on the jinja2-example/schema.yaml.
+    """
+    jinja2_response = '{"summary": "Implements rate limiting and improves error handling.", "code_quality_score": 9, "security_assessment": {"vulnerabilities_found": ["None detected"], "risk_level": "low", "recommendations": ["Continue using parameterized queries", "Add more input validation"]}, "performance_analysis": {"impact": "positive", "concerns": ["None"], "optimizations": ["Consider caching frequent queries"]}, "testing_recommendations": {"test_coverage": "adequate", "missing_tests": ["Edge case for max_limit"], "test_scenarios": ["Test rate limit exceeded", "Test invalid credentials"]}, "suggestions": ["Improve documentation", "Add logging for rate limit events"], "overall_rating": "approve_with_suggestions"}'
+    return [create_mock_chat_message_content(content=jinja2_response)]
+
+def create_hbs_template_mock() -> list[Mock]:
+    """
+    Create mock for Handlebars template response based on the pr-review-template/schema.yaml.
+    """
+    hbs_response = '{"description": "This PR addresses SQL injection vulnerabilities and improves input validation. Session management is now more secure and error handling is robust.", "summary": "Fixes security issues and improves session management.", "change_type": "security", "impact": "high", "security_findings": [{"type": "vulnerability_fixed", "description": "SQL injection vulnerability resolved by using parameterized queries.", "severity": "high"}, {"type": "security_improvement", "description": "Input validation added for user_id.", "severity": "medium"}], "testing_notes": ["Add tests for invalid credentials", "Test session creation with invalid user_id"], "deployment_notes": ["No downtime expected", "Monitor authentication logs post-deployment"], "breaking_changes": [], "related_issues": [456, 789]}'
+    return [create_mock_chat_message_content(content=hbs_response)]
+
 # Mock response mapping for easy test fixture creation
 MOCK_RESPONSES = {
     "structured_output": create_structured_output_mock,
@@ -198,4 +212,6 @@ MOCK_RESPONSES = {
     "pr_review": create_pr_review_mock,
     "minimal": create_minimal_response_mock,
     "error": create_error_response_mock,
+    "jinja2_template": create_jinja2_template_mock,
+    "hbs_template": create_hbs_template_mock,
 }

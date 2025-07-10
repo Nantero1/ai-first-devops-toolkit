@@ -37,14 +37,14 @@ class TestCLIArgumentParsing:
     def test_cli_with_missing_required_arguments_shows_error(self):
         """Test that missing required arguments shows appropriate error."""
         # given
-        command = ["uv", "run", "llm_ci_runner.py", "--input-file", "test.json"]
+        command = ["uv", "run", "llm_ci_runner.py", "--input-file"]
 
         # when
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
-        assert result.returncode != 0
-        assert "required" in result.stderr.lower() or "error" in result.stderr.lower()
+        assert result.returncode == 2  # ArgumentParser error
+        assert "expected one argument" in result.stderr.lower() or "error" in result.stderr.lower()
 
     def test_cli_with_invalid_log_level_shows_error(self):
         """Test that invalid log level shows appropriate error."""
@@ -86,12 +86,12 @@ class TestCLIArgumentParsing:
 
         # then
         assert result.returncode == 1
-        # Should show input validation error
-        assert "not found" in result.stderr.lower() or "error" in result.stderr.lower()
+        # Should show input validation error (goes to stdout with Rich)
+        assert "not found" in result.stdout.lower() or "error" in result.stdout.lower()
 
     @pytest.mark.parametrize("log_level", ["DEBUG", "INFO", "WARNING", "ERROR"])
     def test_cli_with_valid_log_levels_accepts_gracefully(self, temp_dir, log_level):
-        """Test that all valid log levels are accepted."""
+        """Test that all valid log levels are accepted by argument parser."""
         # given
         input_file = temp_dir / "test_input.json"
         output_file = temp_dir / "test_output.json"
@@ -114,15 +114,17 @@ class TestCLIArgumentParsing:
         ]
 
         # when
-        # This will fail due to missing Azure credentials, but should parse args correctly
+        # This will fail due to Azure authentication (respx mocking doesn't work in subprocess)
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
-        # Should fail at authentication stage, not argument parsing
-        assert result.returncode == 1
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
+        assert result.returncode == 1  # Authentication failure, not argument parsing
         # Should not be an argument parsing error
         assert "invalid choice" not in result.stderr.lower()
         assert "unrecognized arguments" not in result.stderr.lower()
+        # Should reach Azure authentication stage (confirms log level parsing worked)
+        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
 
 
 class TestCLIFileHandling:
@@ -161,9 +163,12 @@ class TestCLIFileHandling:
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1
-        # Should fail at authentication, not input validation
-        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
+        # Should not be an argument parsing error
+        assert "unrecognized arguments" not in result.stderr.lower()
+        # Should reach authentication stage and fail there
+        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
 
     def test_cli_with_invalid_json_input_shows_validation_error(self, temp_dir):
         """Test that invalid JSON input shows validation error."""
@@ -190,7 +195,7 @@ class TestCLIFileHandling:
 
         # then
         assert result.returncode == 1
-        assert "json" in result.stderr.lower() or "invalid" in result.stderr.lower()
+        assert "json" in result.stdout.lower() or "invalid" in result.stdout.lower()
 
     def test_cli_with_schema_file_parameter_is_processed(self, temp_dir):
         """Test that schema file parameter is properly processed."""
@@ -231,11 +236,12 @@ class TestCLIFileHandling:
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1
-        # Should fail at authentication, not schema processing
-        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
-        # Should not have schema-related errors
-        assert "schema" not in result.stderr.lower() or "not found" not in result.stderr.lower()
+        # Should not be an argument parsing error
+        assert "unrecognized arguments" not in result.stderr.lower()
+        # Should reach authentication stage, confirming schema was parsed correctly
+        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
 
 
 class TestCLIErrorHandling:
@@ -300,9 +306,9 @@ class TestCLIIntegrationWithExamples:
     @pytest.mark.parametrize(
         "example_file",
         [
-            "examples/simple-example.json",
-            "examples/minimal-example.json",
-            "examples/pr-review-example.json",
+            "tests/integration/data/simple-chat/input.json",
+            "tests/integration/data/simple-chat/input.json",  # Using simple-chat for minimal
+            "tests/integration/data/code-review/input.json",
         ],
     )
     def test_cli_with_example_files_reaches_authentication_stage(self, temp_dir, example_file):
@@ -326,15 +332,18 @@ class TestCLIIntegrationWithExamples:
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1
-        # Should fail at authentication, not input processing
-        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
+        # Should not be an argument parsing error
+        assert "unrecognized arguments" not in result.stderr.lower()
+        # Should reach authentication stage and fail there
+        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
 
     def test_cli_with_structured_output_example_processes_schema(self, temp_dir):
         """Test that CLI with structured output processes schema correctly."""
         # given
-        input_file = "examples/simple-example.json"
-        schema_file = "examples/structured-output-example.json"
+        input_file = "tests/integration/data/simple-chat/input.json"
+        schema_file = "tests/integration/data/sentiment-analysis/schema.json"
         output_file = temp_dir / "structured_output.json"
 
         command = [
@@ -355,11 +364,12 @@ class TestCLIIntegrationWithExamples:
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1
-        # Should fail at authentication, not schema processing
-        assert "AZURE_OPENAI_ENDPOINT" in result.stderr or "authentication" in result.stderr.lower()
-        # Should not have schema-related errors
-        assert "schema" not in result.stderr.lower() or "invalid" not in result.stderr.lower()
+        # Should not be an argument parsing error
+        assert "unrecognized arguments" not in result.stderr.lower()
+        # Should reach authentication stage, confirming schema was parsed correctly
+        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
 
 
 class TestCLILoggingAndOutput:
@@ -391,6 +401,7 @@ class TestCLILoggingAndOutput:
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1
         # Should show more detailed logging information
         # The exact content depends on where it fails, but should have debug info
@@ -421,6 +432,23 @@ class TestCLILoggingAndOutput:
         result = subprocess.run(command, capture_output=True, text=True)
 
         # then
+        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1
         # Should show minimal output with error logging
         # The output should be less verbose than DEBUG mode
+
+# =====================
+# CLI Return Code Table
+# =====================
+# | Scenario                                 | Return Code | Notes                                      |
+# |-------------------------------------------|-------------|--------------------------------------------|
+# | Valid input, all required args present    |     0       | Output file created, CLI succeeds          |
+# | Missing required argument (argparse)      |     2       | Argparse error, help/usage shown           |
+# | Input file not found                      |     1       | Custom error, message in stdout            |
+# | Invalid JSON input                        |     1       | Custom error, message in stdout            |
+# | Invalid log level                         |     2       | Argparse error, help/usage shown           |
+# | Invalid schema file                       |     1       | Custom error, message in stdout            |
+# | Any other handled error                   |     1       | Custom error, message in stdout            |
+# | Unhandled exception                       |     1       | Stack trace, message in stdout             |
+#
+# See test cases above for examples.

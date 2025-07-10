@@ -1,0 +1,20 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that provides concise and informative responses."
+        },
+        {
+            "role": "user",
+            "content": "Explain what CI/CD means in software development in one paragraph.",
+            "name": "developer"
+        }
+    ],
+    "context": {
+        "session_id": "simple-example-001",
+        "metadata": {
+            "task_type": "explanation",
+            "domain": "software_development"
+        }
+    }
+}

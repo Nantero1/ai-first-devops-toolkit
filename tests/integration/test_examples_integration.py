@@ -18,6 +18,8 @@ from tests.mock_factory import (
     create_pr_review_mock,
     create_structured_output_mock,
     create_text_output_mock,
+    create_jinja2_template_mock,
+    create_hbs_template_mock,
 )
 
 
@@ -28,7 +30,7 @@ class TestSimpleExampleIntegration:
     async def test_simple_example_with_text_output(self, temp_integration_workspace, integration_mock_azure_service):
         """Test simple example with text output (no schema)."""
         # given
-        input_file = Path("examples/simple-example.json")
+        input_file = Path("tests/integration/data/simple-chat/input.json")
         output_file = temp_integration_workspace / "output" / "simple_text_output.json"
 
         # Mock the Azure service response
@@ -38,7 +40,7 @@ class TestSimpleExampleIntegration:
         # when
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -70,8 +72,8 @@ class TestSimpleExampleIntegration:
     ):
         """Test simple example with structured output schema."""
         # given
-        input_file = Path("examples/simple-example.json")
-        schema_file = Path("examples/structured-output-example.json")
+        input_file = Path("tests/integration/data/simple-chat/input.json")
+        schema_file = Path("tests/integration/data/sentiment-analysis/schema.json")
         output_file = temp_integration_workspace / "output" / "simple_structured_output.json"
 
         # Mock the Azure service response
@@ -81,7 +83,7 @@ class TestSimpleExampleIntegration:
         # when
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -119,7 +121,7 @@ class TestPRReviewExampleIntegration:
     async def test_pr_review_example_with_text_output(self, temp_integration_workspace, integration_mock_azure_service):
         """Test PR review example with text output."""
         # given
-        input_file = Path("examples/pr-review-example.json")
+        input_file = Path("tests/integration/data/code-review/input.json")
         output_file = temp_integration_workspace / "output" / "pr_review_output.json"
 
         # Mock the Azure service response
@@ -129,7 +131,7 @@ class TestPRReviewExampleIntegration:
         # when
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -162,8 +164,8 @@ class TestPRReviewExampleIntegration:
     ):
         """Test PR review example with code review schema."""
         # given
-        input_file = Path("examples/pr-review-example.json")
-        schema_file = Path("examples/code_review_schema.json")
+        input_file = Path("tests/integration/data/code-review/input.json")
+        schema_file = Path("tests/integration/data/code-review/schema.json")
         output_file = temp_integration_workspace / "output" / "pr_review_structured_output.json"
 
         # Create a mock structured response that matches the code review schema
@@ -202,7 +204,7 @@ class TestPRReviewExampleIntegration:
         # when
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -239,7 +241,7 @@ class TestMinimalExampleIntegration:
     async def test_minimal_example_with_text_output(self, temp_integration_workspace, integration_mock_azure_service):
         """Test minimal example with simple greeting."""
         # given
-        input_file = Path("examples/minimal-example.json")
+        input_file = Path("tests/integration/data/simple-chat/input.json")  # Using simple-chat for minimal test
         output_file = temp_integration_workspace / "output" / "minimal_output.json"
 
         # Mock the Azure service response
@@ -249,7 +251,7 @@ class TestMinimalExampleIntegration:
         # when
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -283,9 +285,9 @@ class TestAllExamplesEndToEnd:
         """Test that all examples can be processed successfully."""
         # given
         examples = [
-            ("examples/simple-example.json", create_text_output_mock),
-            ("examples/pr-review-example.json", create_pr_review_mock),
-            ("examples/minimal-example.json", create_minimal_response_mock),
+            ("tests/integration/data/simple-chat/input.json", create_text_output_mock),
+            ("tests/integration/data/code-review/input.json", create_pr_review_mock),
+            ("tests/integration/data/simple-chat/input.json", create_minimal_response_mock),  # Using simple-chat for minimal test
         ]
 
         results = []
@@ -298,7 +300,7 @@ class TestAllExamplesEndToEnd:
 
             with patch(
                 "llm_ci_runner.setup_azure_service",
-                return_value=integration_mock_azure_service,
+                return_value=(integration_mock_azure_service, None),
             ):
                 test_args = [
                     "llm_ci_runner.py",
@@ -335,13 +337,13 @@ class TestAllExamplesEndToEnd:
     ):
         """Test that nonexistent input file raises appropriate error."""
         # given
-        input_file = Path("examples/nonexistent.json")
+        input_file = Path("tests/integration/data/nonexistent.json")
         output_file = temp_integration_workspace / "output" / "error_output.json"
 
         # when & then
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -365,14 +367,14 @@ class TestAllExamplesEndToEnd:
     ):
         """Test that invalid schema file raises appropriate error."""
         # given
-        input_file = Path("examples/simple-example.json")
-        schema_file = Path("examples/nonexistent_schema.json")
+        input_file = Path("tests/integration/data/simple-chat/input.json")
+        schema_file = Path("tests/integration/data/nonexistent_schema.json")
         output_file = temp_integration_workspace / "output" / "error_output.json"
 
         # when & then
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -443,7 +445,7 @@ class TestFullPipelineIntegration:
         # when
         with patch(
             "llm_ci_runner.setup_azure_service",
-            return_value=integration_mock_azure_service,
+            return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
                 "llm_ci_runner.py",
@@ -471,3 +473,95 @@ class TestFullPipelineIntegration:
         integration_mock_azure_service.get_chat_message_contents.assert_called_once()
         call_kwargs = integration_mock_azure_service.get_chat_message_contents.call_args[1]
         assert "arguments" in call_kwargs
+
+
+class TestTemplateIntegration:
+    """Integration tests for template-based (Jinja2 and Handlebars) examples."""
+
+    @pytest.mark.asyncio
+    async def test_jinja2_template_integration(self, temp_integration_workspace, integration_mock_azure_service):
+        """Test Jinja2 template with template vars and schema."""
+        # given
+        template_file = Path("tests/integration/data/jinja2-example/template.jinja")
+        template_vars_file = Path("tests/integration/data/jinja2-example/template-vars.yaml")
+        schema_file = Path("tests/integration/data/jinja2-example/schema.yaml")
+        output_file = temp_integration_workspace / "output" / "jinja2_output.json"
+
+        # Mock the Azure service response
+        mock_response = create_jinja2_template_mock()
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
+
+        # when
+        with patch(
+            "llm_ci_runner.setup_azure_service",
+            return_value=(integration_mock_azure_service, None),
+        ):
+            test_args = [
+                "llm_ci_runner.py",
+                "--template-file",
+                str(template_file),
+                "--template-vars",
+                str(template_vars_file),
+                "--schema-file",
+                str(schema_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "INFO",
+            ]
+            with patch("sys.argv", test_args):
+                await main()
+
+        # then
+        assert output_file.exists()
+        with open(output_file) as f:
+            result = json.load(f)
+        assert result["success"] is True
+        assert isinstance(result["response"], dict)
+        assert "summary" in result["response"]
+        assert "overall_rating" in result["response"]
+        integration_mock_azure_service.get_chat_message_contents.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_hbs_template_integration(self, temp_integration_workspace, integration_mock_azure_service):
+        """Test Handlebars template with template vars and schema."""
+        # given
+        template_file = Path("tests/integration/data/pr-review-template/template.hbs")
+        template_vars_file = Path("tests/integration/data/pr-review-template/template-vars.yaml")
+        schema_file = Path("tests/integration/data/pr-review-template/schema.yaml")
+        output_file = temp_integration_workspace / "output" / "hbs_output.json"
+
+        # Mock the Azure service response
+        mock_response = create_hbs_template_mock()
+        integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
+
+        # when
+        with patch(
+            "llm_ci_runner.setup_azure_service",
+            return_value=(integration_mock_azure_service, None),
+        ):
+            test_args = [
+                "llm_ci_runner.py",
+                "--template-file",
+                str(template_file),
+                "--template-vars",
+                str(template_vars_file),
+                "--schema-file",
+                str(schema_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "INFO",
+            ]
+            with patch("sys.argv", test_args):
+                await main()
+
+        # then
+        assert output_file.exists()
+        with open(output_file) as f:
+            result = json.load(f)
+        assert result["success"] is True
+        assert isinstance(result["response"], dict)
+        assert "description" in result["response"]
+        assert "impact" in result["response"]
+        integration_mock_azure_service.get_chat_message_contents.assert_called_once()

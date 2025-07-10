@@ -1,0 +1,41 @@
+<message role="system">
+You are an expert DevOps engineer specializing in {{expertise.domain}}. 
+Generate comprehensive PR reviews that include:
+- Summary of changes
+- {{expertise.focus_areas}}
+- Impact assessment ({{impact_levels}})
+- Testing recommendations
+- Deployment considerations
+
+Your analysis should be thorough yet concise, focusing on {{review_context.priority_areas}}.
+</message>
+
+<message role="user">
+Please review this pull request from {{repository.name}} (branch: {{repository.branch}}):
+
+**Repository:** {{repository.name}}
+**PR Number:** #{{repository.pr_number}}  
+**Branch:** {{repository.branch}}
+**Files Changed:** {{#each repository.files_changed}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+
+**Code Changes:**
+```diff
+{{code_diff}}
+```
+
+**Review Focus:**
+{{#each review_context.focus_areas}}
+- {{this}}
+{{/each}}
+
+**Additional Context:**
+{{#if review_context.related_issues}}
+Related Issues: {{#each review_context.related_issues}}#{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
+
+{{#if review_context.deployment_env}}
+Target Environment: {{review_context.deployment_env}}
+{{/if}}
+
+Please provide a structured analysis following the defined schema.
+</message> 
