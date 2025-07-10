@@ -1,0 +1,124 @@
+{
+    "type": "object",
+    "properties": {
+        "overall_rating": {
+            "type": "string",
+            "enum": [
+                "excellent",
+                "good",
+                "needs_work",
+                "poor"
+            ],
+            "description": "Overall assessment of the code quality"
+        },
+        "summary": {
+            "type": "string",
+            "description": "Brief summary of the code review findings"
+        },
+        "strengths": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "List of positive aspects found in the code"
+        },
+        "issues": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "security",
+                            "performance",
+                            "maintainability",
+                            "style",
+                            "bug",
+                            "logic"
+                        ],
+                        "description": "Category of the issue"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "critical",
+                            "high",
+                            "medium",
+                            "low"
+                        ],
+                        "description": "Severity level of the issue"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of the issue"
+                    },
+                    "line_number": {
+                        "type": "integer",
+                        "description": "Line number where the issue occurs (if applicable)"
+                    },
+                    "suggestion": {
+                        "type": "string",
+                        "description": "Suggested fix or improvement"
+                    }
+                },
+                "required": [
+                    "category",
+                    "severity",
+                    "description",
+                    "suggestion"
+                ],
+                "additionalProperties": false
+            },
+            "description": "List of issues found in the code"
+        },
+        "recommendations": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "General recommendations for improvement"
+        },
+        "test_coverage": {
+            "type": "object",
+            "properties": {
+                "has_tests": {
+                    "type": "boolean",
+                    "description": "Whether tests are present"
+                },
+                "adequacy": {
+                    "type": "string",
+                    "enum": [
+                        "excellent",
+                        "good",
+                        "adequate",
+                        "insufficient",
+                        "missing"
+                    ],
+                    "description": "Assessment of test coverage adequacy"
+                },
+                "suggestions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Suggestions for improving test coverage"
+                }
+            },
+            "required": [
+                "has_tests",
+                "adequacy"
+            ],
+            "additionalProperties": false
+        }
+    },
+    "required": [
+        "overall_rating",
+        "summary",
+        "strengths",
+        "issues",
+        "recommendations",
+        "test_coverage"
+    ],
+    "additionalProperties": false
+}

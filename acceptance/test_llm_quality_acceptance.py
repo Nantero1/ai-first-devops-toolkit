@@ -43,25 +43,27 @@ from rich.console import Console
 console = Console()
 
 
-class TestExampleComprehensive:
-    """Comprehensive testing of discovered examples - single execution per example.
+class TestGenericExampleEvaluation:
+    """Example evaluation using abstract LLM-as-judge approach.
 
-    This test class executes each example once and validates:
-    1. Execution reliability (always)
-    2. Schema compliance (if schema exists)
-    3. LLM-as-judge quality assessment (if not smoke test mode)
+    This test class demonstrates a completely abstract approach that can evaluate
+    any example based on its input, schema, and output without requiring specific
+    criteria for each example type.
 
-    Optimized for cost and time efficiency.
+    Key benefits:
+    - No hard-coupled evaluation logic
+    - Works with any example type automatically
+    - Generates criteria based on available information
+    - Extensible for new example types without code changes
     """
 
     @pytest.mark.asyncio
-    async def test_example_comprehensive(
+    async def test_generic_example_evaluation(
         self,
         environment_check,
         llm_ci_runner,
         temp_files,
-        llm_judge,
-        load_example_file,
+        generic_llm_judge,
         assert_execution_success,
         assert_judgment_passed,
         rich_test_output,
@@ -70,10 +72,10 @@ class TestExampleComprehensive:
         example_name,
         smoke_test_mode,
     ):
-        """Comprehensive test of a single example - execute once, validate everything."""
+        """Test of any example - completely abstract evaluation."""
         mode_indicator = "🚀 SMOKE TEST" if smoke_test_mode else "🎯 FULL TEST"
         console.print(
-            f"\n{mode_indicator} - Comprehensive testing of {example_name}...",
+            f"\n{mode_indicator} - evaluation of {example_name}...",
             style="blue",
         )
 
@@ -97,7 +99,7 @@ class TestExampleComprehensive:
             returncode, stdout, stderr = llm_ci_runner(str(input_file), output_file)
 
         # then - Phase 1: Basic execution reliability
-        assert_execution_success(returncode, stdout, stderr, f"{example_name} Comprehensive")
+        assert_execution_success(returncode, stdout, stderr, f"{example_name} Generic")
 
         # Load result for all validations (handle both JSON and YAML output)
         import yaml
@@ -123,19 +125,19 @@ class TestExampleComprehensive:
 
         # then - Phase 3: LLM-as-judge quality assessment (if not smoke test)
         if not smoke_test_mode:
-            await self._evaluate_example_quality(
+            await self._evaluate_generic_quality(
                 result,
                 input_file,
+                schema_file,
                 example_name,
-                llm_judge,
-                load_example_file,
+                generic_llm_judge,
                 assert_judgment_passed,
                 rich_test_output,
             )
             console.print(f"  ✅ {example_name} quality assessment passed", style="green")
 
         console.print(
-            f"🎉 {example_name} comprehensive test completed successfully",
+            f"🎉 {example_name} evaluation completed successfully",
             style="bold green",
         )
 
@@ -201,71 +203,34 @@ class TestExampleComprehensive:
                             f"Array too large in {example_name}.{field_name}: {len(value)} items"
                         )
 
-    async def _evaluate_example_quality(
+    async def _evaluate_generic_quality(
         self,
         result: dict,
         input_file,
+        schema_file,
         example_name: str,
-        llm_judge,
-        load_example_file,
+        generic_llm_judge,
         assert_judgment_passed,
         rich_test_output,
     ):
-        """Evaluate example quality using LLM-as-judge based on example type."""
+        """Evaluate example quality using LLM-as-judge approach."""
         response_data = result.get("response", {})
 
-        from pathlib import Path
-
-        input_path = Path(input_file)
-
-        # Check if this is a template-based example (supports multiple template formats)
-        template_extensions = [".hbs", ".jinja", ".j2"]
-        if input_path.suffix.lower() in template_extensions:
-            # Template-based example - use template content as context
-            with open(input_file, "r") as f:
-                template_content = f.read()
-
-            # For template examples, we evaluate output quality against template purpose
-            # rather than query-response relevance
-            template_type = input_path.suffix.lower().replace(".", "")
-            evaluation_query = f"Template-based generation using: {template_content[:200]}..."
-            input_context = f"Template-based example: {example_name}. The AI was asked to process a {template_type} template and generate structured output."
-        else:
-            # JSON-based example - load from input file
-            input_data = load_example_file(str(input_file))
-            evaluation_query = input_data["messages"][-1]["content"]
-            input_context = f"Standard query-response example: {example_name}"
-
-        # Determine evaluation criteria based on example type
-        criteria = self._get_evaluation_criteria(example_name)
-
-        if not criteria:
-            console.print(
-                f"  ℹ️ {example_name} - no specific quality criteria, skipping LLM-as-judge",
-                style="yellow",
-            )
-            return
-
-        # Format response for judgment
-        if isinstance(response_data, dict):
-            response_text = json.dumps(response_data, indent=2)
-        else:
-            response_text = str(response_data)
-
-        # Evaluate with LLM-as-judge
+        # Use the  evaluator - no hard-coupled logic!
         console.print(
-            f"  🧑‍⚖️ Evaluating {example_name} quality with LLM-as-judge...",
+            f"  🧑‍⚖️ Evaluating {example_name} LLM-as-judge...",
             style="cyan",
         )
-        judgment = await llm_judge(
-            query=evaluation_query,
-            response=response_text,
-            criteria=criteria,
-            input_context=input_context,
+
+        judgment = await generic_llm_judge(
+            input_file=input_file,
+            schema_file=schema_file,
+            output_result=response_data,
+            example_name=example_name,
         )
 
         # Determine minimum score based on example complexity
-        min_score = self._get_minimum_score(example_name)
+        min_score = self._get_generic_minimum_score(example_name)
         assert_judgment_passed(
             judgment,
             f"{example_name} Quality",
@@ -273,126 +238,11 @@ class TestExampleComprehensive:
             rich_output=rich_test_output,
         )
 
-    def _get_evaluation_criteria(self, example_name: str) -> str:
-        """Get evaluation criteria based on example type."""
-        name_lower = example_name.lower()
-
-        # Template-based example criteria - focus on output quality
-        if "static-example" in name_lower and "template" in name_lower:
-            return """
-            For this template-based example, evaluate the output quality focusing on:
-            - Structured output format and completeness
-            - Technical accuracy of any analysis provided
-            - Appropriate use of template variables and formatting
-            - Clarity and usefulness of generated content
-            - Adherence to expected output schema
-            Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
-            """
-
-        if "pr-review" in name_lower and "template" in name_lower:
-            return """
-            For this PR review template example, evaluate the output quality focusing on:
-            - Structured PR review format and completeness
-            - Technical accuracy of review comments
-            - Appropriate use of template variables for PR context
-            - Professional tone and constructive feedback
-            - Adherence to expected output schema
-            Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
-            """
-
-        # Jinja2 template example criteria
-        if "jinja2" in name_lower and "template" in name_lower:
-            return """
-            For this Jinja2 template example, evaluate the output quality focusing on:
-            - Structured output format and completeness
-            - Technical accuracy of any analysis provided
-            - Appropriate use of Jinja2 template variables and filters
-            - Clarity and usefulness of generated content
-            - Adherence to expected output schema
-            - Proper handling of Jinja2-specific features (loops, conditionals, filters)
-            Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
-            """
-
-        # Standard JSON-based example criteria (query-response focused)
-        if "sentiment" in name_lower:
-            return """
-            - Should analyze sentiment accurately based on the input text
-            - Should provide appropriate confidence scores (0-1 range)
-            - Should identify relevant key points from the text
-            - Should generate concise, meaningful summaries
-            - Should follow the structured output format correctly
-            - Should demonstrate understanding of sentiment analysis concepts
-            """
-
-        # Code review criteria
-        if "code-review" in name_lower or "review" in name_lower:
-            return """
-            - Should provide thorough technical analysis of the code
-            - Should identify potential issues, bugs, or improvements
-            - Should give constructive, actionable feedback
-            - Should demonstrate understanding of code quality principles
-            - Should assess security implications where relevant
-            - Should provide appropriate severity ratings
-            - Should be professional and helpful in tone
-            """
-
-        # Vulnerability analysis criteria
-        if "vulnerability" in name_lower or "security" in name_lower:
-            return """
-            - Should identify security vulnerabilities accurately
-            - Should assess risk levels appropriately
-            - Should provide actionable remediation steps
-            - Should demonstrate understanding of security principles
-            - Should be thorough and systematic in analysis
-            """
-
-        # PR description criteria
-        if "pr-description" in name_lower or "pull-request" in name_lower:
-            return """
-            - Should provide clear, comprehensive PR description
-            - Should summarize changes effectively
-            - Should identify key impacts and considerations
-            - Should be well-structured and professional
-            - Should follow good PR description practices
-            """
-
-        # Changelog criteria
-        if "changelog" in name_lower:
-            return """
-            - Should create well-structured changelog entries
-            - Should categorize changes appropriately
-            - Should be clear and informative
-            - Should follow changelog conventions
-            - Should prioritize important changes
-            """
-
-        # Autonomous development criteria
-        if "autonomous" in name_lower or "development-plan" in name_lower:
-            return """
-            - Should provide comprehensive development planning
-            - Should demonstrate understanding of software architecture
-            - Should include realistic timelines and milestones
-            - Should consider quality gates and risk assessment
-            - Should be actionable and well-structured
-            """
-
-        # General criteria for simple examples
-        if "simple" in name_lower or "basic" in name_lower:
-            return """
-            - Should provide clear, accurate explanations
-            - Should be well-structured and easy to understand
-            - Should demonstrate good knowledge of the topic
-            - Should be appropriately concise yet comprehensive
-            """
-
-        # Return None if no specific criteria - skip LLM-as-judge
-        return None
-
-    def _get_minimum_score(self, example_name: str) -> int:
+    def _get_generic_minimum_score(self, example_name: str) -> int:
         """Get minimum score requirement based on example complexity."""
         name_lower = example_name.lower()
 
-        # Higher standards for complex examples
+        # Higher standards for complex examples (based on name patterns)
         if any(keyword in name_lower for keyword in ["code-review", "vulnerability", "security", "autonomous"]):
             return 8
 
@@ -553,12 +403,12 @@ def pytest_generate_tests(metafunc):
         # Second pass: Find template-based examples (fallback when no input.json)
         # Support multiple template formats: .hbs (Handlebars), .jinja/.j2 (Jinja2)
         template_extensions = [".hbs", ".jinja", ".j2"]
-        
+
         for template_file in examples_dir.rglob("template.*"):
             # Check if it's a supported template extension
             if template_file.suffix.lower() not in template_extensions:
                 continue
-                
+
             folder = template_file.parent
 
             # Skip if input.json exists (JSON has priority)

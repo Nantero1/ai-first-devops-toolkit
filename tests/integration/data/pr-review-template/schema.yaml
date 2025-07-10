@@ -1,0 +1,68 @@
+type: object
+required:
+  - description
+  - summary
+  - change_type
+  - impact
+  - security_findings
+  - testing_notes
+  - deployment_notes
+properties:
+  description:
+    type: string
+    description: "Comprehensive markdown description of the PR analysis"
+    minLength: 100
+    maxLength: 2000
+  summary:
+    type: string
+    description: "Brief one-line summary of the changes"
+    maxLength: 200
+  change_type:
+    type: string
+    enum: ["feature", "bugfix", "refactor", "docs", "style", "test", "chore", "security"]
+    description: "Type of change being made"
+  impact:
+    type: string
+    enum: ["low", "medium", "high", "critical"]
+    description: "Impact level of the changes"
+  security_findings:
+    type: array
+    description: "Security-related findings and improvements"
+    items:
+      type: object
+      required: ["type", "description", "severity"]
+      properties:
+        type:
+          type: string
+          enum: ["vulnerability_fixed", "security_improvement", "potential_issue", "best_practice"]
+        description:
+          type: string
+          minLength: 10
+        severity:
+          type: string
+          enum: ["info", "low", "medium", "high", "critical"]
+  testing_notes:
+    type: array
+    description: "Testing requirements and recommendations"
+    minItems: 1
+    maxItems: 10
+    items:
+      type: string
+      minLength: 10
+  deployment_notes:
+    type: array
+    description: "Deployment considerations and requirements"
+    items:
+      type: string
+      minLength: 5
+  breaking_changes:
+    type: array
+    description: "List of breaking changes (if any)"
+    items:
+      type: string
+  related_issues:
+    type: array
+    description: "Related issue numbers"
+    items:
+      type: integer
+      minimum: 1 

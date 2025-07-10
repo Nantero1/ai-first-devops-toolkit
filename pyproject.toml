@@ -1,6 +1,6 @@
 [project]
 name = "llm-ci-runner"
-version = "1.1.0"
+version = "1.2.0"
 description = "A simple CI/CD utility for running LLM tasks with Semantic Kernel"
 readme = "README.md"
 license = {text = "MIT"}
@@ -56,6 +56,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=1.0.0",
     "pytest-mock>=3.14.0",
+    "respx>=0.21.0",
     "mypy>=1.16.0",
     "types-PyYAML>=6.0.0",
     "ruff>=0.12.0",
