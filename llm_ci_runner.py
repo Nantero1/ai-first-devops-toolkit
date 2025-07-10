@@ -73,6 +73,7 @@ from semantic_kernel.functions import KernelArguments
 from semantic_kernel.kernel_pydantic import KernelBaseModel
 from semantic_kernel.prompt_template import (
     HandlebarsPromptTemplate,
+    Jinja2PromptTemplate,
     PromptTemplateConfig,
 )
 
@@ -242,11 +243,13 @@ Examples:
     # With YAML files
     python llm_ci_runner.py --input-file input.yaml --output-file result.yaml
 
-    # Using Handlebars templates with variables
+    # Using templates with variables
     python llm_ci_runner.py --template-file prompt.hbs --template-vars vars.yaml --schema-file schema.yaml
+    python llm_ci_runner.py --template-file prompt.jinja --template-vars vars.yaml --schema-file schema.yaml
 
-    # Using Handlebars templates without variables (static template)
+    # Using templates without variables (static template)
     python llm_ci_runner.py --template-file static-prompt.hbs --schema-file schema.yaml
+    python llm_ci_runner.py --template-file static-prompt.j2 --schema-file schema.yaml
 
     # With debug logging
     python llm_ci_runner.py --input-file input.json --log-level DEBUG
@@ -270,7 +273,7 @@ Environment Variables:
     input_group.add_argument(
         "--template-file",
         type=Path,
-        help="Handlebars .hbs template file for prompt generation",
+        help="Template file for prompt generation (.hbs for Handlebars, .jinja/.j2 for Jinja2)",
     )
 
     parser.add_argument(
@@ -535,6 +538,32 @@ def load_schema_file(schema_file: Path | None) -> type[KernelBaseModel] | None:
         raise InputValidationError(f"Error loading schema file: {e}") from e
 
 
+def get_template_format(template_file: Path) -> str:
+    """
+    Detect template format based on file extension.
+
+    Args:
+        template_file: Path to template file
+
+    Returns:
+        Template format string ("handlebars" or "jinja2")
+
+    Raises:
+        InputValidationError: If file extension is not supported
+    """
+    extension = template_file.suffix.lower()
+
+    if extension == ".hbs":
+        return "handlebars"
+    elif extension in [".jinja", ".j2"]:
+        return "jinja2"
+    else:
+        raise InputValidationError(
+            f"Unsupported template file extension: {extension}. "
+            f"Supported extensions: .hbs (Handlebars), .jinja/.j2 (Jinja2)"
+        )
+
+
 def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
     """
     Load template variables from JSON or YAML file.
@@ -576,6 +605,86 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
         raise InputValidationError(f"Invalid JSON in template variables file: {e}") from e
     except Exception as e:
         raise InputValidationError(f"Error loading template variables file: {e}") from e
+
+
+def load_jinja2_template(template_file: Path) -> Jinja2PromptTemplate:
+    """
+    Load Jinja2 template from .jinja or .j2 file and create PromptTemplate instance.
+
+    Args:
+        template_file: Path to Jinja2 template file
+
+    Returns:
+        Configured Jinja2PromptTemplate instance
+
+    Raises:
+        InputValidationError: If template file cannot be loaded or is invalid
+    """
+    LOGGER.debug(f"📋 Loading Jinja2 template from: {template_file}")
+
+    try:
+        if not template_file.exists():
+            raise InputValidationError(f"Template file not found: {template_file}")
+
+        with open(template_file, encoding="utf-8") as f:
+            template_content = f.read()
+
+        # Create PromptTemplateConfig with raw Jinja2 template content
+        try:
+            template_config = PromptTemplateConfig(
+                template=template_content,
+                template_format="jinja2",
+                name=template_file.stem,
+                description=f"Jinja2 template loaded from {template_file.name}",
+            )
+        except Exception as e:
+            raise InputValidationError(f"Invalid Jinja2 template content: {e}") from e
+
+        # Create Jinja2PromptTemplate instance
+        template = Jinja2PromptTemplate(prompt_template_config=template_config)
+
+        LOGGER.info(f"✅ Loaded Jinja2 template: {template_config.name or 'unnamed'}")
+        return template
+
+    except InputValidationError:
+        raise
+    except Exception as e:
+        raise InputValidationError(f"Error loading template file: {e}") from e
+
+
+def load_template(template_file: Path) -> HandlebarsPromptTemplate | Jinja2PromptTemplate:
+    """
+    Load template from file with automatic format detection.
+
+    Supports both Handlebars (.hbs) and Jinja2 (.jinja, .j2) templates.
+
+    Args:
+        template_file: Path to template file
+
+    Returns:
+        Configured template instance (HandlebarsPromptTemplate or Jinja2PromptTemplate)
+
+    Raises:
+        InputValidationError: If template file cannot be loaded or format is not supported
+    """
+    LOGGER.debug(f"🔍 Detecting template format for: {template_file}")
+
+    try:
+        template_format = get_template_format(template_file)
+
+        if template_format == "handlebars":
+            LOGGER.debug("📋 Using Handlebars template loader")
+            return load_handlebars_template(template_file)
+        elif template_format == "jinja2":
+            LOGGER.debug("📋 Using Jinja2 template loader")
+            return load_jinja2_template(template_file)
+        else:
+            raise InputValidationError(f"Unsupported template format: {template_format}")
+
+    except InputValidationError:
+        raise
+    except Exception as e:
+        raise InputValidationError(f"Error loading template: {e}") from e
 
 
 def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
@@ -623,16 +732,18 @@ def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
         raise InputValidationError(f"Error loading template file: {e}") from e
 
 
-async def render_handlebars_template(
-    template: HandlebarsPromptTemplate,
+async def render_template(
+    template: HandlebarsPromptTemplate | Jinja2PromptTemplate,
     template_vars: dict[str, Any],
     kernel: Kernel,
 ) -> str:
     """
-    Render Handlebars template with provided variables.
+    Render template with provided variables.
+
+    Supports both Handlebars and Jinja2 templates.
 
     Args:
-        template: HandlebarsPromptTemplate instance
+        template: Template instance (HandlebarsPromptTemplate or Jinja2PromptTemplate)
         template_vars: Dictionary of template variables
         kernel: Semantic Kernel instance
 
@@ -642,7 +753,8 @@ async def render_handlebars_template(
     Raises:
         InputValidationError: If template rendering fails
     """
-    LOGGER.debug("🔄 Rendering Handlebars template")
+    template_type = "Handlebars" if isinstance(template, HandlebarsPromptTemplate) else "Jinja2"
+    LOGGER.debug(f"🔄 Rendering {template_type} template")
 
     try:
         # Create KernelArguments from template variables
@@ -651,13 +763,13 @@ async def render_handlebars_template(
         # Render template
         rendered_content = await template.render(kernel, arguments)
 
-        LOGGER.info("✅ Handlebars template rendered successfully")
+        LOGGER.info(f"✅ {template_type} template rendered successfully")
         LOGGER.debug(f"📄 Rendered content length: {len(rendered_content)} characters")
 
         return rendered_content
 
     except Exception as e:
-        raise InputValidationError(f"Error rendering Handlebars template: {e}") from e
+        raise InputValidationError(f"Error rendering {template_type} template: {e}") from e
 
 
 def parse_rendered_template_to_chat_history(rendered_content: str) -> ChatHistory:
@@ -925,7 +1037,8 @@ async def main() -> None:
         # Choose execution path based on input method
         if args.template_file:
             # Template-based execution path
-            LOGGER.info("📝 Using Handlebars template mode...")
+            template_format = get_template_format(args.template_file)
+            LOGGER.info(f"📝 Using {template_format} template mode...")
 
             # Load template variables (optional)
             if args.template_vars:
@@ -935,9 +1048,9 @@ async def main() -> None:
                 LOGGER.info("📝 No template variables provided - using empty variables")
                 template_vars = {}
 
-            # Load Handlebars template
-            LOGGER.info("📋 Loading Handlebars template...")
-            template = load_handlebars_template(args.template_file)
+            # Load template with automatic format detection
+            LOGGER.info("📋 Loading template...")
+            template = load_template(args.template_file)
 
             # Create kernel for rendering
             kernel = Kernel()
@@ -945,7 +1058,7 @@ async def main() -> None:
 
             # Render template with variables
             LOGGER.info("🔄 Rendering template...")
-            rendered_content = await render_handlebars_template(template, template_vars, kernel)
+            rendered_content = await render_template(template, template_vars, kernel)
 
             # Parse rendered content to ChatHistory
             chat_history = parse_rendered_template_to_chat_history(rendered_content)

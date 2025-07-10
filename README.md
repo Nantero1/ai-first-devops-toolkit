@@ -49,7 +49,7 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 - 📦 **CI-friendly CLI**: Stateless command that reads JSON/YAML, writes JSON/YAML, and exits with proper codes
 - 🎨 **Beautiful Logging**: Rich console output with timestamps and colors
 - 📁 **File-based I/O**: CI/CD friendly with JSON/YAML input/output
-- 📋 **Template-Driven Workflows**: Handlebars templates with YAML variables for dynamic prompt generation
+- 📋 **Template-Driven Workflows**: Handlebars and Jinja2 templates with YAML variables for dynamic prompt generation
 - 📄 **YAML Support**: Use YAML for schemas, input files, and output files - more readable than JSON
 - 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
 - 🤖 **Semantic Kernel foundation**: async, service-oriented design ready for skills, memories, orchestration, and future model upgrades
@@ -85,7 +85,7 @@ export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 - **RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed! See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for setup.
 - **API Key**: Set `AZURE_OPENAI_API_KEY` environment variable if not using RBAC.
 
-### 3. Basic Usage
+### 3a. Basic Usage
 
 ```bash
 # Simple chat example
@@ -101,19 +101,6 @@ llm-ci-runner \
   --input-file examples/02-devops/pr-description/input.json \
   --schema-file examples/02-devops/pr-description/schema.json \
   --output-file pr-analysis.json
-```
-
-### 3a. Template-Based Workflows
-
-**Dynamic prompt generation with YAML and Handlebars templates:**
-
-```bash
-# Template-based approach with YAML configuration
-llm-ci-runner \
-  --template-file examples/05-templates/pr-review-template/template.hbs \
-  --template-vars examples/05-templates/pr-review-template/template-vars.yaml \
-  --schema-file examples/05-templates/pr-review-template/schema.yaml \
-  --output-file pr-review-result.yaml
 
 # YAML input files (alternative to JSON)
 llm-ci-runner \
@@ -121,6 +108,28 @@ llm-ci-runner \
   --schema-file schema.yaml \
   --output-file result.yaml
 ```
+
+### 3b. Template-Based Workflows
+
+**Dynamic prompt generation with YAML, Handlebars or Jinja2 templates:**
+
+```bash
+# Handlebars template example
+llm-ci-runner \
+  --template-file examples/05-templates/handlebars-template/template.hbs \
+  --template-vars examples/05-templates/handlebars-template/template-vars.yaml \
+  --schema-file examples/05-templates/handlebars-template/schema.yaml \
+  --output-file handlebars-result.yaml
+  
+# Or using Jinja2 templates
+llm-ci-runner \
+  --template-file examples/05-templates/jinja2-template/template.j2 \
+  --template-vars examples/05-templates/jinja2-template/template-vars.yaml \
+  --schema-file examples/05-templates/jinja2-template/schema.yaml \
+  --output-file jinja2-result.yaml
+```
+
+For more examples see the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples/05-templates).
 
 **Benefits of Template Approach:**
 - 🎯 **Reusable Templates**: Create once, use across multiple scenarios
@@ -216,6 +225,24 @@ Requirements: {{task.requirements}}
 </message>
 ```
 
+**Jinja2 Template** (`template.j2`):
+```jinja2
+<message role="system">
+You are an expert {{expertise.domain}} engineer.
+Focus on {{expertise.focus_areas}}.
+</message>
+
+<message role="user">
+Analyze this {{task.type}}:
+
+{% for item in task.items %}
+- {{item}}
+{% endfor %}
+
+Requirements: {{task.requirements}}
+</message>
+```
+
 **Template Variables** (`vars.yaml`):
 ```yaml
 expertise:
@@ -262,44 +289,13 @@ llm-ci-runner \
 - name: Install LLM CI Runner
   run: pip install llm-ci-runner
 
-- name: Generate PR Review with Schema Enforcement
-  run: |
-    llm-ci-runner \
-      --input-file examples/02-devops/pr-description/input.json \
-      --schema-file examples/02-devops/pr-description/schema.json \
-      --output-file pr-analysis.json \
-      --log-level WARNING
-  env:
-    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-    AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
-
-- name: Use the structured output
-  run: |
-    # The output is now in pr-analysis.json with guaranteed schema compliance
-    cat pr-analysis.json | jq '.summary'
-```
-
-**Template-Based CI/CD:**
-```yaml
 - name: Generate PR Review with Templates
   run: |
     llm-ci-runner \
-      --template-file .github/templates/pr-review.hbs \
+      --template-file .github/templates/pr-review.j2 \
       --template-vars pr-context.yaml \
       --schema-file .github/schemas/pr-review.yaml \
       --output-file pr-analysis.yaml
-  env:
-    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-    AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
-```
-
-**For Development/Source Usage:**
-```yaml
-- name: Generate PR Review (from source)
-  run: |
-    uv run --frozen llm_ci_runner.py \
-      --input-file examples/02-devops/pr-description/input.json \
-      --schema-file examples/02-devops/pr-description/schema.json
   env:
     AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
@@ -336,54 +332,6 @@ uv run pytest tests/unit/ -v
 uv run pytest tests/integration/ -v
 uv run pytest acceptance/ -v
 ```
-
-## Releasing
-
-### Manual Release Process
-
-1. **Test locally first**:
-   ```bash
-   python scripts/release.py 1.0.0
-   ```
-
-2. **Trigger GitHub Actions release**:
-   - Go to Actions → Manual Release
-   - Click "Run workflow"
-   - Enter version (e.g., `1.0.0`)
-   - Add release notes (optional)
-   - Choose whether to publish to PyPI
-   - Click "Run workflow"
-
-The workflow will:
-- ✅ Run all tests
-- ✅ Update version in `pyproject.toml`
-- ✅ Build the package
-- ✅ Create Git tag and push
-- ✅ Create GitHub release
-- ✅ Publish to PyPI (if selected)
-- ✅ Verify package installation
-
-### Package Naming Convention
-
-- **Package name**: `llm-ci-runner` (kebab-case for PyPI)
-- **Module name**: `llm_ci_runner.py` (snake_case for Python)
-- **CLI command**: `llm-ci-runner` (kebab-case for CLI)
-
-## Use Cases
-
-### Automated Code Review with Structured Output
-Generate detailed code reviews with **guaranteed schema compliance** for CI/CD integration.
-
-### Security Analysis with Structured Results
-Analyze code changes for potential security vulnerabilities with structured findings.
-
-### Documentation Updates
-Generate or update documentation based on code changes.
-
-### Release Notes with Structured Metadata
-Create formatted release notes with guaranteed schema compliance.
-
-For detailed examples of each use case, see **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)**.
 
 ## Architecture
 

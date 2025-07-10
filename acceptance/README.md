@@ -95,11 +95,25 @@ The framework automatically discovers and tests all examples in the `examples/` 
 
 ```
 examples/
-├── 01-basic/sentiment-analysis/     # ✅ Auto-tested
-├── 02-devops/code-review/           # ✅ Auto-tested  
-├── 03-security/vulnerability-analysis/ # ✅ Auto-tested
-└── 04-ai-first/autonomous-development-plan/ # ✅ Auto-tested
+├── 01-basic/sentiment-analysis/     # ✅ Auto-tested (JSON mode)
+├── 02-devops/code-review/           # ✅ Auto-tested (JSON mode)  
+├── 03-security/vulnerability-analysis/ # ✅ Auto-tested (JSON mode)
+├── 04-ai-first/autonomous-development-plan/ # ✅ Auto-tested (JSON mode)
+└── 05-templates/
+    ├── jinja2-example/              # ✅ Auto-tested (Jinja2 template)
+    ├── static-example/               # ✅ Auto-tested (Handlebars template)
+    └── pr-review-template/           # ✅ Auto-tested (Handlebars template)
 ```
+
+**Discovery Priority:**
+1. **JSON Examples** (Priority): Folders containing `input.json` files
+2. **Template Examples** (Fallback): Folders containing `template.*` files (`.hbs`, `.jinja`, `.j2`)
+
+**Template Support:**
+- **Handlebars**: `.hbs` files with `{{ variable }}` syntax
+- **Jinja2**: `.jinja` and `.j2` files with `{{ variable }}` and `{% control %}` syntax
+- **Schema Validation**: Requires `schema.yaml` or `schema.json` for template examples
+- **Template Variables**: Optional `template-vars.yaml` or `template-vars.json` files
 
 ### Comprehensive Test Flow
 Each example undergoes a **single execution** with multiple validation phases:
@@ -132,6 +146,7 @@ Different examples are evaluated using **type-specific criteria**:
 | **PR Descriptions** | Clear summaries, impact analysis | 7/10 |
 | **Changelog Generation** | Structured entries, categorization | 7/10 |
 | **Autonomous Development** | Comprehensive planning, quality gates | 8/10 |
+| **Template Examples** | Output quality, schema compliance, template features | 7/10 |
 
 ## Real-World Example: LLM-as-Judge in Action
 
@@ -194,9 +209,11 @@ Adjust minimum scores based on:
 ## Extending the Framework
 
 ### Adding New Examples
-1. Create folder in `examples/` with `input.json`
-2. Optionally add `schema.json` for structured output
-3. Framework auto-discovers and tests
+1. **JSON Examples**: Create folder in `examples/` with `input.json`
+2. **Template Examples**: Create folder in `examples/` with `template.*` file (`.hbs`, `.jinja`, `.j2`)
+3. **Schema Validation**: Optionally add `schema.json` or `schema.yaml` for structured output
+4. **Template Variables**: For template examples, optionally add `template-vars.yaml` or `template-vars.json`
+5. Framework auto-discovers and tests all examples
 
 ### Custom Quality Criteria
 ```python

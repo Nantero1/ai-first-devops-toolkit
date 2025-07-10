@@ -17,56 +17,55 @@ Cross-reference with .cursor/memories.md and .cursor/rules/lessons-learned.mdc f
 
 # Mode: AGENT ⚡
 
-Current Task: Update template examples to use Microsoft Semantic Kernel standard format
+Current Task: Add Jinja2 template support to llm_ci_runner.py with .jinja and .j2 file extension detection
 
-## 🎯 **IMPLEMENTATION COMPLETED** ⭐
+## 🎯 **IMPLEMENTATION PLAN** ⭐
 
-### **✅ MICROSOFT COMPATIBILITY ACHIEVED:**
-- **Template format updated**: Examples now use standard `<message role="...">...</message>` format
-- **No code changes needed**: Existing `parse_rendered_template_to_chat_history()` already supported Microsoft format
-- **Documentation updated**: Removed "breaking change" language since we haven't published yet
+### **✅ STRATEGY DEFINED:**
+- **Template format detection**: File extension-based (.hbs = Handlebars, .jinja/.j2 = Jinja2)
+- **Unified approach**: Create load_template() function that detects format and calls appropriate loader
+- **Backward compatibility**: Maintain existing Handlebars support unchanged
+- **Same parsing**: Both formats produce <message> blocks, so parse_rendered_template_to_chat_history() works for both
 
-### **🔧 IMPLEMENTATION SUMMARY:**
+### **🔧 IMPLEMENTATION TASKS:**
 
-#### **Task 1**: Template Format Update ✅ **COMPLETED**
-- [X] Updated `examples/05-templates/pr-review-template/template.hbs` to use `<message>` tags
-- [X] Updated `examples/05-templates/static-example/template.hbs` to use `<message>` tags
-- [X] Fixed character encoding issue in static template
+#### **Task 1**: Add Jinja2PromptTemplate Import ✅ **READY**
+- [ ] Add Jinja2PromptTemplate to imports
+- [ ] Update import section with proper organization
 
-#### **Task 2**: Documentation Update ✅ **COMPLETED**
-- [X] Updated template README files to show Microsoft format as standard
-- [X] Removed "breaking change" language since we haven't published yet
-- [X] Updated main examples README to remove breaking change notice
+#### **Task 2**: Create Template Format Detection ✅ **READY**
+- [ ] Create get_template_format() function to detect by file extension
+- [ ] Support .hbs (Handlebars), .jinja, .j2 (Jinja2)
 
-## 🏆 **KEY INSIGHT: No Code Changes Required!**
+#### **Task 3**: Create Jinja2 Template Loader ✅ **READY**
+- [ ] Create load_jinja2_template() function similar to load_handlebars_template()
+- [ ] Use template_format="jinja2" for Jinja2PromptTemplate
 
-**Why no code changes needed:**
-- ✅ **Existing regex already perfect**: `r'<message\s+role="([^"]+)"[^>]*>(.*?)</message>'`
-- ✅ **Docstring already specified Microsoft format**: "Expects the rendered content to contain `<message role="...">content</message>` blocks"
-- ✅ **Parsing function still essential**: Converts rendered Handlebars text with `<message>` tags into ChatHistory objects
+#### **Task 4**: Create Unified Template Loader ✅ **READY**
+- [ ] Create load_template() function that detects format and calls appropriate loader
+- [ ] Maintain backward compatibility with existing Handlebars support
 
-**Workflow unchanged:**
-1. Load Handlebars template
-2. Render with variables → produces text with `<message>` tags
-3. Parse with `parse_rendered_template_to_chat_history()` → creates ChatHistory
-4. Send ChatHistory to LLM with 100% schema enforcement
+#### **Task 5**: Update Main Execution Flow ✅ **READY**
+- [ ] Update main() to use load_template() instead of load_handlebars_template()
+- [ ] Update render_template() to handle both template types
 
-## ✅ **PRODUCTION READY**
+#### **Task 6**: Create Jinja2 Example ✅ **READY**
+- [ ] Create examples/05-templates/jinja2-example/ directory
+- [ ] Add template.jinja, template-vars.yaml, schema.yaml, README.md
 
-**Microsoft Compatibility**: ✅ **COMPLETE**
-- Templates use standard Microsoft Semantic Kernel `<message>` format
-- Compatible with Microsoft ecosystem patterns
-- Our code was already designed for this format!
+#### **Task 7**: Update Tests ✅ **READY**
+- [ ] Add tests for Jinja2 template loading
+- [ ] Add tests for template format detection
+- [ ] Update existing template tests to use unified approach
 
-**Testing Status**: ✅ **VALIDATED**
-- All 97 unit tests passing
-- 9 acceptance tests passing (4 skipped for LLM-as-judge in smoke mode)
-- Both template examples tested and working perfectly
+#### **Task 8**: Update Documentation ✅ **READY**
+- [ ] Update help text to mention Jinja2 support
+- [ ] Update examples README
+- [ ] Update main README
 
-**Documentation**: ✅ **UPDATED**
-- Template READMEs show correct Microsoft format
-- Examples documentation updated
-- No "breaking change" language since we haven't published
+## 🚀 **READY TO IMPLEMENT**
 
-### **🚀 Achievement**: 
-We achieved Microsoft Semantic Kernel compatibility simply by updating our template examples to use the correct format that our code already supported!
+**Confidence**: 95% - Clear implementation strategy with all requirements defined
+**Backward Compatibility**: ✅ **MAINTAINED** - Existing Handlebars support unchanged
+**Template Detection**: ✅ **DESIGNED** - File extension-based detection
+**Unified Architecture**: ✅ **PLANNED** - Single load_template() function with format detection

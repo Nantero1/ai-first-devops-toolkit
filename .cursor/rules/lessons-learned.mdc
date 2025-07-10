@@ -2,491 +2,143 @@
 description: This lessons-learned file serves as a critical knowledge base for capturing and preventing mistakes. During development, document any reusable solutions, bug fixes, or important patterns. Consult it before implementing any solution.
 alwaysApply: false
 ---
-*This lessons-learned file serves as a critical knowledge base for capturing and preventing mistakes. During development, document any reusable solutions, bug fixes, or important patterns using the format: [Timestamp] Category: Issue → Solution → Impact. Entries must be categorized by priority (Critical/Important/Enhancement) and include clear problem statements, solutions, prevention steps, and code examples. Only update upon user request with "lesson" trigger word. Focus on high-impact, reusable lessons that improve code quality, prevent common errors, and establish best practices. Cross-reference with .cursor\memories.md for context.*
+*This lessons-learned file serves as a critical knowledge base for capturing and preventing mistakes. During development, document any reusable solutions, bug fixes, or important patterns using the format: Category: Issue → Solution → Impact. Entries must be categorized by priority (Critical/Important/Enhancement) and include clear problem statements, solutions, prevention steps, and code examples. Only update upon user request with "lesson" trigger word. Focus on high-impact, reusable lessons that improve code quality, prevent common errors, and establish best practices. Cross-reference with .cursor\memories.md for context.*
 
 # Lessons Learned
 
-*Note: This file is updated only upon user request and focuses on capturing important, reusable lessons learned during development. Each entry follows format: [Timestamp] Priority: Category → Issue: [Problem] → Fix: [Solution] → Why: [Impact]. Use grep/automated tools to verify changes and prevent regressions.*
+*Note: This file is updated only upon user request and focuses on capturing important, reusable lessons learned during development. Each entry follows format: Priority: Category → Issue: [Problem] → Fix: [Solution] → Why: [Impact]. Use grep/automated tools to verify changes and prevent regressions.*
 
 ## Component Development
 
-[2024-12-30 14:30] Testing Framework: Template evaluation requires different approach than query-response evaluation → Use template content as context instead of hardcoded fake queries, focus on output quality rather than relevance → Prevents brittle hardcoded queries and makes evaluation more appropriate for template-based examples
-
-[2024-12-30 14:25] Testing Framework: Auto-detection of test mode based on file extension simplifies CLI integration → Check .hbs vs .json extension to determine --template-file vs --input-file mode → Cleaner code and automatic mode switching without manual configuration
-
-[2024-12-30 14:20] Testing Framework: Priority-based example discovery enables graceful fallback → Scan for input.json first, then fall back to template.hbs + schema.yaml → Maintains backward compatibility while adding new functionality
-
-## 2025-01-06 - Code Quality and Refactoring
-
-[2025-01-06 23:16] **Critical**: Code Smell Detection and Library Usage → Issue: Manual implementation of JSON schema to Pydantic model conversion instead of using dedicated libraries creates 150+ lines of maintenance burden and incomplete feature coverage → Fix: Replace manual implementation with json-schema-to-pydantic library, use multiple inheritance to maintain KernelBaseModel functionality → Why: Eliminates reinventing-the-wheel anti-pattern, reduces code by 150+ lines, improves robustness with comprehensive JSON schema support including references and combiners, follows DRY principle and reduces maintenance burden. Libraries exist for common problems - use them.
-
-```python
-# ❌ CODE SMELL - Manual implementation
-def _convert_json_schema_field(field_schema: Dict[str, Any], field_name: str) -> tuple:
-    # 150+ lines of manual type mapping...
-    if field_type == "string":
-        if "enum" in field_schema:
-            # Manual enum handling...
-    # More manual mapping...
-
-# ✅ PROPER - Use dedicated library
-from json_schema_to_pydantic import create_model as create_model_from_schema
-
-def create_dynamic_model_from_schema(schema_dict: Dict[str, Any], model_name: str) -> Type[KernelBaseModel]:
-    BaseGeneratedModel = create_model_from_schema(schema_dict)
-    
-    class DynamicKernelModel(KernelBaseModel, BaseGeneratedModel):
-        pass
-    
-    return DynamicKernelModel
-```
-
-## 2025-01-06 - Schema Enforcement Implementation
-
-[2025-01-06 22:48] **Critical**: Semantic Kernel ChatHistory Integration → Issue: Using kernel.invoke_prompt() with {{$chat_history}} template variable causes "Variable not found" error when chat_history is passed separately → Fix: Use service.get_chat_message_contents() directly with chat_history parameter instead of prompt templates → Why: Direct service call properly handles ChatHistory objects and avoids template variable resolution issues. Critical for structured output workflows.
-
-```python
-# ❌ WRONG - Template variable approach fails
-result = await kernel.invoke_prompt(
-    prompt="{{$chat_history}}",
-    arguments=args,
-    chat_history=chat_history,
-)
-
-# ✅ CORRECT - Direct service call works
-result = await service.get_chat_message_contents(
-    chat_history=chat_history,
-    settings=settings,
-    arguments=args,
-)
-```
-
-[2025-01-06 22:47] **Critical**: Semantic Kernel Response Extraction → Issue: Different response objects returned by kernel.invoke_prompt() vs service.get_chat_message_contents() causing extraction failures → Fix: Handle both list[ChatMessageContent] and FunctionResult.value patterns with proper type checking → Why: Ensures robust response handling across different Semantic Kernel execution paths. Essential for production reliability.
-
-```python
-# ✅ ROBUST - Handle both response types
-if isinstance(result, list) and len(result) > 0:
-    # Direct service call returns list of ChatMessageContent
-    response = result[0].content if hasattr(result[0], "content") else str(result[0])
-elif hasattr(result, "value") and result.value:
-    # Kernel invoke_prompt returns FunctionResult with value
-    if isinstance(result.value, list) and len(result.value) > 0:
-        response = result.value[0].content if hasattr(result.value[0], "content") else str(result.value[0])
-    else:
-        response = str(result.value)
-else:
-    response = str(result)
-```
-
-[2025-01-06 22:45] **Important**: Dynamic Pydantic Model Creation → Issue: JSON schemas need runtime conversion to KernelBaseModel classes for 100% enforcement → Fix: Use pydantic.create_model() with custom field mapping function to convert JSON schema properties to Pydantic field definitions → Why: Enables true token-level constraint enforcement through settings.response_format = ModelClass. Achieves 100% schema compliance vs basic JSON mode.
-
-```python
-# ✅ PATTERN - Dynamic model creation
-def create_dynamic_model_from_schema(schema_dict: Dict[str, Any], model_name: str) -> Type[KernelBaseModel]:
-    properties = schema_dict.get("properties", {})
-    required_fields = schema_dict.get("required", [])
-    field_definitions = {}
-    
-    for field_name, field_schema in properties.items():
-        field_type, field_info = _convert_json_schema_field(field_schema, field_name)
-        if field_name in required_fields:
-            field_definitions[field_name] = (field_type, field_info)
-        else:
-            field_definitions[field_name] = (Optional[field_type], Field(default=None, **field_info.extra))
-    
-    return create_model(model_name, __base__=KernelBaseModel, **field_definitions)
-```
-
-[2025-01-06 22:43] **Important**: JSON Schema Field Type Mapping → Issue: JSON schema types (string, number, array, etc.) need conversion to Python types with constraint validation → Fix: Create comprehensive mapping function handling enums, numeric ranges, array limits, string constraints → Why: Ensures all JSON schema validation rules are enforced at the Pydantic model level. Critical for maintaining schema integrity.
-
-```python
-# ✅ COMPREHENSIVE - Handle all JSON schema types
-def _convert_json_schema_field(field_schema: Dict[str, Any], field_name: str) -> tuple:
-    field_type = field_schema.get("type")
-    field_kwargs = {"description": field_schema.get("description", "")} if field_schema.get("description") else {}
-    
-    if field_type == "string":
-        python_type = str
-        if "enum" in field_schema:
-            enum_values = field_schema["enum"]
-            field_kwargs["pattern"] = f"^({'|'.join(enum_values)})$"
-        if "maxLength" in field_schema:
-            field_kwargs["max_length"] = field_schema["maxLength"]
-        if "minLength" in field_schema:
-            field_kwargs["min_length"] = field_schema["minLength"]
-    elif field_type == "number":
-        python_type = float
-        if "minimum" in field_schema:
-            field_kwargs["ge"] = field_schema["minimum"]
-        if "maximum" in field_schema:
-            field_kwargs["le"] = field_schema["maximum"]
-    # ... handle other types
-    
-    return python_type, Field(**field_kwargs)
-```
-
-[2025-01-06 22:42] **Enhancement**: Structured Output Enforcement Architecture → Issue: Basic JSON mode ({type: "json_object"}) provides no schema validation → Fix: Use settings.response_format = KernelBaseModel for token-level constraint enforcement → Why: Achieves 100% schema compliance through Azure OpenAI's structured outputs feature. Eliminates schema validation errors in production CI/CD pipelines.
-
-```python
-# ❌ WEAK - Basic JSON mode (no enforcement)
-settings.response_format = {"type": "json_object"}
-
-# ✅ STRONG - Token-level constraint enforcement
-settings.response_format = DynamicPydanticModel  # 100% guaranteed compliance
-```
-
-
-## 2025-01-06 - Comprehensive Testing Infrastructure
-
-[2025-01-06 23:45] **Critical**: Python Metaclass Compatibility Issues → Issue: Using Mock objects in tests for KernelBaseModel-based classes causes TypeError due to metaclass conflicts between Mock and BaseModel metaclasses → Fix: Replace Mock objects with actual Pydantic BaseModel classes in test fixtures, use @patch decorators with proper BaseModel subclasses → Why: Eliminates metaclass conflicts while maintaining test isolation. Critical for testing schema enforcement functionality with KernelBaseModel inheritance. Affected 7 of 18 test failures.
-
-```python
-# ❌ WRONG - Mock objects cause metaclass conflicts
-@patch("llm_ci_runner.create_dynamic_model_from_schema")
-def test_schema_function(mock_create_model):
-    mock_create_model.return_value = Mock()  # Fails with metaclass conflict
-    
-# ✅ CORRECT - Use actual BaseModel classes
-@patch("llm_ci_runner.create_dynamic_model_from_schema")
-def test_schema_function(mock_create_model):
-    class MockModel(BaseModel):
-        test_field: str = "test"
-    mock_create_model.return_value = MockModel
-```
-
-[2025-01-06 23:42] **Important**: Realistic Mocking Strategy → Issue: Synthetic mocks fail to capture actual API response complexity leading to false test confidence → Fix: Generate mocks from actual API responses using debug mode, create mock_factory.py with realistic ChatMessageContent structure including inner_content, metadata, and usage statistics → Why: Ensures test mocks match production behavior, catches integration issues early. Based on captured Azure OpenAI API responses with proper structure.
-
-```python
-# ❌ SYNTHETIC - Oversimplified mocks
-def create_mock_response():
-    return Mock(content="simple response")
-
-# ✅ REALISTIC - Based on actual API responses
-def create_chat_message_content_mock(content: str = "Test response") -> ChatMessageContent:
-    return ChatMessageContent(
-        role="assistant",
-        content=content,
-        inner_content=TextContent(text=content),
-        metadata={"usage": {"total_tokens": 150}},
-        model_id="gpt-4"
-    )
-```
-
-[2025-01-06 23:40] **Important**: Systematic Test Failure Resolution → Issue: 18 failing tests across multiple categories (imports, mocking, business logic) overwhelm debugging efforts → Fix: Categorize failures by complexity (Easy: 4 tests, Medium: 7 tests, Complex: 7 tests), tackle systematically starting with easiest wins → Why: Achieves 100% test pass rate through organized approach, prevents debugging fatigue, ensures no failures are missed. Methodology scales to larger codebases.
-
-```python
-# ✅ SYSTEMATIC APPROACH - Categorize and prioritize
-"""
-Easy Fixes (4 tests):
-- Logger assertion issues
-- Mock setup problems  
-- Simple return value mismatches
-
-Medium Fixes (7 tests):
-- Exception type alignment
-- Error message regex patterns
-- Import statement updates
-
-Complex Fixes (7 tests):
-- Metaclass compatibility
-- Schema model mocking
-- Retry logic testing
-"""
-```
-
-[2025-01-06 23:38] **Important**: Test Architecture Design → Issue: Monolithic test structure lacks proper separation of concerns and makes maintenance difficult → Fix: Implement three-tier architecture: tests/unit/ (heavy mocking), tests/integration/ (minimal mocking), acceptance/ (real API calls with LLM-as-judge) → Why: Provides comprehensive coverage at different levels, enables faster unit tests while maintaining end-to-end validation. Follows industry best practices for test pyramid.
-
-```python
-# ✅ THREE-TIER ARCHITECTURE
-tests/
-├── unit/                     # 69 tests, heavy mocking, fast execution
-│   ├── test_schema_functions.py
-│   ├── test_semantic_kernel_functions.py
-│   └── test_input_output_functions.py
-├── integration/              # End-to-end with realistic mocks
-│   ├── test_examples_integration.py
-│   └── test_cli_interface.py
-└── acceptance/               # Real API calls, quality evaluation
-    └── llm_as_judge_acceptance_test.py
-```
-
-[2025-01-06 23:36] **Enhancement**: Exception Handling Alignment → Issue: Test expectations don't match actual function behavior causing false failures → Fix: Analyze actual exception types and messages thrown by functions, update test assertions to match reality → Why: Ensures tests validate actual behavior rather than assumed behavior. Prevents brittle tests that break when error messages change.
-
-```python
-# ❌ ASSUMED - Test expects wrong exception type
-def test_invalid_json_schema():
-    with pytest.raises(SchemaValidationError):  # Wrong exception type
-        load_json_schema("invalid.json")
-
-# ✅ ALIGNED - Test matches actual behavior  
-def test_invalid_json_schema():
-    with pytest.raises(InputValidationError):  # Actual exception type
-        load_json_schema("invalid.json")
-```
-
-
-## 2025-01-07 - Acceptance Test Framework Refactoring
-
-[2025-01-07 00:15] **Critical**: Monolithic Test Framework Anti-Pattern → Issue: Custom AcceptanceTestFramework class with 600+ lines violates testing best practices, creates maintenance burden, and lacks proper test isolation → Fix: Refactor to pytest-based structure with conftest.py fixtures, Rich formatting, and structured output for LLM-as-judge responses → Why: Eliminates custom framework maintenance, follows industry standards, enables easy test extension, provides beautiful visual feedback. Achieves professional test structure with minimal boilerplate.
-
-```python
-# ❌ ANTI-PATTERN - Custom monolithic framework
-class AcceptanceTestFramework:
-    def __init__(self):
-        self.results = []
-        self.temp_files = []
-    
-    async def judge_response_with_llm(self, query, response, criteria):
-        # 150+ lines of custom logic with regex parsing
-        pass
-    
-    def run_llm_ci_runner(self, input_file, output_file):
-        # Custom subprocess handling
-        pass
-
-# ✅ PROPER - Pytest fixtures with Rich formatting
-@pytest.fixture
-def llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
-    async def _evaluate_response(query, response, criteria):
-        # Structured output, no parsing needed
-        return structured_judgment
-    
-    return _evaluate_response
-
-@pytest.fixture  
-def rich_test_output():
-    def _format_judgment_table(judgment):
-        # Beautiful Rich tables and panels
-        return table
-    
-    return {"format_judgment_table": _format_judgment_table}
-```
-
-[2025-01-07 00:14] **Important**: String Parsing Anti-Pattern in LLM-as-Judge → Issue: Using regex to parse LLM judgment responses causes brittle tests, false failures, and maintenance overhead → Fix: Use structured output with JSON schema (judgment_schema.json) for guaranteed parsing reliability → Why: Eliminates regex parsing errors, ensures consistent judgment structure, provides type safety, enables easy validation. Critical for reliable acceptance testing.
-
-```python
-# ❌ BRITTLE - Regex parsing of text responses
-def _extract_score(self, text: str, criteria: str) -> int:
-    pattern = f"{criteria}.*?(\\d+)"
-    match = re.search(pattern, text, re.IGNORECASE)
-    return int(match.group(1)) if match else 0
-
-def judge_response_with_llm(self, query, response, criteria):
-    # Parse text with regex - error prone!
-    pass_fail_match = re.search(r"PASS/FAIL:.*?(PASS|FAIL)", judgment_text)
-    actual_decision = pass_fail_match.group(1).upper() if pass_fail_match else "FAIL"
-
-# ✅ ROBUST - Structured output with schema validation
-async def _evaluate_response(query, response, criteria):
-    # Use judgment_schema.json for structured output
-    returncode, stdout, stderr = llm_ci_runner(
-        judgment_input_file, 
-        judgment_output_file, 
-        judgment_schema_path  # Guaranteed structure!
-    )
-    
-    structured_judgment = judgment_result.get("response", {})
-    # No parsing needed - direct access to fields
-    return structured_judgment
-```
-
-[2025-01-07 00:13] **Important**: Test Extensibility Architecture → Issue: Adding new acceptance tests requires 50+ lines of boilerplate, custom framework knowledge, and manual setup → Fix: Create pytest fixtures (environment_check, llm_ci_runner, llm_judge, temp_files, rich_test_output) that enable new tests with ~20 lines → Why: Dramatically reduces test creation effort, follows DRY principle, enables rapid test development, maintains consistency across test suite.
-
-```python
-# ❌ HIGH BOILERPLATE - Custom framework approach
-async def test_new_scenario():
-    with AcceptanceTestFramework() as framework:
-        # 50+ lines of setup, execution, validation
-        input_file = "examples/new-example.json"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            output_file = f.name
-            framework.temp_files.append(output_file)
-        
-        returncode, stdout, stderr = framework.run_llm_ci_runner(input_file, output_file)
-        # ... more boilerplate
-        
-        judgment = await framework.judge_response_with_llm(...)
-        # ... manual validation
-
-# ✅ MINIMAL BOILERPLATE - Pytest fixtures approach
-@pytest.mark.asyncio
-async def test_new_scenario(
-    self, environment_check, llm_ci_runner, temp_files, llm_judge,
-    assert_execution_success, assert_judgment_passed, rich_test_output
-):
-    # given - just define input and criteria (~10 lines)
-    input_file = temp_files(json.dumps(input_data, indent=2))
-    output_file = temp_files()
-    
-    # when - single line execution
-    returncode, stdout, stderr = llm_ci_runner(input_file, output_file)
-    
-    # then - single line validation with Rich output
-    assert_judgment_passed(judgment, "Test Name", rich_output=rich_test_output)
-```
-
-[2025-01-07 00:12] **Enhancement**: Rich Formatting for Test Output → Issue: Basic print statements provide poor user experience and make test results hard to interpret → Fix: Implement Rich console formatting with tables, panels, and colored output for professional test feedback → Why: Improves developer experience, makes test results visually appealing, enables better debugging, provides clear pass/fail indicators with detailed reasoning.
-
-```python
-# ❌ BASIC - Simple print statements
-print(f"  ❌ FAIL: {test_name}")
-print(f"    Details: {details}")
-print(f"    Full judgment: {judgment.get('full_judgment', '')[:200]}...")
-
-# ✅ RICH - Beautiful formatted output
-def _format_judgment_table(judgment: Dict[str, Any]) -> Table:
-    table = Table(title="🧑‍⚖️ LLM Judge Results")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Score", style="magenta")
-    table.add_column("Status", style="green" if judgment.get("pass") else "red")
-    
-    for metric in ["relevance", "accuracy", "completeness", "clarity", "overall"]:
-        score = judgment.get(metric, 0)
-        table.add_row(metric.title(), f"{score}/10", "✅" if score >= 7 else "❌")
-    
-    return table
-
-console.print(table)
-console.print(Panel(details, title="📊 Detailed Assessment"))
-```
-
-[2025-01-07 00:11] **Enhancement**: Pytest Parametrization for Test Efficiency → Issue: Testing multiple scenarios requires duplicate test functions or manual iteration → Fix: Use @pytest.mark.parametrize for efficient testing of multiple scenarios with shared logic → Why: Reduces code duplication, enables comprehensive scenario coverage, maintains test consistency, improves test execution efficiency.
-
-```python
-# ❌ DUPLICATE - Multiple similar test functions
-async def test_python_programming_expertise():
-    # 30+ lines of test logic
-    pass
-
-async def test_data_science_expertise():
-    # 30+ lines of nearly identical test logic
-    pass
-
-async def test_machine_learning_expertise():
-    # 30+ lines of nearly identical test logic
-    pass
-
-# ✅ EFFICIENT - Single parametrized test
-@pytest.mark.parametrize("topic,min_score", [
-    ("python_programming", 8),
-    ("data_science", 7),
-    ("machine_learning", 8),
-])
-@pytest.mark.asyncio
-async def test_technical_expertise_topics(
-    self, environment_check, llm_ci_runner, temp_files, llm_judge,
-    assert_execution_success, assert_judgment_passed, rich_test_output,
-    topic, min_score
-):
-    # Single test function handles all scenarios
-    # Dynamic content based on topic parameter
-    topic_questions = {
-        "python_programming": "Explain list comprehensions...",
-        "data_science": "What are key data science steps...",
-        "machine_learning": "Explain bias-variance tradeoff..."
-    }
-    # ... shared test logic
-```
-
-## 2025-01-07 - Handlebars Templates and Structured Output
-
-[2025-01-07 01:30] **Critical**: Semantic Kernel YAML Execution Settings Limitation → Issue: response_format parameter is NOT supported in YAML execution_settings, only programmatic setting works → Fix: Use hybrid approach - load Handlebars YAML template, render with variables, then apply schema enforcement programmatically via settings.response_format = KernelBaseModel → Why: Maintains 100% schema enforcement while using Handlebars templates. YAML execution_settings only support temperature, max_tokens, function_choice_behavior - NOT response_format. Critical architectural constraint.
-
-```python
-# ❌ WRONG - YAML execution_settings don't support response_format
-execution_settings:
-  default:
-    temperature: 0.7
-    response_format: MySchema  # NOT SUPPORTED in YAML
-
-# ✅ CORRECT - Hybrid approach
-config = PromptTemplateConfig.from_yaml(template_content)
-template = HandlebarsPromptTemplate(prompt_template_config=config)
-rendered_prompt = await template.render(kernel, KernelArguments(**template_vars))
-
-# Apply schema enforcement programmatically
-settings = OpenAIChatPromptExecutionSettings()
-settings.response_format = schema_model  # Must be done in code
-```
-
-[2025-01-07 01:28] **Important**: Handlebars Template Rendering Integration → Issue: Rendered Handlebars templates produce string output that needs conversion to ChatHistory for existing execution pipeline → Fix: Create rendered prompt as single ChatMessageContent with user role, maintain existing service.get_chat_message_contents() flow → Why: Preserves existing schema enforcement architecture while adding template capability. Avoids rewriting core execution logic.
-
-```python
-# ✅ INTEGRATION PATTERN - Template to ChatHistory
-rendered_prompt = await template.render(kernel, KernelArguments(**template_vars))
-
-# Convert to ChatHistory for existing pipeline
-chat_history = ChatHistory([
-    ChatMessageContent(role="user", content=rendered_prompt)
-])
-
-# Use existing execution path with schema enforcement
-result = await service.get_chat_message_contents(
-    chat_history=chat_history,
-    settings=settings,  # Contains response_format
-    arguments=args
-)
-```
-
-[2025-01-07 01:26] **Important**: Template Variables Validation Strategy → Issue: Handlebars templates can reference variables not provided in template_vars causing rendering failures → Fix: Validate template variable requirements against provided variables, surface clear error messages before attempting render → Why: Prevents cryptic template rendering errors, improves user experience, enables early validation feedback.
-
-```python
-# ✅ VALIDATION PATTERN - Check template variables
-def validate_template_variables(template_config: PromptTemplateConfig, provided_vars: dict):
-    required_vars = [var.name for var in template_config.input_variables if var.is_required]
-    missing_vars = [var for var in required_vars if var not in provided_vars]
-    
-    if missing_vars:
-        raise InputValidationError(
-            f"Template requires variables {missing_vars} but only {list(provided_vars.keys())} provided"
-        )
-```
-
-[2025-01-07 01:24] **Enhancement**: YAML Template Execution Settings Integration → Issue: Handlebars YAML templates can define execution_settings (temperature, etc.) that should be merged with schema enforcement settings → Fix: Extract execution_settings from template config, merge with programmatic response_format setting → Why: Respects template author's intent for model behavior while maintaining schema enforcement. Enables template-specific tuning.
-
-```python
-# ✅ MERGE PATTERN - Template settings + schema enforcement
-config = PromptTemplateConfig.from_yaml(template_content)
-
-# Extract template execution settings
-template_settings = config.execution_settings.get("default", {})
-
-# Create execution settings with schema enforcement
-settings = OpenAIChatPromptExecutionSettings()
-settings.response_format = schema_model  # Schema enforcement (not in YAML)
-
-# Merge template settings
-if "temperature" in template_settings:
-    settings.temperature = template_settings["temperature"]
-if "max_tokens" in template_settings:
-    settings.max_tokens = template_settings["max_tokens"]
-# ... other settings
-```
-
-[2025-01-17 10:15] Agent Mode Implementation: YAML Support Complete → Full feature implementation with comprehensive testing → Impact: Production-ready YAML/template functionality achieved
-
-[2025-01-17 10:00] Template Function Testing: Mock PromptTemplateConfig directly → Use `PromptTemplateConfig(**yaml_data)` instead of non-existent `from_yaml()` method → Impact: Tests pass correctly matching actual SK Python API
-
-[2025-01-17 09:45] Unit Test Debugging: Function name changes require test updates → Update all references from `load_input_json` to `load_input_file` and `load_json_schema` to `load_schema_file` → Impact: All 93 tests passing after refactoring
-
-[2025-01-17 09:30] Main Function Testing: sys.exit mocking prevents SystemExit → Remove sys.exit patches to allow proper exception propagation in tests → Impact: KeyboardInterrupt tests pass correctly
-
-[2025-01-17 09:15] Template Implementation: Direct YAML parsing needed → Parse YAML manually with `yaml.safe_load()` then create `PromptTemplateConfig(**data)` → Impact: Proper template loading without deprecated methods
-
-[2025-01-17 09:00] CLI Mutual Exclusivity: argparse groups enforce constraints → Use `add_mutually_exclusive_group()` for --input-file vs --template-file → Impact: Clear validation and proper error messages
-
-[2025-01-17 08:45] YAML Output: File extension determines format → Check `output_file.suffix.lower() in [".yaml", ".yml"]` to select writer → Impact: Seamless format switching based on user intent
-
-[2025-01-17 08:30] Template Execution: Dual main() paths needed → Branch execution based on `args.template_file` vs `args.input_file` → Impact: Clean separation of template vs direct file workflows
-
-[2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
-
-[2025-01-17 08:00] Code Organization: Follow existing patterns → Maintain same error handling, logging style, and function signatures as original code → Impact: Consistent codebase quality and maintainability
-
-[2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
-
-[2025-01-17 08:00] Code Organization: Follow existing patterns → Maintain same error handling, logging style, and function signatures as original code → Impact: Consistent codebase quality and maintainability
-
-[2025-01-17 08:15] Function Refactoring: Maintain backward compatibility → Rename functions (`load_input_json` → `load_input_file`) but keep same behavior for JSON → Impact: Zero breaking changes for existing users
-
-[2025-01-17 08:00] Code Organization: Follow existing patterns → Maintain same error handling, logging style, and function signatures as original code → Impact: Consistent codebase quality and maintainability
+**Important**: Template Engine Unification Strategy
+→ Issue: Supporting both Handlebars and Jinja2 without breaking compatibility.
+→ Solution: Implement unified load_template() with file extension-based detection (.hbs, .jinja, .j2), separate loader functions, keep existing signatures.
+→ Impact: Enables multi-engine support, backward compatibility, and easy future extension.
+
+## Component Development  
+  
+**Important**: Template Engine Unification Strategy    
+→ Issue: Supporting both Handlebars and Jinja2 without breaking compatibility.    
+→ Solution: Implement unified load_template() with file extension-based detection (.hbs, .jinja, .j2), separate loader functions, keep existing signatures.    
+→ Impact: Enables multi-engine support, backward compatibility, and easy future extension.  
+  
+**Important**: Template Rendering Function Unification    
+→ Issue: Need uniform rendering function for diverse template engines.    
+→ Solution: Unified render_template() handling both template types using isinstance(), with consistent error reporting.    
+→ Impact: Simplifies maintenance, supports extensibility, and provides consistent UX.  
+  
+**Enhancement**: Template Engine Feature Parity    
+→ Issue: Jinja2 has advanced features not present in Handlebars.    
+→ Solution: Produce thorough Jinja2 examples showing filters, loops, and comparisons; document feature differences.    
+→ Impact: Enables informed engine choice and showcases capabilities.  
+  
+**Important**: Dynamic Pydantic Model Creation    
+→ Issue: Need runtime JSON schema enforcement.    
+→ Solution: Use pydantic.create_model() with mapping from JSON schema to fields.    
+→ Impact: Enables token-level constraint enforcement, ensuring true compliance.  
+  
+**Critical**: Code Smell — Reinvented JSON Schema Parsing    
+→ Issue: Manual schema-to-model conversion is maintenance-heavy, incomplete.    
+→ Solution: Replace with dedicated json-schema-to-pydantic library and inheritance.    
+→ Impact: Reduces 150+ lines of code, improves robustness, and prevents duplicate work.  
+  
+## Schema Enforcement  
+  
+**Critical**: ChatHistory Integration with Kernel    
+→ Issue: Using {{$chat_history}} as template variable fails if passed separately.    
+→ Solution: Use service.get_chat_message_contents() with chat_history param directly, not via template.    
+→ Impact: Prevents errors; approach is critical for structured output.  
+  
+**Critical**: Semantic Kernel Response Extraction    
+→ Issue: Extraction logic broke due to multiple result types (list, FunctionResult.value).    
+→ Solution: Add robust handling for both types using isinstance/checks.    
+→ Impact: Reliable for production; avoids hidden integration bugs.  
+  
+**Important**: JSON Schema Field Type Mapping    
+→ Issue: JSON schema constraints (enum, ranges, lengths) not mapped fully to Pydantic.    
+→ Solution: Central mapping function ensuring all validation rules applied when generating fields.    
+→ Impact: Maintains schema integrity and catches errors early.  
+  
+**Enhancement**: Structured Output Enforcement    
+→ Issue: JSON mode lacks validation.    
+→ Solution: Set settings.response_format = KernelBaseModel for 100% schema compliance.    
+→ Impact: No more invalid API output, aligns with Azure OpenAI and CI/CD best practices.  
+  
+## Testing Infrastructure and Practices  
+  
+**Critical**: Mocking Pydantic Models    
+→ Issue: Mocking KernelBaseModel subclasses with Mock causes metaclass errors.    
+→ Solution: Use concrete Pydantic classes in fixtures.    
+→ Impact: Eliminates class conflicts, stabilizes schema tests.  
+  
+**Important**: Realistic Mocking Strategy    
+→ Issue: Fake mocks don’t capture real API response shape.    
+→ Solution: Generate mocks from real API data, including nested/usage fields.    
+→ Impact: Closer to prod behavior, better early bug detection.  
+  
+**Important**: Systematic Test Failure Resolution    
+→ Issue: Many test failures are overwhelming.    
+→ Solution: Categorize by complexity and tackle easy → hard.    
+→ Impact: Efficiently attains 100% pass rate and lessens cognitive load.  
+  
+**Important**: Test Architecture Design    
+→ Issue: Monolithic test files impede scaling/maintenance.    
+→ Solution: Split into unit (heavy mocks), integration (minimal mocks), and acceptance (real API) tests.    
+→ Impact: Obtain speed, coverage, realism—reflects industry best practices.  
+  
+**Enhancement**: Exception Handling Alignment in Tests    
+→ Issue: Tests assume wrong error types/messages.    
+→ Solution: Base assertions on real exceptions/messages thrown.    
+→ Impact: Less brittle, matches production logic.  
+  
+## Acceptance Test and Template Refactoring  
+  
+**Critical**: Custom Monolithic AcceptanceTestFramework    
+→ Issue: 600+ line ad hoc class; hard to maintain, violates pytest/industry practices.    
+→ Solution: Refactor to pytest-based, with fixtures (llm_ci_runner, temp_files, llm_judge, etc.), and use Rich for output.    
+→ Impact: Easier to extend, standard tooling, reduces boilerplate.  
+  
+**Important**: Anti-Pattern — Regex for LLM-as-Judge Parsing    
+→ Issue: Using regex for judging output is fragile and fails on format changes.    
+→ Solution: Use structured (JSON schema) outputs from LLM.    
+→ Impact: Eliminates parse errors, makes validation type-safe/reliable.  
+  
+**Important**: Test Extensibility    
+→ Issue: Adding tests requires lots of custom boilerplate/knowledge.    
+→ Solution: Encapsulate setup/execution in shared pytest fixtures so new tests need ~20 lines.    
+→ Impact: Encourages more/consistent tests, easier collaboration.  
+  
+**Enhancement**: Rich Formatting in Test Output    
+→ Issue: Print statements are hard to read/scan.    
+→ Solution: Implement Rich (tables, panels, colors) for judgment and debugging feedback.    
+→ Impact: Faster debugging, visually appealing.  
+  
+**Enhancement**: Pytest Parametrization for Efficiency    
+→ Issue: Many-variant test cases led to duplicated code.    
+→ Solution: Use @pytest.mark.parametrize to DRY out scenario-based tests.    
+→ Impact: Less test code, easier additions, higher scenario coverage.  
+  
+  
+## YAML & Template Execution  
+  
+**Critical**: response_format Not Supported in Execution Settings YAML    
+→ Issue: YAML-based Handlebars templates can’t enforce schema at YAML level (response_format param ignored).    
+→ Solution: Merge YAML template config (temperature, etc) with programmatic settings.response_format in code.    
+→ Impact: Enforces schema, preserves template authors’ intent; critical architectural constraint.  
+  
+**Important**: Handlebars Template Output Pipeline    
+→ Issue: Rendered Handlebars templates need conversion to ChatHistory for existing flow.    
+→ Solution: Wrap as ChatMessageContent and supply to service.get_chat_message_contents().    
+→ Impact: Avoids need to rearchitect core flow.  
+  
+**Important**: Template Variable Validation    
+→ Issue: Missing variables during rendering cause cryptic errors.    
+→ Solution: Validate config for required vars vs. provided input; raise early, clear errors.    
+→ Impact: Surfaces issues before runtime.  
+  
+**Enhancement**: Merging Execution Settings    
+→ Issue: Need to merge YAML-provided settings (temperature, etc.) with programmatic enforcement (schema).    
+→ Solution: Extract, merge, then apply both kinds of settings before execution.    
+→ Impact: Honors template parameters and maintains validation.  
+  
+  

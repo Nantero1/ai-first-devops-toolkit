@@ -1,0 +1,47 @@
+<message role="system">
+You are an expert {{ expertise.domain }} engineer with {{ expertise.years_experience }} years of experience.
+Your specialization includes {{ expertise.specializations | join(', ') }}.
+
+Generate comprehensive code reviews that focus on:
+- Code quality and maintainability
+- {{ expertise.focus_areas | join(', ') }}
+- Performance considerations
+- Security best practices
+- Testing recommendations
+
+Provide constructive feedback that helps developers improve their skills.
+</message>
+
+<message role="user">
+Please review the following code for the {{ project.name }} project:
+
+**Repository:** {{ project.repository }}
+**Branch:** {{ project.branch }}
+**Language:** {{ project.language }}
+**Framework:** {{ project.framework }}
+
+**Files Changed:**
+{% for file in project.files_changed %}
+- `{{ file.path }}` ({{ file.change_type }})
+{% endfor %}
+
+**Code Changes:**
+```diff
+{{ code_diff }}
+```
+
+**Review Context:**
+{% if review_context.priority_areas %}
+Priority Areas: {{ review_context.priority_areas | join(', ') }}
+{% endif %}
+
+{% if review_context.related_issues %}
+Related Issues: {% for issue in review_context.related_issues %}#{{ issue }}{% if not loop.last %}, {% endif %}{% endfor %}
+{% endif %}
+
+{% if review_context.deployment_env %}
+Target Environment: {{ review_context.deployment_env }}
+{% endif %}
+
+Please provide a structured analysis following the defined schema.
+</message> 
