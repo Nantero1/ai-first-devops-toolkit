@@ -603,13 +603,13 @@ The LLM CI Runner now supports dynamic prompt generation using YAML configuratio
 
 #### Step 1: Create Reusable Template
 ```handlebars
-{{#message role="system"}}
+<message role="system">
 You are a {{team.role}} specialist for {{team.name}}.
 Focus on {{team.priorities}} in your analysis.
 Your experience level: {{team.experience_level}}
-{{/message}}
+</message>
 
-{{#message role="user"}}
+<message role="user">
 Analyze this {{repository.type}} pull request:
 
 **Repository**: {{repository.name}} ({{repository.language}})
@@ -637,7 +637,7 @@ Analyze this {{repository.type}} pull request:
 {{/if}}
 
 Please provide analysis according to the defined schema.
-{{/message}}
+</message>
 ```
 
 #### Step 2: Create Dynamic Configuration

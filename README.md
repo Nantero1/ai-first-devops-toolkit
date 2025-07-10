@@ -200,12 +200,12 @@ context:
 
 **Handlebars Template** (`template.hbs`):
 ```handlebars
-{{#message role="system"}}
+<message role="system">
 You are an expert {{expertise.domain}} engineer.
 Focus on {{expertise.focus_areas}}.
-{{/message}}
+</message>
 
-{{#message role="user"}}
+<message role="user">
 Analyze this {{task.type}}:
 
 {{#each task.items}}
@@ -213,7 +213,7 @@ Analyze this {{task.type}}:
 {{/each}}
 
 Requirements: {{task.requirements}}
-{{/message}}
+</message>
 ```
 
 **Template Variables** (`vars.yaml`):

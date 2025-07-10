@@ -1,32 +1,30 @@
-# Static Template Example
+# Static Template Example with Microsoft Semantic Kernel Format
 
-This example demonstrates using **Handlebars templates without template variables** - showing that the `--template-vars` parameter is **optional**.
+This example demonstrates using **Microsoft Semantic Kernel-compatible** Handlebars templates without external variables - a completely self-contained template for code analysis.
 
-## 🎯 Key Feature Demonstrated
+## 📋 **Template Components**
 
-- **Optional Template Variables**: Templates can be completely static without requiring external variables
-- **Simplified Usage**: No need for template variables when the template is self-contained
-- **Static Content**: Perfect for standardized prompts that don't change
+This static example includes two files:
 
-## Files
+1. **`template.hbs`** - Microsoft-compatible Handlebars template with `<message>` tags (no variables needed)
+2. **`schema.yaml`** - YAML schema definition for structured code analysis output
 
-- `template.hbs` - Static Handlebars template (no variables needed)
-- `schema.yaml` - YAML schema defining the expected output structure
-- `README.md` - This documentation
+## 🔧 **Template Structure**
 
-## How It Works
-
-### Static Template Approach
-
-This template is **completely self-contained** and doesn't require any external variables:
-
+### **System Message**
+Sets up the AI as a code quality expert:
 ```handlebars
-{{#message role="system"}}
+<message role="system">
 You are an expert software engineer with deep knowledge of code quality and best practices.
 Your task is to analyze code for potential improvements, bugs, and adherence to coding standards.
-{{/message}}
+Provide constructive feedback that helps developers improve their skills.
+</message>
+```
 
-{{#message role="user"}}
+### **User Message**  
+Contains static analysis request with embedded Python code:
+```handlebars
+<message role="user">
 Please analyze the following code for:
 1. Code quality and readability
 2. Potential bugs or issues
@@ -34,147 +32,157 @@ Please analyze the following code for:
 4. Best practice adherence
 5. Suggestions for improvement
 
-[... static code example ...]
-{{/message}}
+```python
+def calculate_total(items):
+    total = 0
+    for item in items:
+        if item.price > 0:
+            total += item.price * item.quantity
+    return total
+
+def process_order(order):
+    if order:
+        total = calculate_total(order.items)
+        if total > 100:
+            discount = total * 0.1
+            total = total - discount
+        return total
+    return 0
 ```
 
-**Notice**: No `{{variables}}` are used - the template contains all the content it needs.
+Please provide a structured analysis following the defined schema.
+</message>
+```
 
-## Usage
+## 🎯 **Schema Validation**
 
-### Command (No Template Variables)
+Uses YAML schema for structured code analysis output:
+
+```yaml
+$schema: "http://json-schema.org/draft-07/schema#"
+type: object
+properties:
+  code_quality_score:
+    type: integer
+    minimum: 1
+    maximum: 10
+    description: "Overall code quality score (1-10)"
+  issues_found:
+    type: array
+    items:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["bug", "performance", "readability", "best_practice", "security"]
+        severity:
+          type: string
+          enum: ["low", "medium", "high", "critical"]
+        description:
+          type: string
+        line_number:
+          type: integer
+          minimum: 1
+        suggestion:
+          type: string
+      required: ["type", "severity", "description", "suggestion"]
+  improvements:
+    type: array
+    items:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: ["performance", "readability", "maintainability", "error_handling", "testing"]
+        description:
+          type: string
+        implementation:
+          type: string
+      required: ["category", "description", "implementation"]
+  overall_feedback:
+    type: string
+    description: "Summary feedback and recommendations"
+required: ["code_quality_score", "issues_found", "improvements", "overall_feedback"]
+```
+
+## 🚀 **Usage**
+
+Run with template and schema (no variables needed):
 
 ```bash
 llm-ci-runner \
   --template-file examples/05-templates/static-example/template.hbs \
   --schema-file examples/05-templates/static-example/schema.yaml \
-  --output-file code-analysis-result.yaml
-```
-
-**Key Point**: No `--template-vars` parameter needed!
-
-### Alternative with JSON Schema
-
-```bash
-# Convert YAML schema to JSON if preferred
-cat examples/05-templates/static-example/schema.yaml | yq eval -o json > schema.json
-
-llm-ci-runner \
-  --template-file examples/05-templates/static-example/template.hbs \
-  --schema-file schema.json \
   --output-file code-analysis-result.json
 ```
 
-## When to Use Static Templates
+**Note**: This example demonstrates that `--template-vars` is optional when templates don't use variables.
 
-### ✅ **Perfect For**
-- **Standardized Analysis**: Code reviews, security scans, quality checks
-- **Fixed Prompts**: When the prompt content doesn't change between runs
-- **Simple Workflows**: No dynamic content needed
-- **Consistent Output**: Same analysis criteria every time
+## 🔍 **Expected Output**
 
-### 🔄 **Compare with Variable Templates**
-- **Static Template**: Fixed content, no external data needed
-- **Variable Template**: Dynamic content based on context (PR info, user data, etc.)
+Generates structured code analysis:
 
-## Example Scenarios
-
-### 1. Code Quality Analysis
-```bash
-# Analyze any code with the same criteria
-llm-ci-runner --template-file code-quality-template.hbs --schema-file quality-schema.yaml
+```json
+{
+  "code_quality_score": 7,
+  "issues_found": [
+    {
+      "type": "performance",
+      "severity": "low",
+      "description": "Loop could be optimized using sum() and generator expression",
+      "line_number": 3,
+      "suggestion": "Use: return sum(item.price * item.quantity for item in items if item.price > 0)"
+    },
+    {
+      "type": "readability", 
+      "severity": "medium",
+      "description": "Magic number 100 should be a named constant",
+      "line_number": 12,
+      "suggestion": "Define DISCOUNT_THRESHOLD = 100 at module level"
+    }
+  ],
+  "improvements": [
+    {
+      "category": "error_handling",
+      "description": "Add error handling for missing attributes",
+      "implementation": "Check if items have 'price' and 'quantity' attributes before accessing"
+    },
+    {
+      "category": "testing",
+      "description": "Add unit tests for edge cases",
+      "implementation": "Test with empty items list, items with zero/negative prices, None values"
+    }
+  ],
+  "overall_feedback": "Code is functional but could benefit from improved error handling, performance optimization, and better constant management. Consider using more Pythonic approaches for calculations."
+}
 ```
 
-### 2. Security Review
-```bash  
-# Standard security checklist
-llm-ci-runner --template-file security-review-template.hbs --schema-file security-schema.yaml
-```
+## 💡 **Key Features**
 
-### 3. Documentation Review
-```bash
-# Consistent documentation standards
-llm-ci-runner --template-file doc-review-template.hbs --schema-file doc-schema.yaml
-```
+- **Microsoft Semantic Kernel Compatible**: Uses standard `<message>` tag format
+- **Self-Contained**: No external variables needed - completely static template
+- **Code Analysis Focus**: Specialized for code quality and improvement suggestions
+- **Structured Output**: 100% schema-enforced JSON response
+- **Embedded Code**: Sample Python code included directly in template
+- **Simple Setup**: No variables file required
 
-## Expected Output
+## 🔧 **When to Use Static Templates**
 
-The command generates structured output following the YAML schema:
+Static templates are ideal for:
+- **Fixed Analysis Scenarios**: When the content doesn't change
+- **Demo Purposes**: Showing capabilities without variable complexity
+- **Template Testing**: Validating template structure and schema
+- **Educational Examples**: Teaching template concepts
+- **Baseline Analysis**: Standard code review patterns
 
-```yaml
-success: true
-response:
-  quality_score: 7
-  analysis:
-    readability: "good"
-    maintainability: "fair" 
-    performance: "good"
-  issues:
-    - severity: "medium"
-      description: "Missing input validation for items parameter"
-      location: "calculate_total function"
-    - severity: "low"
-      description: "Magic number 0.1 should be a named constant"
-      location: "process_order function"
-  suggestions:
-    - category: "best_practice"
-      description: "Add input validation and type hints for better code safety"
-      impact: "medium"
-      code_example: "def calculate_total(items: List[Item]) -> float:"
-    - category: "maintainability"
-      description: "Extract discount rate to a named constant"
-      impact: "low"
-      code_example: "DISCOUNT_RATE = 0.1"
-```
+## 🆚 **Static vs Variable Templates**
 
-## Benefits of Static Templates
+| Static Template | Variable Template |
+|----------------|-------------------|
+| No external variables needed | Requires `template-vars.yaml` |
+| Fixed content | Dynamic content |
+| Simpler setup | More flexible |
+| Good for demos | Good for production |
+| Self-contained | Configurable |
 
-### 🎯 **Simplicity**
-- No external configuration files needed
-- Single template file contains everything
-- Easier to version control and share
-
-### 🔒 **Consistency**
-- Same analysis criteria every time
-- No risk of missing or incorrect variables
-- Standardized output across all runs
-
-### 🚀 **Performance**
-- No variable loading or processing overhead
-- Faster template rendering
-- Simpler CI/CD integration
-
-### 📋 **Maintenance**
-- Template is self-documenting
-- No variable dependencies to track
-- Easier to understand and modify
-
-## Integration with CI/CD
-
-Perfect for automated quality gates:
-
-```yaml
-# GitHub Actions example
-- name: Code Quality Analysis
-  run: |
-    llm-ci-runner \
-      --template-file .github/templates/code-quality.hbs \
-      --schema-file .github/schemas/quality.yaml \
-      --output-file quality-report.yaml
-      
-- name: Check Quality Score
-  run: |
-    SCORE=$(yq eval '.response.quality_score' quality-report.yaml)
-    if [ "$SCORE" -lt 7 ]; then
-      echo "❌ Code quality score too low: $SCORE"
-      exit 1
-    fi
-```
-
-## What This Demonstrates
-
-- 📝 **Optional Template Variables**: `--template-vars` is not required
-- 🎯 **Static Content Templates**: Self-contained templates work perfectly
-- ✅ **Schema Enforcement**: Still get 100% schema compliance
-- 🔧 **Simplified Usage**: Fewer command-line parameters needed
-- 🚀 **CI/CD Integration**: Perfect for standardized automated workflows 
+This static template example demonstrates how Microsoft-compatible Handlebars templates can provide comprehensive code analysis without requiring external variable files, making them perfect for fixed-content scenarios. 

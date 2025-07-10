@@ -1,4 +1,4 @@
-{{#message role="system"}}
+<message role="system">
 You are an expert DevOps engineer specializing in {{expertise.domain}}. 
 Generate comprehensive PR reviews that include:
 - Summary of changes
@@ -8,9 +8,9 @@ Generate comprehensive PR reviews that include:
 - Deployment considerations
 
 Your analysis should be thorough yet concise, focusing on {{review_context.priority_areas}}.
-{{/message}}
+</message>
 
-{{#message role="user"}}
+<message role="user">
 Please review this pull request from {{repository.name}} (branch: {{repository.branch}}):
 
 **Repository:** {{repository.name}}
@@ -38,4 +38,4 @@ Target Environment: {{review_context.deployment_env}}
 {{/if}}
 
 Please provide a structured analysis following the defined schema.
-{{/message}} 
+</message> 
