@@ -77,8 +77,18 @@ class TestExampleComprehensive:
             style="blue",
         )
 
-        # given
-        output_file = temp_files()
+        # given - Create output file with appropriate extension
+        from pathlib import Path
+
+        # Determine output file extension based on schema type
+        if schema_file:
+            schema_path = Path(schema_file)
+            if schema_path.suffix.lower() in [".yaml", ".yml"]:
+                output_file = temp_files(suffix=".yaml")
+            else:
+                output_file = temp_files(suffix=".json")
+        else:
+            output_file = temp_files()
 
         # when - Execute example ONCE
         if schema_file:
@@ -89,9 +99,17 @@ class TestExampleComprehensive:
         # then - Phase 1: Basic execution reliability
         assert_execution_success(returncode, stdout, stderr, f"{example_name} Comprehensive")
 
-        # Load result for all validations
-        with open(output_file) as f:
-            result = json.load(f)
+        # Load result for all validations (handle both JSON and YAML output)
+        import yaml
+
+        output_path = Path(output_file)
+
+        if output_path.suffix.lower() in [".yaml", ".yml"]:
+            with open(output_file, "r") as f:
+                result = yaml.safe_load(f)
+        else:
+            with open(output_file) as f:
+                result = json.load(f)
 
         assert result.get("success") is True, "Response should indicate success"
         assert "response" in result, "Response should contain response field"
@@ -125,9 +143,20 @@ class TestExampleComprehensive:
         """Validate schema compliance for structured examples."""
         response_data = result.get("response", {})
 
-        # Load schema for validation
-        with open(schema_file) as f:
-            schema = json.load(f)
+        # Load schema for validation (support both JSON and YAML)
+        from pathlib import Path
+        import yaml
+
+        schema_path = Path(schema_file)
+
+        if schema_path.suffix.lower() in [".yaml", ".yml"]:
+            # Load YAML schema
+            with open(schema_file, "r") as f:
+                schema = yaml.safe_load(f)
+        else:
+            # Load JSON schema
+            with open(schema_file) as f:
+                schema = json.load(f)
 
         # Basic schema compliance checks
         required_fields = schema.get("required", [])
@@ -185,9 +214,24 @@ class TestExampleComprehensive:
         """Evaluate example quality using LLM-as-judge based on example type."""
         response_data = result.get("response", {})
 
-        # Load original input to get context
-        input_data = load_example_file(str(input_file))
-        original_query = input_data["messages"][-1]["content"]
+        from pathlib import Path
+
+        input_path = Path(input_file)
+
+        if input_path.suffix.lower() == ".hbs":
+            # Template-based example - use template content as context
+            with open(input_file, "r") as f:
+                template_content = f.read()
+
+            # For template examples, we evaluate output quality against template purpose
+            # rather than query-response relevance
+            evaluation_query = f"Template-based generation using: {template_content[:200]}..."
+            input_context = f"Template-based example: {example_name}. The AI was asked to process a Handlebars template and generate structured output."
+        else:
+            # JSON-based example - load from input file
+            input_data = load_example_file(str(input_file))
+            evaluation_query = input_data["messages"][-1]["content"]
+            input_context = f"Standard query-response example: {example_name}"
 
         # Determine evaluation criteria based on example type
         criteria = self._get_evaluation_criteria(example_name)
@@ -211,10 +255,10 @@ class TestExampleComprehensive:
             style="cyan",
         )
         judgment = await llm_judge(
-            query=original_query,
+            query=evaluation_query,
             response=response_text,
             criteria=criteria,
-            input_context=f"Quality assessment for {example_name} example",
+            input_context=input_context,
         )
 
         # Determine minimum score based on example complexity
@@ -230,7 +274,30 @@ class TestExampleComprehensive:
         """Get evaluation criteria based on example type."""
         name_lower = example_name.lower()
 
-        # Sentiment analysis criteria
+        # Template-based example criteria - focus on output quality
+        if "static-example" in name_lower and "template" in name_lower:
+            return """
+            For this template-based example, evaluate the output quality focusing on:
+            - Structured output format and completeness
+            - Technical accuracy of any analysis provided
+            - Appropriate use of template variables and formatting
+            - Clarity and usefulness of generated content
+            - Adherence to expected output schema
+            Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
+            """
+
+        if "pr-review" in name_lower and "template" in name_lower:
+            return """
+            For this PR review template example, evaluate the output quality focusing on:
+            - Structured PR review format and completeness
+            - Technical accuracy of review comments
+            - Appropriate use of template variables for PR context
+            - Professional tone and constructive feedback
+            - Adherence to expected output schema
+            Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
+            """
+
+        # Standard JSON-based example criteria (query-response focused)
         if "sentiment" in name_lower:
             return """
             - Should analyze sentiment accurately based on the input text
@@ -459,12 +526,30 @@ def pytest_generate_tests(metafunc):
         examples_dir = Path("examples")
         examples = []
 
+        # First pass: Find all folders with input.json (JSON mode - priority)
         for input_file in examples_dir.rglob("input.json"):
             folder = input_file.parent
             schema_file = folder / "schema.json"
             schema = schema_file if schema_file.exists() else None
             example_name = str(folder.relative_to(examples_dir)).replace("/", "_").replace("\\", "_")
-            examples.append((input_file, schema, example_name))
+            examples.append((input_file, schema, f"{example_name}_json"))
+
+        # Second pass: Find template-based examples (fallback when no input.json)
+        for template_file in examples_dir.rglob("template.hbs"):
+            folder = template_file.parent
+
+            # Skip if input.json exists (JSON has priority)
+            if (folder / "input.json").exists():
+                continue
+
+            # Look for schema.yaml or schema.json
+            schema_yaml = folder / "schema.yaml"
+            schema_json = folder / "schema.json"
+            schema_file = schema_yaml if schema_yaml.exists() else (schema_json if schema_json.exists() else None)
+
+            if schema_file:  # Only include if schema exists
+                example_name = str(folder.relative_to(examples_dir)).replace("/", "_").replace("\\", "_")
+                examples.append((template_file, schema_file, f"{example_name}_template"))
 
         # Parametrize the test
         metafunc.parametrize("input_file,schema_file,example_name", examples)

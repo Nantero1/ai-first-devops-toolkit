@@ -5,6 +5,8 @@ Automated PR description generation with structured output for CI/CD integration
 ## Files
 - `input.json` - The prompt and PR context
 - `schema.json` - JSON schema for structured PR descriptions
+- `input.yaml` - Same content as input.json but in YAML format (more readable)
+- `schema.yaml` - Same schema as schema.json but in YAML format (more readable)
 - `README.md` - This documentation
 
 ## Example:
@@ -80,12 +82,21 @@ When you use this example, here is what happens step by step:
 - `breaking_changes`: Array of breaking changes
 - `related_issues`: Array of related issue numbers
 
-**Command:**
+**Command (JSON):**
 ```bash
 llm-ci-runner \
   --input-file examples/02-devops/pr-description/input.json \
   --output-file pr-description.json \
   --schema-file examples/02-devops/pr-description/schema.json \
+  --log-level INFO
+```
+
+**Command (YAML):**
+```bash
+llm-ci-runner \
+  --input-file examples/02-devops/pr-description/input.yaml \
+  --output-file pr-description.yaml \
+  --schema-file examples/02-devops/pr-description/schema.yaml \
   --log-level INFO
 ```
 ![Structured output of the PR review example](./output.png)
@@ -147,3 +158,5 @@ llm-ci-runner \
 - CI/CD integration ready
 - Impact assessment and testing requirements
 - Breaking changes detection
+- **YAML Support**: Use YAML for more readable input/schema files
+- **Format Flexibility**: Choose JSON or YAML based on your preference

@@ -57,6 +57,7 @@ def skip_if_smoke_test(smoke_test_mode):
 @pytest.fixture(scope="session")
 def environment_check(smoke_test_mode):
     """Check that Azure OpenAI environment is properly configured."""
+    console.print("")  # New line to make sure boxes are not next to each other
     if smoke_test_mode:
         console.print(
             Panel(
@@ -70,7 +71,6 @@ def environment_check(smoke_test_mode):
     required_vars = [
         "AZURE_OPENAI_ENDPOINT",
         "AZURE_OPENAI_MODEL",
-        "AZURE_OPENAI_API_KEY",
     ]
 
     missing_vars = [var for var in required_vars if not os.getenv(var)]
@@ -127,19 +127,55 @@ def llm_ci_runner():
     def _run_llm_ci_runner(
         input_file: str, output_file: str, schema_file: str = None, timeout: int = 60
     ) -> tuple[int, str, str]:
-        """Run the LLM runner and return result code, stdout, stderr."""
-        cmd = [
-            "llm-ci-runner",
-            "--input-file",
-            input_file,
-            "--output-file",
-            output_file,
-            "--log-level",
-            "ERROR",  # Minimize noise in tests
-        ]
+        """Run the LLM runner and return result code, stdout, stderr.
 
-        if schema_file:
-            cmd.extend(["--schema-file", schema_file])
+        Supports both input-file mode and template-file mode:
+        - If input_file ends with .json: uses --input-file mode
+        - If input_file ends with .hbs: uses --template-file mode (with optional template-vars)
+        """
+        from pathlib import Path
+
+        input_path = Path(input_file)
+
+        # Determine mode based on file extension
+        if input_path.suffix.lower() == ".hbs":
+            # Template mode: --template-file template.hbs [--template-vars vars.yaml] --schema-file schema.yaml
+            cmd = [
+                "llm-ci-runner",
+                "--template-file",
+                input_file,
+                "--output-file",
+                output_file,
+                "--log-level",
+                "ERROR",  # Minimize noise in tests
+            ]
+
+            # Check for template-vars file in same directory
+            template_vars_yaml = input_path.parent / "template-vars.yaml"
+            template_vars_json = input_path.parent / "template-vars.json"
+
+            if template_vars_yaml.exists():
+                cmd.extend(["--template-vars", str(template_vars_yaml)])
+            elif template_vars_json.exists():
+                cmd.extend(["--template-vars", str(template_vars_json)])
+
+            # Schema file is required for template mode
+            if schema_file:
+                cmd.extend(["--schema-file", schema_file])
+        else:
+            # Input file mode: --input-file input.json [--schema-file schema.json]
+            cmd = [
+                "llm-ci-runner",
+                "--input-file",
+                input_file,
+                "--output-file",
+                output_file,
+                "--log-level",
+                "ERROR",  # Minimize noise in tests
+            ]
+
+            if schema_file:
+                cmd.extend(["--schema-file", schema_file])
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
