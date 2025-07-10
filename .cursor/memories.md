@@ -47,5 +47,9 @@ Implemented Jinja2 template support in llm_ci_runner.py: auto-detects .jinja/.j2
 Extended acceptance tests to auto-discover YAML/Handlebars template examples, improved template execution and schema evaluation, ensuring all template-based examples are properly tested and validated. #templates #acceptance-testing  
    
 Enhanced acceptance test auto-discovery to support Jinja2 templates (.jinja/.j2 files) in addition to Handlebars templates (.hbs files): updated llm_ci_runner fixture to handle multiple template formats, expanded pytest_generate_tests to discover all template types generically, added Jinja2-specific evaluation criteria, and made template type detection dynamic for future extensibility. #jinja2 #acceptance-testing #auto-discovery  
+   
+Created generic, abstract LLM-as-judge evaluation approach: implemented generic_llm_judge fixture that can evaluate any example based on input, schema, and output without hard-coupled criteria, added TestGenericExampleEvaluation class demonstrating completely abstract evaluation, generated criteria dynamically based on example characteristics (template vs JSON, schema presence, name patterns), eliminated need for specific evaluation logic per example type, and made system extensible for new example types without code changes. #generic-evaluation #abstract-testing #llm-as-judge  
+   
+Cleaned up acceptance tests by removing hard-coupled TestExampleComprehensive class: replaced with generic TestGenericExampleEvaluation class that covers all example types without specific criteria, kept TestCustomScenarios for extensibility demonstration, eliminated 200+ lines of hard-coupled evaluation logic, and maintained same functionality with abstract, generic approach. #test-cleanup #generic-approach #maintainability  
 
 *Note: This memory file maintains chronological order and uses tags for better organization. Cross-reference with @memories2.md will be created when reaching 1000 lines.*
