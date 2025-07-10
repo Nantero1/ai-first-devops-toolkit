@@ -12,6 +12,7 @@ echo -e "\033[32mChecking for type errors...\033[0m"
 uv run mypy llm_ci_runner.py
 
 echo -e "\033[32mRunning unit tests...\033[0m"
+export PYTHONPATH=$(pwd):$PYTHONPATH
 uv run pytest tests/unit/
 
 echo -e ""

@@ -218,15 +218,18 @@ class TestExampleComprehensive:
 
         input_path = Path(input_file)
 
-        if input_path.suffix.lower() == ".hbs":
+        # Check if this is a template-based example (supports multiple template formats)
+        template_extensions = [".hbs", ".jinja", ".j2"]
+        if input_path.suffix.lower() in template_extensions:
             # Template-based example - use template content as context
             with open(input_file, "r") as f:
                 template_content = f.read()
 
             # For template examples, we evaluate output quality against template purpose
             # rather than query-response relevance
+            template_type = input_path.suffix.lower().replace(".", "")
             evaluation_query = f"Template-based generation using: {template_content[:200]}..."
-            input_context = f"Template-based example: {example_name}. The AI was asked to process a Handlebars template and generate structured output."
+            input_context = f"Template-based example: {example_name}. The AI was asked to process a {template_type} template and generate structured output."
         else:
             # JSON-based example - load from input file
             input_data = load_example_file(str(input_file))
@@ -294,6 +297,19 @@ class TestExampleComprehensive:
             - Appropriate use of template variables for PR context
             - Professional tone and constructive feedback
             - Adherence to expected output schema
+            Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
+            """
+
+        # Jinja2 template example criteria
+        if "jinja2" in name_lower and "template" in name_lower:
+            return """
+            For this Jinja2 template example, evaluate the output quality focusing on:
+            - Structured output format and completeness
+            - Technical accuracy of any analysis provided
+            - Appropriate use of Jinja2 template variables and filters
+            - Clarity and usefulness of generated content
+            - Adherence to expected output schema
+            - Proper handling of Jinja2-specific features (loops, conditionals, filters)
             Note: For template examples, 'relevance' should assess how well the output fulfills the template's intended purpose.
             """
 
@@ -535,7 +551,14 @@ def pytest_generate_tests(metafunc):
             examples.append((input_file, schema, f"{example_name}_json"))
 
         # Second pass: Find template-based examples (fallback when no input.json)
-        for template_file in examples_dir.rglob("template.hbs"):
+        # Support multiple template formats: .hbs (Handlebars), .jinja/.j2 (Jinja2)
+        template_extensions = [".hbs", ".jinja", ".j2"]
+        
+        for template_file in examples_dir.rglob("template.*"):
+            # Check if it's a supported template extension
+            if template_file.suffix.lower() not in template_extensions:
+                continue
+                
             folder = template_file.parent
 
             # Skip if input.json exists (JSON has priority)
@@ -549,7 +572,8 @@ def pytest_generate_tests(metafunc):
 
             if schema_file:  # Only include if schema exists
                 example_name = str(folder.relative_to(examples_dir)).replace("/", "_").replace("\\", "_")
-                examples.append((template_file, schema_file, f"{example_name}_template"))
+                template_type = template_file.suffix.lower().replace(".", "")
+                examples.append((template_file, schema_file, f"{example_name}_{template_type}"))
 
         # Parametrize the test
         metafunc.parametrize("input_file,schema_file,example_name", examples)

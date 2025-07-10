@@ -131,15 +131,15 @@ def llm_ci_runner():
 
         Supports both input-file mode and template-file mode:
         - If input_file ends with .json: uses --input-file mode
-        - If input_file ends with .hbs: uses --template-file mode (with optional template-vars)
+        - If input_file ends with .hbs/.jinja/.j2: uses --template-file mode (with optional template-vars)
         """
         from pathlib import Path
 
         input_path = Path(input_file)
 
         # Determine mode based on file extension
-        if input_path.suffix.lower() == ".hbs":
-            # Template mode: --template-file template.hbs [--template-vars vars.yaml] --schema-file schema.yaml
+        if input_path.suffix.lower() in [".hbs", ".jinja", ".j2"]:
+            # Template mode: --template-file template.hbs/jinja/j2 [--template-vars vars.yaml] --schema-file schema.yaml
             cmd = [
                 "llm-ci-runner",
                 "--template-file",

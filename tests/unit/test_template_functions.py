@@ -1,7 +1,8 @@
 """
 Unit tests for template functions in llm_ci_runner.py
 
-Tests load_template_vars, load_handlebars_template, and template parsing functions
+Tests load_template_vars, load_handlebars_template, load_jinja2_template,
+get_template_format, load_template, and template parsing functions
 with heavy mocking following the Given-When-Then pattern.
 """
 
@@ -14,10 +15,13 @@ import yaml
 
 from llm_ci_runner import (
     InputValidationError,
+    get_template_format,
     load_handlebars_template,
+    load_jinja2_template,
+    load_template,
     load_template_vars,
     parse_rendered_template_to_chat_history,
-    render_handlebars_template,
+    render_template,
 )
 
 
@@ -190,40 +194,312 @@ Customer: {{customer.first_name}} {{customer.last_name}}
                 load_handlebars_template(template_file)
 
 
-class TestRenderHandlebarsTemplate:
-    """Tests for render_handlebars_template function."""
+class TestGetTemplateFormat:
+    """Tests for get_template_format function."""
 
-    @pytest.mark.asyncio
-    async def test_render_template_successfully(self):
-        """Test successful template rendering."""
+    def test_detect_handlebars_format(self):
+        """Test detecting Handlebars format from .hbs extension."""
         # given
-        mock_template = AsyncMock()
-        template_vars = {"customer": {"name": "John"}, "company": "Test Corp"}
-        mock_kernel = MagicMock()
-        rendered_content = '<message role="system">Hello John from Test Corp</message>'
-
-        mock_template.render.return_value = rendered_content
+        template_file = Path("template.hbs")
 
         # when
-        result = await render_handlebars_template(mock_template, template_vars, mock_kernel)
+        result = get_template_format(template_file)
 
         # then
-        assert result == rendered_content
+        assert result == "handlebars"
+
+    def test_detect_jinja2_format_jinja_extension(self):
+        """Test detecting Jinja2 format from .jinja extension."""
+        # given
+        template_file = Path("template.jinja")
+
+        # when
+        result = get_template_format(template_file)
+
+        # then
+        assert result == "jinja2"
+
+    def test_detect_jinja2_format_j2_extension(self):
+        """Test detecting Jinja2 format from .j2 extension."""
+        # given
+        template_file = Path("template.j2")
+
+        # when
+        result = get_template_format(template_file)
+
+        # then
+        assert result == "jinja2"
+
+    def test_detect_jinja2_format_case_insensitive(self):
+        """Test detecting Jinja2 format with uppercase extension."""
+        # given
+        template_file = Path("template.JINJA")
+
+        # when
+        result = get_template_format(template_file)
+
+        # then
+        assert result == "jinja2"
+
+    def test_unsupported_extension_raises_error(self):
+        """Test that unsupported extension raises InputValidationError."""
+        # given
+        template_file = Path("template.txt")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Unsupported template file extension"):
+            get_template_format(template_file)
+
+    def test_no_extension_raises_error(self):
+        """Test that file without extension raises InputValidationError."""
+        # given
+        template_file = Path("template")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Unsupported template file extension"):
+            get_template_format(template_file)
+
+
+class TestLoadJinja2Template:
+    """Tests for load_jinja2_template function."""
+
+    def test_load_valid_jinja2_template(self, temp_dir):
+        """Test loading a valid Jinja2 template."""
+        # given
+        template_file = temp_dir / "template.jinja"
+        template_content = """<message role="system">
+You are an AI agent for {{ company_name }}.
+Customer: {{ customer.first_name }} {{ customer.last_name }}
+</message>
+
+{% for message in history %}
+<message role="{{ message.role }}">
+{{ message.content }}
+</message>
+{% endfor %}"""
+        with open(template_file, "w") as f:
+            f.write(template_content)
+
+        # when
+        with (
+            patch("llm_ci_runner.PromptTemplateConfig") as mock_config_class,
+            patch("llm_ci_runner.Jinja2PromptTemplate") as mock_template_class,
+        ):
+            mock_config = MagicMock()
+            mock_config.name = "template"
+            mock_config_class.return_value = mock_config
+
+            mock_template = MagicMock()
+            mock_template_class.return_value = mock_template
+
+            result = load_jinja2_template(template_file)
+
+        # then
+        mock_config_class.assert_called_once_with(
+            template=template_content,
+            template_format="jinja2",
+            name="template",
+            description="Jinja2 template loaded from template.jinja",
+        )
+        mock_template_class.assert_called_once_with(prompt_template_config=mock_config)
+        assert result == mock_template
+
+    def test_load_jinja2_template_with_j2_extension(self, temp_dir):
+        """Test loading a Jinja2 template with .j2 extension."""
+        # given
+        template_file = temp_dir / "template.j2"
+        template_content = """<message role="user">
+Hello {{ name }}, how are you today?
+</message>"""
+        with open(template_file, "w") as f:
+            f.write(template_content)
+
+        # when
+        with (
+            patch("llm_ci_runner.PromptTemplateConfig") as mock_config_class,
+            patch("llm_ci_runner.Jinja2PromptTemplate") as mock_template_class,
+        ):
+            mock_config = MagicMock()
+            mock_config_class.return_value = mock_config
+            mock_template = MagicMock()
+            mock_template_class.return_value = mock_template
+
+            result = load_jinja2_template(template_file)
+
+        # then
+        mock_config_class.assert_called_once_with(
+            template=template_content,
+            template_format="jinja2",
+            name="template",
+            description="Jinja2 template loaded from template.j2",
+        )
+        assert result == mock_template
+
+    def test_load_nonexistent_jinja2_template_raises_error(self):
+        """Test that nonexistent Jinja2 template file raises InputValidationError."""
+        # given
+        nonexistent_file = Path("nonexistent.jinja")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Template file not found"):
+            load_jinja2_template(nonexistent_file)
+
+    def test_load_invalid_jinja2_template_content_raises_error(self, temp_dir):
+        """Test that invalid Jinja2 template content raises InputValidationError."""
+        # given
+        template_file = temp_dir / "invalid_template.jinja"
+        with open(template_file, "w") as f:
+            f.write("invalid template content")
+
+        # when & then
+        with patch(
+            "llm_ci_runner.PromptTemplateConfig",
+            side_effect=Exception("Invalid template"),
+        ):
+            with pytest.raises(InputValidationError, match="Invalid Jinja2 template content"):
+                load_jinja2_template(template_file)
+
+
+class TestLoadTemplate:
+    """Tests for unified load_template function."""
+
+    def test_load_handlebars_template_via_unified_function(self, temp_dir):
+        """Test loading Handlebars template through unified load_template function."""
+        # given
+        template_file = temp_dir / "template.hbs"
+        template_content = """{{#message role="system"}}
+You are an AI agent.
+{{/message}}"""
+        with open(template_file, "w") as f:
+            f.write(template_content)
+
+        # when
+        with (
+            patch("llm_ci_runner.load_handlebars_template") as mock_load_handlebars,
+            patch("llm_ci_runner.load_jinja2_template") as mock_load_jinja2,
+        ):
+            mock_template = MagicMock()
+            mock_load_handlebars.return_value = mock_template
+
+            result = load_template(template_file)
+
+        # then
+        mock_load_handlebars.assert_called_once_with(template_file)
+        mock_load_jinja2.assert_not_called()
+        assert result == mock_template
+
+    def test_load_jinja2_template_via_unified_function(self, temp_dir):
+        """Test loading Jinja2 template through unified load_template function."""
+        # given
+        template_file = temp_dir / "template.jinja"
+        template_content = """<message role="system">
+You are an AI agent.
+</message>"""
+        with open(template_file, "w") as f:
+            f.write(template_content)
+
+        # when
+        with (
+            patch("llm_ci_runner.load_handlebars_template") as mock_load_handlebars,
+            patch("llm_ci_runner.load_jinja2_template") as mock_load_jinja2,
+        ):
+            mock_template = MagicMock()
+            mock_load_jinja2.return_value = mock_template
+
+            result = load_template(template_file)
+
+        # then
+        mock_load_jinja2.assert_called_once_with(template_file)
+        mock_load_handlebars.assert_not_called()
+        assert result == mock_template
+
+    def test_load_template_unsupported_format_raises_error(self):
+        """Test that unsupported template format raises InputValidationError."""
+        # given
+        template_file = Path("template.txt")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Unsupported template file extension"):
+            load_template(template_file)
+
+
+class TestRenderTemplate:
+    """Tests for render_template function."""
+
+    @pytest.mark.asyncio
+    async def test_render_handlebars_template_successfully(self):
+        """Test successful Handlebars template rendering."""
+        # given
+        mock_template = AsyncMock()
+        mock_template.render.return_value = '<message role="user">Hello World</message>'
+        template_vars = {"name": "World"}
+        mock_kernel = MagicMock()
+
+        # when
+        result = await render_template(mock_template, template_vars, mock_kernel)
+
+        # then
         mock_template.render.assert_called_once()
+        assert result == '<message role="user">Hello World</message>'
+
+    @pytest.mark.asyncio
+    async def test_render_jinja2_template_successfully(self):
+        """Test successful Jinja2 template rendering."""
+        # given
+        mock_template = AsyncMock()
+        mock_template.render.return_value = '<message role="user">Hello World</message>'
+        template_vars = {"name": "World"}
+        mock_kernel = MagicMock()
+
+        # when
+        result = await render_template(mock_template, template_vars, mock_kernel)
+
+        # then
+        mock_template.render.assert_called_once()
+        assert result == '<message role="user">Hello World</message>'
 
     @pytest.mark.asyncio
     async def test_render_template_failure_raises_error(self):
         """Test that template rendering failure raises InputValidationError."""
         # given
         mock_template = AsyncMock()
-        template_vars = {"invalid": "vars"}
+        mock_template.render.side_effect = Exception("Template error")
+        template_vars = {"name": "World"}
         mock_kernel = MagicMock()
 
-        mock_template.render.side_effect = Exception("Rendering failed")
-
         # when & then
-        with pytest.raises(InputValidationError, match="Error rendering Handlebars template"):
-            await render_handlebars_template(mock_template, template_vars, mock_kernel)
+        with pytest.raises(InputValidationError, match="Error rendering Jinja2 template"):
+            await render_template(mock_template, template_vars, mock_kernel)
+
+    @pytest.mark.asyncio
+    async def test_render_template_with_handlebars_type_detection(self):
+        """Test that Handlebars template type is correctly detected in error messages."""
+        # given
+        mock_template = MagicMock()
+        # Mock isinstance to return True for HandlebarsPromptTemplate
+        with patch("llm_ci_runner.isinstance", return_value=True):
+            mock_template.render.side_effect = Exception("Template error")
+            template_vars = {"name": "World"}
+            mock_kernel = MagicMock()
+
+            # when & then
+            with pytest.raises(InputValidationError, match="Error rendering Handlebars template"):
+                await render_template(mock_template, template_vars, mock_kernel)
+
+    @pytest.mark.asyncio
+    async def test_render_template_with_jinja2_type_detection(self):
+        """Test that Jinja2 template type is correctly detected in error messages."""
+        # given
+        mock_template = MagicMock()
+        # Mock isinstance to return False for HandlebarsPromptTemplate (making it Jinja2)
+        with patch("llm_ci_runner.isinstance", return_value=False):
+            mock_template.render.side_effect = Exception("Template error")
+            template_vars = {"name": "World"}
+            mock_kernel = MagicMock()
+
+            # when & then
+            with pytest.raises(InputValidationError, match="Error rendering Jinja2 template"):
+                await render_template(mock_template, template_vars, mock_kernel)
 
 
 class TestParseRenderedTemplateToChat:
