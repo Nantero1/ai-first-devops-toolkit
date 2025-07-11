@@ -68,7 +68,7 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
     try:
         yaml = YAML(typ="safe")
 
-        with open(template_vars_file, "r", encoding="utf-8") as f:
+        with open(template_vars_file, encoding="utf-8") as f:
             content = f.read()
 
         # Try YAML first, fallback to JSON
@@ -108,7 +108,7 @@ def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
     LOGGER.debug(f"📂 Loading Handlebars template from: {template_file}")
 
     try:
-        with open(template_file, "r", encoding="utf-8") as f:
+        with open(template_file, encoding="utf-8") as f:
             template_content = f.read()
 
         # Create PromptTemplateConfig for Handlebars
@@ -144,7 +144,7 @@ def load_jinja2_template(template_file: Path) -> Jinja2PromptTemplate:
     LOGGER.debug(f"📂 Loading Jinja2 template from: {template_file}")
 
     try:
-        with open(template_file, "r", encoding="utf-8") as f:
+        with open(template_file, encoding="utf-8") as f:
             template_content = f.read()
 
         # Create PromptTemplateConfig for Jinja2

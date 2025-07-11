@@ -7,8 +7,6 @@ and parsing command line arguments with proper error handling.
 
 import argparse
 import json
-import logging
-import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -131,7 +129,7 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
     try:
         yaml = YAML(typ="safe")
 
-        with open(input_file, "r", encoding="utf-8") as f:
+        with open(input_file, encoding="utf-8") as f:
             content = f.read()
 
         # Determine format based on file extension
@@ -143,7 +141,7 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
                 data = yaml.load(content)
             except YAMLError as e:
                 # For .yaml/.yml files, don't fallback to JSON - fail immediately
-                raise InputValidationError(f"Invalid YAML in input file: {e}")
+                raise InputValidationError(f"Invalid YAML in input file: {e}") from e
         else:
             # Try JSON first, fallback to YAML
             try:
@@ -151,12 +149,12 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
             except json.JSONDecodeError as e:
                 # For .json files, don't fallback to YAML - fail immediately
                 if extension == ".json":
-                    raise InputValidationError(f"Invalid JSON in input file: {e}")
+                    raise InputValidationError(f"Invalid JSON in input file: {e}") from e
                 # For other files, try YAML fallback
                 try:
                     data = yaml.load(content)
                 except YAMLError as e:
-                    raise InputValidationError(f"Invalid YAML in input file: {e}")
+                    raise InputValidationError(f"Invalid YAML in input file: {e}") from e
 
         if not isinstance(data, dict):
             raise InputValidationError("Input file must contain a dictionary")
@@ -198,13 +196,13 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
 
         return data
 
-    except (OSError, IOError) as e:
-        raise InputValidationError(f"Error reading input file: {e}")
+    except OSError as e:
+        raise InputValidationError(f"Error reading input file: {e}") from e
     except Exception as e:
         # Re-raise InputValidationError as-is
         if isinstance(e, InputValidationError):
             raise
-        raise InputValidationError(f"Failed to load input file: {e}")
+        raise InputValidationError(f"Failed to load input file: {e}") from e
 
 
 def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
@@ -348,7 +346,7 @@ def load_schema_file(schema_file: Path | None) -> type | None:
     try:
         yaml = YAML(typ="safe")
 
-        with open(schema_file, "r", encoding="utf-8") as f:
+        with open(schema_file, encoding="utf-8") as f:
             content = f.read()
 
         # Try YAML first, fallback to JSON
@@ -365,14 +363,14 @@ def load_schema_file(schema_file: Path | None) -> type | None:
         from .schema import create_dynamic_model_from_schema
 
         model = create_dynamic_model_from_schema(schema_dict)
-        LOGGER.info(f"✅ Loaded schema and created dynamic model")
+        LOGGER.info("✅ Loaded schema and created dynamic model")
 
         return model
 
     except json.JSONDecodeError as e:
-        raise InputValidationError(f"Invalid JSON in schema file: {e}")
+        raise InputValidationError(f"Invalid JSON in schema file: {e}") from e
     except Exception as e:
-        raise InputValidationError(f"Failed to load schema file: {e}")
+        raise InputValidationError(f"Failed to load schema file: {e}") from e
 
 
 def yaml_recursively_force_literal(data: Any) -> Any:

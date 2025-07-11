@@ -34,7 +34,7 @@ jobs:
       - name: Run linting
         run: |
           uv run ruff check llm_ci_runner/
-          uv run ruff format --check lm_ci_runner/
+          uv run ruff format --check llm_ci_runner/
 
   type-check:
     runs-on: ubuntu-latest

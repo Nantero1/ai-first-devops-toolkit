@@ -28,10 +28,25 @@ Environment Variables:
 """
 
 # Import main CLI entry point
-from .core import cli_main, main
+from azure.identity.aio import DefaultAzureCredential
+from rich.logging import RichHandler
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
+
+# Import additional functions for testing compatibility
+# Import classes for testing compatibility
+from semantic_kernel.contents import ChatHistory, ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.prompt_template import (
+    HandlebarsPromptTemplate,
+    Jinja2PromptTemplate,
+    PromptTemplateConfig,
+)
 
 # Import core functionality for programmatic use
 from .azure_service import setup_azure_service
+from .core import cli_main, main
 from .exceptions import (
     AuthenticationError,
     InputValidationError,
@@ -47,7 +62,9 @@ from .io_operations import (
     write_output_file,
 )
 from .llm_execution import execute_llm_task
-from .logging_config import CONSOLE, setup_logging
+
+# Import logger for testing compatibility
+from .logging_config import CONSOLE, LOGGER, setup_logging
 from .schema import create_dynamic_model_from_schema
 from .templates import (
     get_template_format,
@@ -58,26 +75,6 @@ from .templates import (
     parse_rendered_template_to_chat_history,
     render_template,
 )
-
-# Import additional functions for testing compatibility
-from .core import cli_main, main
-
-# Import classes for testing compatibility
-from semantic_kernel.contents import ChatHistory, ChatMessageContent
-from semantic_kernel.contents.utils.author_role import AuthorRole
-from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
-from semantic_kernel.prompt_template import (
-    HandlebarsPromptTemplate,
-    Jinja2PromptTemplate,
-    PromptTemplateConfig,
-)
-from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
-from azure.identity.aio import DefaultAzureCredential
-from rich.logging import RichHandler
-
-# Import logger for testing compatibility
-from .logging_config import LOGGER
 
 # Public API
 __all__ = [

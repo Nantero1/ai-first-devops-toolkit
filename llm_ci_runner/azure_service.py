@@ -7,7 +7,6 @@ with proper authentication using both API keys and RBAC.
 
 import logging
 import os
-from typing import Any
 
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity.aio import DefaultAzureCredential

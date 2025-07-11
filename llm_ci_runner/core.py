@@ -9,17 +9,13 @@ and output writing.
 import asyncio
 import logging
 import sys
-from pathlib import Path
-from typing import Any
 
 from rich.panel import Panel
 from rich.traceback import install as install_rich_traceback
 
 from .azure_service import setup_azure_service
 from .exceptions import (
-    AuthenticationError,
     InputValidationError,
-    LLMExecutionError,
     LLMRunnerError,
 )
 from .io_operations import (
@@ -64,7 +60,7 @@ async def main() -> None:
         args = parse_arguments()
 
         # Setup logging
-        logger = setup_logging(args.log_level)
+        setup_logging(args.log_level)
 
         # Display startup banner
         CONSOLE.print(
