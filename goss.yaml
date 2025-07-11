@@ -53,12 +53,20 @@ command:
     title: uv package manager is installed
 
   # Test main application
-  uv run llm_ci_runner.py --help:
+  uv run python -m llm_ci_runner --help:
     exit-status: 0
     title: LLM CI Runner is installed and accessible
     timeout: 60000
     stdout:
-      - "LLM Runner - Simple CI/CD utility for LLM tasks"
+      - "LLM CI Runner - AI-powered automation for CI/CD pipelines"
+
+  # Test main application
+  llm-ci-runner --help:
+    exit-status: 0
+    title: LLM CI Runner is installed and accessible
+    timeout: 60000
+    stdout:
+      - "LLM CI Runner - AI-powered automation for CI/CD pipelines"
 
   # Test Python packages are installed
   uv run python -c "import semantic_kernel; print('semantic-kernel available')":
@@ -81,12 +89,6 @@ command:
     title: UV_NO_SYNC is set to true
     stdout:
       - "true"
-
-  echo $UV_COMPILE_BYTECODE:
-    exit-status: 0
-    title: UV_COMPILE_BYTECODE is set to 1
-    stdout:
-      - "1"
 
   # Test PATH includes virtual environment
   echo $PATH:
@@ -132,7 +134,7 @@ command:
 
 file:
   # Test key files exist
-  /app/llm_ci_runner.py:
+  /app/llm_ci_runner/:
     exists: true
     title: Main application file exists
 

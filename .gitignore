@@ -7,3 +7,5 @@ __pycache__/
 result.json
 .mypy_cache/
 /.DS_Store
+/.coverage
+/test-results.xml

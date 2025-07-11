@@ -4,7 +4,7 @@ set -e
 # Handle different execution scenarios
 if [ $# -eq 0 ]; then
     # No arguments provided, run default command
-    exec uv run llm_ci_runner.py --help
+    exec uv run python -m llm_ci_runner --help
 elif [ "$1" = "bash" ] || [ "$1" = "sh" ]; then
     # Interactive shell requested
     exec "$@"

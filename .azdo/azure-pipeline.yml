@@ -22,7 +22,7 @@ resources:
     - repository: Templates
       type: git
       name: CDOS/azure-devops-pipeline
-      ref: refs/tags/v4
+      ref: feat/python_make_requirement_optional
   pipelines:
     - pipeline: base-image-miniconda-4.11-rhel8
       source: base-image-miniconda-4.11-rhel8
@@ -44,8 +44,40 @@ extends:
     notifyOnSuccess: false
 
     stages:
+      - stage: test
+        displayName: Test & Quality
+        jobs:
+          - template: Jobs/python_tests.yml@Templates
+            parameters:
+              requirementFiles: ""
+              pythonBinary: "UV_NO_SYNC=0 uv run --group dev --frozen python"
+              # TODO: set to true, after solving DOTNET issue
+              codeCoverage: false
+              container:
+                image: cdos-marketplace-docker/llm-runtime:latest
+                endpoint: "sc-generic-docker"
+              
+          # TODO:
+          # - template: Jobs/sonarqube_cli_generic.yml@Templates
+          #   parameters:
+          #     sonarQube: 'sc-cdos-sonar'
+          #     dependsOn:
+          #       - run_python_tests
+          #     cliProjectKey: 'CDOS_marketplace-llm-runtime_345475696jfg'
+          #     extraProperties: |
+          #       sonar.language=python
+          #       sonar.python.coverage.reportPaths=coverage.xml
+          #       sonar.python.xunit.reportPaths=test-results.xml
+          #       sonar.python.version=3.12
+          #     coverageXmlArtifact: "coverage.xml"
+          #     cliSources: './'
+          #     testResultsArtifact: "TestResults"
+
       - stage: build
         displayName: Build
+        dependsOn:
+          - test
+        condition: succeeded()
         jobs:
           - template: Jobs/docker.yml@Templates
             parameters:

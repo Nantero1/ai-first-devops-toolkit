@@ -52,7 +52,9 @@ RUN --mount=type=secret,id=ARTIFACTORY_USR \
     rm ~/.netrc
 
 # Copy application code and install the project
-COPY llm_ci_runner.py README.md LICENSE NOTICE ./
+COPY llm_ci_runner/ ./llm_ci_runner/
+COPY README.md LICENSE NOTICE ./
+
 COPY scripts/optimize_venv.py /tmp/optimize_venv.py
 RUN --mount=type=cache,target=/opt/uv-cache/ \
     uv sync --locked --compile-bytecode && \
@@ -115,14 +117,17 @@ COPY --from=builder /usr/local/lib64/python3.12/site-packages/uv /usr/local/lib6
 
 WORKDIR /app
 
+# for test coverage report generation
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
+
 # Set up Python virtual environment
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app"
 
 # Performance optimizations for runtime
 ENV UV_NO_SYNC=true
-ENV UV_COMPILE_BYTECODE=1
-ENV PYTHONOPTIMIZE=2
+ENV UV_LINK_MODE=copy
 
 # Color support for Azure DevOps
 ENV TERM=xterm-256color
@@ -141,4 +146,4 @@ RUN chmod +x /entrypoint.sh
 
 # Set entrypoint and default command
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uv", "run", "llm_ci_runner.py", "--help"] 
+CMD ["uv", "run", "python", "-m", "llm_ci_runner", "--help"] 
