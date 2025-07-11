@@ -21,7 +21,7 @@ from llm_ci_runner import (
 class TestCreateDynamicModelFromSchema:
     """Tests for create_dynamic_model_from_schema function."""
 
-    @patch("llm_ci_runner.create_model_from_schema")
+    @patch("llm_ci_runner.schema.create_model_from_schema")
     def test_create_valid_model_with_all_field_types(self, mock_create_model):
         """Test creating a dynamic model with various field types."""
         # given
@@ -75,7 +75,7 @@ class TestCreateDynamicModelFromSchema:
         # Verify it's a type
         assert isinstance(result_model, type)
 
-    @patch("llm_ci_runner.create_model_from_schema")
+    @patch("llm_ci_runner.schema.create_model_from_schema")
     def test_create_model_with_empty_properties_succeeds(self, mock_create_model):
         """Test that empty properties creates a valid model."""
         # given
@@ -97,7 +97,7 @@ class TestCreateDynamicModelFromSchema:
         assert result is not None
         mock_create_model.assert_called_once_with(schema_dict)
 
-    @patch("llm_ci_runner.create_model_from_schema")
+    @patch("llm_ci_runner.schema.create_model_from_schema")
     def test_create_model_with_non_object_type_succeeds(self, mock_create_model):
         """Test that non-object type is handled by the library."""
         # given
@@ -138,7 +138,7 @@ class TestCreateDynamicModelFromSchema:
         }
 
         # when & then
-        with patch("llm_ci_runner.create_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.schema.create_model_from_schema") as mock_create_model:
             mock_create_model.side_effect = Exception("Library error")
 
             with pytest.raises(
@@ -155,7 +155,7 @@ class TestCreateDynamicModelFromSchema:
             ([], "field1", False),
         ],
     )
-    @patch("llm_ci_runner.create_model_from_schema")
+    @patch("llm_ci_runner.schema.create_model_from_schema")
     def test_required_field_handling(self, mock_create_model, required_fields, field_name, expected_required):
         """Test that required fields are handled correctly."""
         # given
@@ -193,7 +193,7 @@ class TestLoadSchemaFile:
         schema_file = temp_schema_file
 
         # when
-        with patch("llm_ci_runner.create_dynamic_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.schema.create_dynamic_model_from_schema") as mock_create_model:
             mock_model = Mock()
             mock_model.__name__ = "TestModel"
             mock_create_model.return_value = mock_model
@@ -229,10 +229,10 @@ class TestLoadSchemaFile:
         # given
         invalid_json_file = temp_dir / "invalid.json"
         with open(invalid_json_file, "w") as f:
-            f.write("{ invalid json }")
+            f.write("{{{{ completely invalid content \n unmatched braces")  # Invalid for both YAML and JSON
 
         # when & then
-        with pytest.raises(InputValidationError, match="Invalid JSON in schema file"):
+        with pytest.raises(InputValidationError, match="Invalid JSON in schema file:"):
             load_schema_file(invalid_json_file)
 
     def test_load_schema_with_create_model_error_raises_schema_error(self, temp_schema_file):
@@ -241,10 +241,10 @@ class TestLoadSchemaFile:
         schema_file = temp_schema_file
 
         # when & then
-        with patch("llm_ci_runner.create_dynamic_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.schema.create_dynamic_model_from_schema") as mock_create_model:
             mock_create_model.side_effect = Exception("Model creation failed")
 
-            with pytest.raises(InputValidationError, match="Error loading schema file"):
+            with pytest.raises(InputValidationError, match="Failed to load schema file"):
                 load_schema_file(schema_file)
 
     def test_load_schema_with_file_read_error_raises_schema_error(self):
@@ -257,7 +257,7 @@ class TestLoadSchemaFile:
             patch("pathlib.Path.exists", return_value=True),
             patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
-            with pytest.raises(InputValidationError, match="Error loading schema file"):
+            with pytest.raises(InputValidationError, match="Failed to load schema file"):
                 load_schema_file(schema_file)
 
     def test_load_valid_yaml_schema_file(self, temp_dir):
@@ -283,7 +283,7 @@ additionalProperties: false
             f.write(schema_content)
 
         # when
-        with patch("llm_ci_runner.create_dynamic_model_from_schema") as mock_create_model:
+        with patch("llm_ci_runner.schema.create_dynamic_model_from_schema") as mock_create_model:
             mock_model = Mock()
             mock_model.__name__ = "TestModel"
             mock_create_model.return_value = mock_model
@@ -307,5 +307,5 @@ additionalProperties: false
             f.write("type: object\nproperties:\n  field: {\n")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Invalid YAML in schema file"):
+        with pytest.raises(InputValidationError, match="Invalid JSON in schema file"):
             load_schema_file(invalid_yaml_file)

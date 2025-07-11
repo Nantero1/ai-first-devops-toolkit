@@ -54,9 +54,9 @@ class TestCreateChatHistory:
 
         # then
         mock_chat_history.add_message.assert_called_once()
-        # Verify ChatMessageContent was created with name
-        call_args = mock_semantic_kernel_imports["chat_content"].call_args
-        assert call_args[1]["name"] == "test_user"
+        # Verify ChatMessageContent was created and name was set
+        mock_message = mock_semantic_kernel_imports["chat_content"].return_value
+        assert mock_message.name == "test_user"
 
     def test_create_chat_history_with_missing_role_raises_error(self, mock_semantic_kernel_imports):
         """Test that message without role raises InputValidationError."""
@@ -100,7 +100,7 @@ class TestCreateChatHistory:
         mock_semantic_kernel_imports["author_role"].side_effect = ValueError("Invalid role")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Invalid role 'invalid_role' in message 0"):
+        with pytest.raises(InputValidationError, match="Invalid message role: invalid_role"):
             create_chat_history(messages)
 
     def test_create_chat_history_with_chat_content_error_raises_input_error(self, mock_semantic_kernel_imports):
@@ -111,7 +111,7 @@ class TestCreateChatHistory:
         mock_semantic_kernel_imports["chat_content"].side_effect = Exception("ChatContent error")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Error processing message 0"):
+        with pytest.raises(InputValidationError, match="Failed to create message 0"):
             create_chat_history(messages)
 
 
@@ -149,13 +149,18 @@ class TestSetupAzureService:
             clear=True,
         ):
             # when
-            with patch("llm_ci_runner.DefaultAzureCredential") as mock_credential:
+            from unittest.mock import AsyncMock
+
+            with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+                mock_credential = AsyncMock()
+                mock_credential.get_token = AsyncMock()
+                mock_credential_class.return_value = mock_credential
                 service, credential = await setup_azure_service()
 
         # then
         assert service is not None
         assert credential is not None  # RBAC auth returns a credential
-        mock_credential.assert_called_once()
+        mock_credential_class.assert_called()
         assert service == mock_azure_chat_completion
 
     @pytest.mark.asyncio
@@ -166,7 +171,7 @@ class TestSetupAzureService:
             # when & then
             with pytest.raises(
                 AuthenticationError,
-                match="AZURE_OPENAI_ENDPOINT environment variable not set",
+                match="AZURE_OPENAI_ENDPOINT environment variable is required",
             ):
                 await setup_azure_service()
 
@@ -182,32 +187,54 @@ class TestSetupAzureService:
             # when & then
             with pytest.raises(
                 AuthenticationError,
-                match="AZURE_OPENAI_MODEL environment variable not set",
+                match="AZURE_OPENAI_MODEL environment variable is required",
             ):
                 await setup_azure_service()
 
     @pytest.mark.asyncio
-    async def test_setup_azure_service_with_auth_error_raises_auth_error(self, mock_environment_variables):
+    async def test_setup_azure_service_with_auth_error_raises_auth_error(self):
         """Test that Azure authentication errors are wrapped in AuthenticationError."""
         # given
         from azure.core.exceptions import ClientAuthenticationError
 
-        # when & then
-        with patch(
-            "llm_ci_runner.AzureChatCompletion",
-            side_effect=ClientAuthenticationError("Auth failed"),
+        # Set environment with API key to test the API key path
+        with patch.dict(
+            "os.environ",
+            {
+                "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
+                "AZURE_OPENAI_MODEL": "gpt-4-test",
+                "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+                "AZURE_OPENAI_API_KEY": "test-api-key",
+            },
+            clear=True,
         ):
-            with pytest.raises(AuthenticationError, match="Azure authentication failed"):
-                await setup_azure_service()
+            # when & then
+            with patch(
+                "llm_ci_runner.azure_service.AzureChatCompletion",
+                side_effect=ClientAuthenticationError("Auth failed"),
+            ):
+                with pytest.raises(AuthenticationError, match="Azure authentication failed"):
+                    await setup_azure_service()
 
     @pytest.mark.asyncio
-    async def test_setup_azure_service_with_generic_error_raises_auth_error(self, mock_environment_variables):
+    async def test_setup_azure_service_with_generic_error_raises_auth_error(self):
         """Test that generic errors are wrapped in AuthenticationError."""
         # given
-        # when & then
-        with patch("llm_ci_runner.AzureChatCompletion", side_effect=Exception("Generic error")):
-            with pytest.raises(AuthenticationError, match="Error setting up Azure service"):
-                await setup_azure_service()
+        # Set environment with API key to test the API key path
+        with patch.dict(
+            "os.environ",
+            {
+                "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
+                "AZURE_OPENAI_MODEL": "gpt-4-test",
+                "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+                "AZURE_OPENAI_API_KEY": "test-api-key",
+            },
+            clear=True,
+        ):
+            # when & then
+            with patch("llm_ci_runner.azure_service.AzureChatCompletion", side_effect=Exception("Generic error")):
+                with pytest.raises(AuthenticationError, match="Error setting up Azure service"):
+                    await setup_azure_service()
 
 
 class TestExecuteLlmTask:

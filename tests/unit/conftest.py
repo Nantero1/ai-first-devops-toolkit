@@ -22,7 +22,8 @@ def mock_console(monkeypatch):
 def mock_logger(monkeypatch):
     """Mock logger for unit tests."""
     mock_logger = Mock()
-    monkeypatch.setattr("llm_ci_runner.LOGGER", mock_logger)
+    # Mock the logger in io_operations module where it's actually used
+    monkeypatch.setattr("llm_ci_runner.io_operations.LOGGER", mock_logger)
     return mock_logger
 
 
@@ -37,7 +38,7 @@ def mock_azure_credential():
 @pytest.fixture
 def mock_azure_chat_completion():
     """Mock Azure ChatCompletion service."""
-    with patch("llm_ci_runner.AzureChatCompletion") as mock_class:
+    with patch("llm_ci_runner.azure_service.AzureChatCompletion") as mock_class:
         mock_service = AsyncMock()
         mock_class.return_value = mock_service
         yield mock_service
@@ -46,7 +47,7 @@ def mock_azure_chat_completion():
 @pytest.fixture
 def mock_kernel():
     """Mock Semantic Kernel for unit tests."""
-    with patch("llm_ci_runner.Kernel") as mock_kernel_class:
+    with patch("llm_ci_runner.llm_execution.Kernel") as mock_kernel_class:
         mock_kernel = Mock()
         mock_kernel_class.return_value = mock_kernel
         yield mock_kernel
@@ -55,8 +56,10 @@ def mock_kernel():
 @pytest.fixture
 def mock_chat_history():
     """Mock ChatHistory for unit tests."""
-    with patch("llm_ci_runner.ChatHistory") as mock_chat_history_class:
+    with patch("llm_ci_runner.io_operations.ChatHistory") as mock_chat_history_class:
         mock_history = Mock()
+        # Configure messages attribute to support len()
+        mock_history.messages = []
         mock_chat_history_class.return_value = mock_history
         yield mock_history
 
@@ -93,11 +96,11 @@ def mock_environment_variables(monkeypatch):
 def mock_semantic_kernel_imports():
     """Mock all Semantic Kernel imports for unit tests."""
     with (
-        patch("llm_ci_runner.Kernel") as mock_kernel,
-        patch("llm_ci_runner.ChatHistory") as mock_chat_history,
-        patch("llm_ci_runner.ChatMessageContent") as mock_chat_content,
-        patch("llm_ci_runner.AuthorRole") as mock_author_role,
-        patch("llm_ci_runner.OpenAIChatPromptExecutionSettings") as mock_settings,
+        patch("llm_ci_runner.llm_execution.Kernel") as mock_kernel,
+        patch("llm_ci_runner.io_operations.ChatHistory") as mock_chat_history,
+        patch("llm_ci_runner.io_operations.ChatMessageContent") as mock_chat_content,
+        patch("llm_ci_runner.io_operations.AuthorRole") as mock_author_role,
+        patch("llm_ci_runner.llm_execution.OpenAIChatPromptExecutionSettings") as mock_settings,
     ):
         yield {
             "kernel": mock_kernel,

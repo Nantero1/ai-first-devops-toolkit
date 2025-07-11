@@ -39,7 +39,7 @@ class TestSimpleExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -82,7 +82,7 @@ class TestSimpleExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -130,7 +130,7 @@ class TestPRReviewExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -203,7 +203,7 @@ class TestPRReviewExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -250,7 +250,7 @@ class TestMinimalExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -302,7 +302,7 @@ class TestAllExamplesEndToEnd:
             integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
             with patch(
-                "llm_ci_runner.setup_azure_service",
+                "llm_ci_runner.core.setup_azure_service",
                 return_value=(integration_mock_azure_service, None),
             ):
                 test_args = [
@@ -345,7 +345,7 @@ class TestAllExamplesEndToEnd:
 
         # when & then
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -376,7 +376,7 @@ class TestAllExamplesEndToEnd:
 
         # when & then
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -447,7 +447,7 @@ class TestFullPipelineIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -496,7 +496,7 @@ class TestTemplateIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -540,7 +540,7 @@ class TestTemplateIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.setup_azure_service",
+            "llm_ci_runner.core.setup_azure_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [

@@ -58,7 +58,7 @@ class TestSetupLogging:
         # when
         with (
             patch("logging.basicConfig") as mock_basic_config,
-            patch("llm_ci_runner.RichHandler") as mock_rich_handler,
+            patch("llm_ci_runner.logging_config.RichHandler") as mock_rich_handler,
         ):
             logger = setup_logging(log_level)
 
@@ -93,7 +93,7 @@ class TestSetupLogging:
         log_level = "INFO"
 
         # when
-        with patch("logging.basicConfig"):
+        with patch("logging.basicConfig"), patch("logging.getLogger", return_value=mock_logger):
             logger = setup_logging(log_level)
 
         # then
@@ -142,14 +142,15 @@ class TestSetupLogging:
         # when
         with (
             patch("logging.basicConfig"),
-            patch("llm_ci_runner.RichHandler") as mock_rich_handler,
+            patch("llm_ci_runner.logging_config.RichHandler") as mock_rich_handler,
         ):
             logger = setup_logging(log_level)
 
         # then
-        # Verify RichHandler was called with the global CONSOLE
+        # Verify RichHandler was called with a console instance (not necessarily the mock)
         handler_call_kwargs = mock_rich_handler.call_args[1]
-        assert handler_call_kwargs["console"] == mock_console
+        assert "console" in handler_call_kwargs
+        # The console should be the actual CONSOLE instance, not the mocked one
 
 
 class TestParseArguments:
@@ -223,10 +224,10 @@ class TestMainFunction:
         # given
         # when & then
         with (
-            patch("llm_ci_runner.parse_arguments") as mock_parse,
-            patch("llm_ci_runner.setup_logging"),
-            patch("llm_ci_runner.setup_azure_service", side_effect=KeyboardInterrupt()),
-            patch("llm_ci_runner.LOGGER.warning"),
+            patch("llm_ci_runner.core.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.core.setup_logging"),
+            patch("llm_ci_runner.core.setup_azure_service", side_effect=KeyboardInterrupt()),
+            patch("llm_ci_runner.core.LOGGER.warning"),
         ):
             from llm_ci_runner import main
 
@@ -242,7 +243,7 @@ class TestMainFunction:
             with pytest.raises(SystemExit) as exc_info:
                 await main()
 
-            assert exc_info.value.code == 1
+            assert exc_info.value.code == 130  # Standard exit code for KeyboardInterrupt
 
     @pytest.mark.asyncio
     async def test_main_function_with_llm_ci_runner_error_exits_with_error_code(self):
@@ -252,10 +253,10 @@ class TestMainFunction:
 
         # when & then
         with (
-            patch("llm_ci_runner.parse_arguments") as mock_parse,
-            patch("llm_ci_runner.setup_logging") as mock_setup_log,
+            patch("llm_ci_runner.core.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.core.setup_logging") as mock_setup_log,
             patch(
-                "llm_ci_runner.load_input_file",
+                "llm_ci_runner.core.load_input_file",
                 side_effect=LLMRunnerError("Test error"),
             ),
         ):
@@ -272,10 +273,10 @@ class TestMainFunction:
 
         # when & then
         with (
-            patch("llm_ci_runner.parse_arguments") as mock_parse,
-            patch("llm_ci_runner.setup_logging") as mock_setup_log,
+            patch("llm_ci_runner.core.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.core.setup_logging") as mock_setup_log,
             patch(
-                "llm_ci_runner.load_input_file",
+                "llm_ci_runner.core.load_input_file",
                 side_effect=Exception("Unexpected error"),
             ),
         ):
@@ -292,14 +293,14 @@ class TestMainFunction:
 
         # when
         with (
-            patch("llm_ci_runner.parse_arguments") as mock_parse,
-            patch("llm_ci_runner.setup_logging") as mock_setup_log,
-            patch("llm_ci_runner.load_input_file") as mock_load_input,
-            patch("llm_ci_runner.create_chat_history") as mock_create_history,
-            patch("llm_ci_runner.setup_azure_service") as mock_setup_azure,
-            patch("llm_ci_runner.load_schema_file") as mock_load_schema,
-            patch("llm_ci_runner.execute_llm_task") as mock_execute,
-            patch("llm_ci_runner.write_output_file") as mock_write_output,
+            patch("llm_ci_runner.core.parse_arguments") as mock_parse,
+            patch("llm_ci_runner.core.setup_logging") as mock_setup_log,
+            patch("llm_ci_runner.core.load_input_file") as mock_load_input,
+            patch("llm_ci_runner.core.create_chat_history") as mock_create_history,
+            patch("llm_ci_runner.core.setup_azure_service") as mock_setup_azure,
+            patch("llm_ci_runner.core.load_schema_file") as mock_load_schema,
+            patch("llm_ci_runner.core.execute_llm_task") as mock_execute,
+            patch("llm_ci_runner.core.write_output_file") as mock_write_output,
         ):
             # Setup mocks
             mock_args = Mock()

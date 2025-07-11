@@ -289,7 +289,7 @@ class TestMainFunctionErrorHandling:
 
         # Create invalid schema file
         with open(schema_file, "w") as f:
-            f.write("{ invalid json schema }")
+            f.write("{ invalid json schema")
 
         # Mock command line arguments
         test_args = [

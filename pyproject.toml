@@ -48,6 +48,9 @@ Changelog = "https://github.com/Nantero1/ai-first-devops-toolkit/releases"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["llm_ci_runner"]
+
 [project.scripts]
 llm-ci-runner = "llm_ci_runner:cli_main"
 

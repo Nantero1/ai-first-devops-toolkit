@@ -119,7 +119,7 @@ def run_linting() -> None:
     print("\n2. Running linting...")
     run_command(["uv", "run", "ruff", "check", "*.py"])
     run_command(["uv", "run", "ruff", "format", "--check", "*.py"])
-    run_command(["uv", "run", "mypy", "llm_ci_runner.py"])
+    run_command(["uv", "run", "mypy", "llm_ci_runner/"])
 
 
 def check_security() -> None:

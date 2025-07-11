@@ -73,9 +73,9 @@ jobs:
 
       - name: Run linting
         run: |
-          uv run ruff check *.py
-          uv run ruff format --check *.py
-          uv run mypy llm_ci_runner.py
+          uv run ruff check *.py llm_ci_runner/
+          uv run ruff format --check *.py llm_ci_runner/
+          uv run mypy llm_ci_runner/
 
       - name: Check for security vulnerabilities
         run: |

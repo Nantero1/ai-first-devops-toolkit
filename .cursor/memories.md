@@ -4,6 +4,8 @@
 
 ### Interactions
 
+Fixed critical Docker build failures by resolving package structure issues: 1) **Package Location**: Updated pyproject.toml to specify `[tool.hatch.build.targets.wheel] packages = ["llm_ci_runner"]` so Hatchling can find the package, 2) **Directory Structure**: Fixed Dockerfile COPY command from `COPY llm_ci_runner/ README.md LICENSE NOTICE ./` to `COPY llm_ci_runner/ ./llm_ci_runner/` to preserve package structure, 3) **Python Path**: Added `ENV PYTHONPATH="/app"` to ensure Python can find the module, 4) **Environment Variables**: Added missing `ENV UV_COMPILE_BYTECODE=1` in runtime stage, 5) **Goss Tests**: Updated goss.yaml to match actual help text "LLM CI Runner - AI-powered automation for CI/CD pipelines". All 46 goss tests now passing (100% success). Key insight: Docker package copying must preserve directory structure for Python modules to be importable. #docker #package-structure #goss-tests
+
 Implemented strict schema enforcement in llm_ci_runner.py using Semantic Kernel's KernelBaseModel, supporting dynamic Pydantic models from JSON schemas, robust response extraction, token-level validation, and backward compatibility. Achieved high production readiness and comprehensive constraint checking. #schema-enforcement #semantic-kernel  
    
 Refactored schema-to-Pydantic conversion using json-schema-to-pydantic library, eliminated manual type mapping, reduced code by 150+ lines, maintained KernelBaseModel approach—improved robustness and maintainability. #refactoring #pydantic  

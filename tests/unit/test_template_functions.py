@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import yaml
 
 from llm_ci_runner import (
     InputValidationError,
@@ -88,7 +87,7 @@ history:
         nonexistent_file = Path("nonexistent.json")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Template variables file not found"):
+        with pytest.raises(InputValidationError, match="Failed to load template variables"):
             load_template_vars(nonexistent_file)
 
     def test_load_invalid_json_vars_raises_error(self, temp_dir):
@@ -96,10 +95,10 @@ history:
         # given
         invalid_vars_file = temp_dir / "invalid.json"
         with open(invalid_vars_file, "w") as f:
-            f.write("{ invalid json }")
+            f.write("{{{{ completely invalid content \n unmatched braces")  # Invalid for both YAML and JSON
 
         # when & then
-        with pytest.raises(InputValidationError, match="Invalid JSON in template variables file"):
+        with pytest.raises(InputValidationError, match="Failed to load template variables"):
             load_template_vars(invalid_vars_file)
 
     def test_load_invalid_yaml_vars_raises_error(self, temp_dir):
@@ -110,7 +109,7 @@ history:
             f.write("customer:\n  first_name: John\n  invalid_key: {\n")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Invalid YAML in template variables file"):
+        with pytest.raises(InputValidationError, match="Failed to load template variables"):
             load_template_vars(invalid_vars_file)
 
     def test_load_non_dict_vars_raises_error(self, temp_dir):
@@ -121,7 +120,7 @@ history:
             json.dump(["not", "a", "dict"], f)
 
         # when & then
-        with pytest.raises(InputValidationError, match="Template variables must be a valid object"):
+        with pytest.raises(InputValidationError, match="Failed to load template variables"):
             load_template_vars(non_dict_vars_file)
 
 
@@ -147,8 +146,8 @@ Customer: {{customer.first_name}} {{customer.last_name}}
 
         # when
         with (
-            patch("llm_ci_runner.PromptTemplateConfig") as mock_config_class,
-            patch("llm_ci_runner.HandlebarsPromptTemplate") as mock_template_class,
+            patch("llm_ci_runner.templates.PromptTemplateConfig") as mock_config_class,
+            patch("llm_ci_runner.templates.HandlebarsPromptTemplate") as mock_template_class,
         ):
             mock_config = MagicMock()
             mock_config.name = "template"
@@ -163,8 +162,6 @@ Customer: {{customer.first_name}} {{customer.last_name}}
         mock_config_class.assert_called_once_with(
             template=template_content,
             template_format="handlebars",
-            name="template",
-            description="Handlebars template loaded from template.hbs",
         )
         mock_template_class.assert_called_once_with(prompt_template_config=mock_config)
         assert result == mock_template
@@ -175,7 +172,7 @@ Customer: {{customer.first_name}} {{customer.last_name}}
         nonexistent_file = Path("nonexistent.yaml")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Template file not found"):
+        with pytest.raises(InputValidationError, match="Failed to load Handlebars template"):
             load_handlebars_template(nonexistent_file)
 
     def test_load_invalid_template_content_raises_error(self, temp_dir):
@@ -187,10 +184,10 @@ Customer: {{customer.first_name}} {{customer.last_name}}
 
         # when & then
         with patch(
-            "llm_ci_runner.PromptTemplateConfig",
+            "llm_ci_runner.templates.PromptTemplateConfig",
             side_effect=Exception("Invalid template"),
         ):
-            with pytest.raises(InputValidationError, match="Invalid Handlebars template content"):
+            with pytest.raises(InputValidationError, match="Failed to load Handlebars template"):
                 load_handlebars_template(template_file)
 
 
@@ -247,7 +244,7 @@ class TestGetTemplateFormat:
         template_file = Path("template.txt")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Unsupported template file extension"):
+        with pytest.raises(InputValidationError, match="Unsupported template format"):
             get_template_format(template_file)
 
     def test_no_extension_raises_error(self):
@@ -256,7 +253,7 @@ class TestGetTemplateFormat:
         template_file = Path("template")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Unsupported template file extension"):
+        with pytest.raises(InputValidationError, match="Unsupported template format"):
             get_template_format(template_file)
 
 
@@ -282,8 +279,8 @@ Customer: {{ customer.first_name }} {{ customer.last_name }}
 
         # when
         with (
-            patch("llm_ci_runner.PromptTemplateConfig") as mock_config_class,
-            patch("llm_ci_runner.Jinja2PromptTemplate") as mock_template_class,
+            patch("llm_ci_runner.templates.PromptTemplateConfig") as mock_config_class,
+            patch("llm_ci_runner.templates.Jinja2PromptTemplate") as mock_template_class,
         ):
             mock_config = MagicMock()
             mock_config.name = "template"
@@ -298,8 +295,6 @@ Customer: {{ customer.first_name }} {{ customer.last_name }}
         mock_config_class.assert_called_once_with(
             template=template_content,
             template_format="jinja2",
-            name="template",
-            description="Jinja2 template loaded from template.jinja",
         )
         mock_template_class.assert_called_once_with(prompt_template_config=mock_config)
         assert result == mock_template
@@ -316,8 +311,8 @@ Hello {{ name }}, how are you today?
 
         # when
         with (
-            patch("llm_ci_runner.PromptTemplateConfig") as mock_config_class,
-            patch("llm_ci_runner.Jinja2PromptTemplate") as mock_template_class,
+            patch("llm_ci_runner.templates.PromptTemplateConfig") as mock_config_class,
+            patch("llm_ci_runner.templates.Jinja2PromptTemplate") as mock_template_class,
         ):
             mock_config = MagicMock()
             mock_config_class.return_value = mock_config
@@ -330,8 +325,6 @@ Hello {{ name }}, how are you today?
         mock_config_class.assert_called_once_with(
             template=template_content,
             template_format="jinja2",
-            name="template",
-            description="Jinja2 template loaded from template.j2",
         )
         assert result == mock_template
 
@@ -341,7 +334,7 @@ Hello {{ name }}, how are you today?
         nonexistent_file = Path("nonexistent.jinja")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Template file not found"):
+        with pytest.raises(InputValidationError, match="Failed to load Jinja2 template"):
             load_jinja2_template(nonexistent_file)
 
     def test_load_invalid_jinja2_template_content_raises_error(self, temp_dir):
@@ -353,10 +346,10 @@ Hello {{ name }}, how are you today?
 
         # when & then
         with patch(
-            "llm_ci_runner.PromptTemplateConfig",
+            "llm_ci_runner.templates.PromptTemplateConfig",
             side_effect=Exception("Invalid template"),
         ):
-            with pytest.raises(InputValidationError, match="Invalid Jinja2 template content"):
+            with pytest.raises(InputValidationError, match="Failed to load Jinja2 template"):
                 load_jinja2_template(template_file)
 
 
@@ -375,8 +368,8 @@ You are an AI agent.
 
         # when
         with (
-            patch("llm_ci_runner.load_handlebars_template") as mock_load_handlebars,
-            patch("llm_ci_runner.load_jinja2_template") as mock_load_jinja2,
+            patch("llm_ci_runner.templates.load_handlebars_template") as mock_load_handlebars,
+            patch("llm_ci_runner.templates.load_jinja2_template") as mock_load_jinja2,
         ):
             mock_template = MagicMock()
             mock_load_handlebars.return_value = mock_template
@@ -400,8 +393,8 @@ You are an AI agent.
 
         # when
         with (
-            patch("llm_ci_runner.load_handlebars_template") as mock_load_handlebars,
-            patch("llm_ci_runner.load_jinja2_template") as mock_load_jinja2,
+            patch("llm_ci_runner.templates.load_handlebars_template") as mock_load_handlebars,
+            patch("llm_ci_runner.templates.load_jinja2_template") as mock_load_jinja2,
         ):
             mock_template = MagicMock()
             mock_load_jinja2.return_value = mock_template
@@ -419,7 +412,7 @@ You are an AI agent.
         template_file = Path("template.txt")
 
         # when & then
-        with pytest.raises(InputValidationError, match="Unsupported template file extension"):
+        with pytest.raises(InputValidationError, match="Unsupported template format"):
             load_template(template_file)
 
 
@@ -468,7 +461,7 @@ class TestRenderTemplate:
         mock_kernel = MagicMock()
 
         # when & then
-        with pytest.raises(InputValidationError, match="Error rendering Jinja2 template"):
+        with pytest.raises(InputValidationError, match="Failed to render template"):
             await render_template(mock_template, template_vars, mock_kernel)
 
     @pytest.mark.asyncio
@@ -483,7 +476,7 @@ class TestRenderTemplate:
             mock_kernel = MagicMock()
 
             # when & then
-            with pytest.raises(InputValidationError, match="Error rendering Handlebars template"):
+            with pytest.raises(InputValidationError, match="Failed to render template"):
                 await render_template(mock_template, template_vars, mock_kernel)
 
     @pytest.mark.asyncio
@@ -498,7 +491,7 @@ class TestRenderTemplate:
             mock_kernel = MagicMock()
 
             # when & then
-            with pytest.raises(InputValidationError, match="Error rendering Jinja2 template"):
+            with pytest.raises(InputValidationError, match="Failed to render template"):
                 await render_template(mock_template, template_vars, mock_kernel)
 
 
@@ -518,23 +511,23 @@ class TestParseRenderedTemplateToChat:
         """
 
         # when
-        with (
-            patch("llm_ci_runner.ChatHistory") as mock_chat_history_class,
-            patch("llm_ci_runner.ChatMessageContent") as mock_message_class,
-            patch("llm_ci_runner.AuthorRole") as mock_role_class,
-        ):
-            mock_chat_history = MagicMock()
-            mock_chat_history_class.return_value = mock_chat_history
-
-            mock_message = MagicMock()
-            mock_message_class.return_value = mock_message
-
-            result = parse_rendered_template_to_chat_history(rendered_content)
+        result = parse_rendered_template_to_chat_history(rendered_content)
 
         # then
-        assert result == mock_chat_history
-        assert mock_message_class.call_count == 2  # Two messages
-        mock_chat_history.add_message.assert_called()
+        # Verify we get a real ChatHistory object
+        from semantic_kernel.contents import ChatHistory
+
+        assert isinstance(result, ChatHistory)
+
+        # Verify it has the expected number of messages
+        assert len(result.messages) == 2
+
+        # Verify message content and roles
+        messages = result.messages
+        assert messages[0].role.name == "SYSTEM"
+        assert "You are a helpful assistant." in messages[0].content
+        assert messages[1].role.name == "USER"
+        assert "Hello, how are you?" in messages[1].content
 
     def test_parse_no_messages_raises_error(self):
         """Test that content with no message blocks raises InputValidationError."""
@@ -542,7 +535,7 @@ class TestParseRenderedTemplateToChat:
         rendered_content = "Just plain text without message blocks"
 
         # when & then
-        with pytest.raises(InputValidationError, match="No <message> blocks found in rendered template"):
+        with pytest.raises(InputValidationError, match="No valid messages found in rendered template"):
             parse_rendered_template_to_chat_history(rendered_content)
 
     def test_parse_invalid_role_raises_error(self):
@@ -551,6 +544,6 @@ class TestParseRenderedTemplateToChat:
         rendered_content = '<message role="invalid_role">Content</message>'
 
         # when & then
-        with patch("llm_ci_runner.AuthorRole", side_effect=ValueError("Invalid role")):
-            with pytest.raises(InputValidationError, match="Invalid role 'invalid_role' in message 0"):
+        with patch("semantic_kernel.contents.utils.author_role.AuthorRole", side_effect=ValueError("Invalid role")):
+            with pytest.raises(InputValidationError, match="Invalid message role: invalid_role"):
                 parse_rendered_template_to_chat_history(rendered_content)
