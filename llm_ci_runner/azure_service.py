@@ -26,6 +26,66 @@ from .exceptions import AuthenticationError
 LOGGER = logging.getLogger(__name__)
 
 
+async def get_azure_token_with_credential(
+    credential: DefaultAzureCredential | None = None,
+) -> str:
+    """
+    Get Azure access token using DefaultAzureCredential.
+
+    Args:
+        credential: Optional credential instance to use. If None, creates a new one.
+
+    Returns:
+        Access token string
+
+    Raises:
+        AuthenticationError: If authentication fails
+    """
+    try:
+        if credential is None:
+            credential = DefaultAzureCredential()
+
+        token = await credential.get_token("https://cognitiveservices.azure.com/.default")
+        return token.token
+    except Exception as e:
+        LOGGER.error(f"❌ Authentication failed: {e}")
+        raise AuthenticationError(f"Failed to authenticate with Azure: {e}") from e
+
+
+@retry(
+    retry=retry_if_exception_type(
+        (
+            # Network-related exceptions that should be retried
+            ConnectionError,
+            TimeoutError,
+            # Generic exceptions that might be transient
+            RuntimeError,
+        )
+    ),
+    stop=stop_after_attempt(3),
+    wait=wait_exponential_jitter(initial=1, max=10, jitter=2),
+    before_sleep=before_sleep_log(LOGGER, logging.WARNING),
+    reraise=True,
+)
+async def azure_token_provider(scopes: list[str] | None = None) -> str:
+    """
+    Token provider for Azure OpenAI with retry logic.
+
+    This function matches the signature expected by AzureChatCompletion.ad_token_provider
+    and includes retry logic for transient failures.
+
+    Args:
+        scopes: Token scopes (ignored, we always use cognitiveservices scope)
+
+    Returns:
+        Access token string
+
+    Raises:
+        AuthenticationError: If authentication fails
+    """
+    return await get_azure_token_with_credential()
+
+
 async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCredential | None]:
     """
     Setup Azure OpenAI service with authentication.
@@ -76,38 +136,13 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
     else:
         LOGGER.info("🔐 Using RBAC authentication with DefaultAzureCredential")
 
-        @retry(
-            retry=retry_if_exception_type(
-                (
-                    # Network-related exceptions that should be retried
-                    ConnectionError,
-                    TimeoutError,
-                    # Generic exceptions that might be transient
-                    RuntimeError,
-                )
-            ),
-            stop=stop_after_attempt(3),
-            wait=wait_exponential_jitter(initial=1, max=10, jitter=2),
-            before_sleep=before_sleep_log(LOGGER, logging.WARNING),
-            reraise=True,
-        )
-        async def token_provider(scopes: list[str] | None = None) -> str:
-            """Get access token with retry logic for transient failures."""
-            try:
-                credential = DefaultAzureCredential()
-                token = await credential.get_token("https://cognitiveservices.azure.com/.default")
-                return token.token
-            except Exception as e:
-                LOGGER.error(f"❌ Authentication failed: {e}")
-                raise AuthenticationError(f"Failed to authenticate with Azure: {e}") from e
-
         try:
             service = AzureChatCompletion(
                 service_id="azure_openai",
                 endpoint=endpoint,
                 deployment_name=model,
                 api_version=api_version,
-                ad_token_provider=token_provider,
+                ad_token_provider=azure_token_provider,
             )
 
             # Test authentication by getting a token

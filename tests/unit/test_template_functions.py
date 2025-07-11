@@ -415,6 +415,16 @@ You are an AI agent.
         with pytest.raises(InputValidationError, match="Unsupported template format"):
             load_template(template_file)
 
+    def test_load_template_unknown_format_raises_error(self):
+        """Test that unknown template format returned by get_template_format raises error."""
+        # given
+        template_file = Path("template.unknown")
+
+        # when & then
+        with patch("llm_ci_runner.templates.get_template_format", return_value="unknown"):
+            with pytest.raises(InputValidationError, match="Unsupported template format: unknown"):
+                load_template(template_file)
+
 
 class TestRenderTemplate:
     """Tests for render_template function."""
@@ -544,6 +554,9 @@ class TestParseRenderedTemplateToChat:
         rendered_content = '<message role="invalid_role">Content</message>'
 
         # when & then
-        with patch("semantic_kernel.contents.utils.author_role.AuthorRole", side_effect=ValueError("Invalid role")):
+        with patch(
+            "semantic_kernel.contents.utils.author_role.AuthorRole",
+            side_effect=ValueError("Invalid role"),
+        ):
             with pytest.raises(InputValidationError, match="Invalid message role: invalid_role"):
                 parse_rendered_template_to_chat_history(rendered_content)

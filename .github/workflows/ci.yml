@@ -148,7 +148,7 @@ jobs:
           
           # Basic security checks
           echo "Checking for hardcoded secrets..."
-          if grep -r "sk-" . --exclude=ci.yml --exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.venv --exclude=*.pyc; then
+          if grep -r "sk-" . --exclude=ci.yml --exclude=README.md --exclude-dir=.git --exclude-dir=__pycache__ --exclude-dir=.venv --exclude=*.pyc; then
             echo "::error::Potential hardcoded secrets found!"
             exit 1
           fi

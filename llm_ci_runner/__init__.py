@@ -32,7 +32,9 @@ from azure.identity.aio import DefaultAzureCredential
 from rich.logging import RichHandler
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
-from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
+from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import (
+    AzureChatCompletion,
+)
 
 # Import additional functions for testing compatibility
 # Import classes for testing compatibility
@@ -45,7 +47,11 @@ from semantic_kernel.prompt_template import (
 )
 
 # Import core functionality for programmatic use
-from .azure_service import setup_azure_service
+from .azure_service import (
+    azure_token_provider,
+    get_azure_token_with_credential,
+    setup_azure_service,
+)
 from .core import cli_main, main
 from .exceptions import (
     AuthenticationError,
@@ -95,6 +101,8 @@ __all__ = [
     "setup_logging",
     "write_output_file",
     # Core functionality
+    "azure_token_provider",
+    "get_azure_token_with_credential",
     "setup_azure_service",
     "execute_llm_task",
     "create_dynamic_model_from_schema",

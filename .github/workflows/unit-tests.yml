@@ -9,6 +9,14 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      # Gives the action the necessary permissions for publishing new
+      # comments in pull requests.
+      pull-requests: write
+      # Gives the action the necessary permissions for pushing data to the
+      # python-coverage-comment-action branch, and for editing existing
+      # comments (to avoid publishing multiple comments in the same PR)
+      contents: write
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -52,15 +60,14 @@ jobs:
           path: test-results/
           retention-days: 30
 
-      - name: Upload coverage reports
-        if: always()  # Always upload coverage, even if tests fail
-        uses: actions/upload-artifact@v4
+      - name: Coverage comment and badge
+        if: always()  # Run even if tests fail to show coverage
+        uses: py-cov-action/python-coverage-comment-action@v3
         with:
-          name: coverage-reports-${{ matrix.python-version }}
-          path: |
-            coverage.xml
-            htmlcov/
-          retention-days: 30
+          GITHUB_TOKEN: ${{ github.token }}
+          MINIMUM_GREEN: 85
+          MINIMUM_ORANGE: 70
+          ANNOTATE_MISSING_LINES: false
 
       - name: Report Test Results
         if: always()
