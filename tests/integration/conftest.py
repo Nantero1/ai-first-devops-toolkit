@@ -19,11 +19,11 @@ from httpx import Response
 def mock_azure_service(monkeypatch):
     """
     Mock Azure environment variables for integration testing.
-    
+
     This fixture sets up the integration test environment by:
     1. Setting required Azure OpenAI environment variables
     2. Providing realistic test endpoints and credentials
-    
+
     The actual HTTP calls are mocked by the respx_mock fixture.
     """
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://test-openai.openai.azure.com")
@@ -36,7 +36,7 @@ def mock_azure_service(monkeypatch):
 def respx_mock():
     """
     Mock HTTP requests to Azure OpenAI API using respx.
-    
+
     This fixture provides proper HTTP-level mocking for Azure OpenAI
     requests, replacing the need for test helper classes in production code.
     """
@@ -48,7 +48,7 @@ def respx_mock():
 def mock_azure_openai_responses(respx_mock):
     """
     Setup mock responses for Azure OpenAI API endpoints.
-    
+
     This fixture configures realistic Azure OpenAI API responses for:
     - Chat completions (both text and structured output)
     - Authentication headers
@@ -56,12 +56,12 @@ def mock_azure_openai_responses(respx_mock):
     """
     # Mock the chat completions endpoint
     base_url = "https://test-openai.openai.azure.com/openai/deployments/gpt-4o/chat/completions"
-    
+
     def create_chat_response(request):
         """Create a dynamic chat response based on request settings."""
         try:
             request_data = json.loads(request.content)
-            
+
             # Check if structured output is requested
             if "response_format" in request_data and request_data["response_format"]:
                 # Structured output response
@@ -69,13 +69,15 @@ def mock_azure_openai_responses(respx_mock):
                     "sentiment": "neutral",
                     "confidence": 0.85,
                     "summary": "This is a mock response for testing purposes.",
-                    "key_points": ["Mock response", "Testing mode active"]
+                    "key_points": ["Mock response", "Testing mode active"],
                 }
                 content = json.dumps(mock_response)
             else:
                 # Text output response
-                content = "This is a mock response from the test Azure service. The integration test is working correctly."
-            
+                content = (
+                    "This is a mock response from the test Azure service. The integration test is working correctly."
+                )
+
             # Create Azure OpenAI API response format
             response_data = {
                 "id": "chatcmpl-test-123",
@@ -83,38 +85,23 @@ def mock_azure_openai_responses(respx_mock):
                 "created": 1234567890,
                 "model": "gpt-4o",
                 "choices": [
-                    {
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": content
-                        },
-                        "finish_reason": "stop"
-                    }
+                    {"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}
                 ],
-                "usage": {
-                    "prompt_tokens": 50,
-                    "completion_tokens": 20,
-                    "total_tokens": 70
-                }
+                "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70},
             }
-            
-            return Response(
-                200,
-                json=response_data,
-                headers={"content-type": "application/json"}
-            )
+
+            return Response(200, json=response_data, headers={"content-type": "application/json"})
         except Exception as e:
             # Return error response if something goes wrong
             return Response(
                 500,
                 json={"error": {"message": f"Mock error: {str(e)}", "type": "internal_error"}},
-                headers={"content-type": "application/json"}
+                headers={"content-type": "application/json"},
             )
-    
+
     # Register the mock route
     respx_mock.post(base_url).mock(side_effect=create_chat_response)
-    
+
     return respx_mock
 
 
@@ -164,7 +151,7 @@ def mock_llm_response_pr_review():
 def integration_mock_azure_service():
     """
     Mock Azure service for integration tests with realistic behavior.
-    
+
     This fixture provides a mock service for tests that need to directly
     manipulate the mock responses. Most tests should rely on the built-in
     test mode instead.
