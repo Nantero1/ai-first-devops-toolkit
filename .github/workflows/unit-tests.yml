@@ -32,12 +32,12 @@ jobs:
         run: |
           uv sync --frozen --group dev
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         id: run_tests
         continue-on-error: true
         run: |
           mkdir -p test-results
-          uv run pytest tests/ -v --junitxml=test-results.xml --tb=short
+          uv run pytest tests/ -v --junitxml=test-results/junit.xml --tb=short
 
       - name: Set test status
         id: test_status
@@ -49,16 +49,32 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.python-version }}
-          path: test-results.xml
+          path: test-results/
+          retention-days: 30
+
+      - name: Upload coverage reports
+        if: always()  # Always upload coverage, even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-${{ matrix.python-version }}
+          path: |
+            coverage.xml
+            htmlcov/
           retention-days: 30
 
       - name: Report Test Results
         if: always()
         run: |
           echo "::notice title=Unit Test Results::Test run completed with status: ${{ steps.run_tests.outcome }}"
-          if [ -f "test-results.xml" ]; then
+          if [ -f "test-results/junit.xml" ]; then
             echo "::group::Test Summary"
-            cat test-results.xml | grep -E "tests=|failures=|errors=|skipped="
+            cat test-results/junit.xml | grep -E "tests=|failures=|errors=|skipped=" || true
+            echo "::endgroup::"
+          fi
+          
+          if [ -f "coverage.xml" ]; then
+            echo "::group::Coverage Summary"
+            uv run coverage report --show-missing || true
             echo "::endgroup::"
           fi
 

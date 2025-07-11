@@ -59,6 +59,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=1.0.0",
     "pytest-mock>=3.14.0",
+    "pytest-cov>=5.0.0",
     "respx>=0.21.0",
     "mypy>=1.16.0",
     "ruff>=0.12.0",
@@ -100,13 +101,41 @@ line-ending = "auto"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers"
+addopts = "-ra -q --strict-markers --cov=llm_ci_runner --cov-report=term-missing --cov-report=xml --cov-report=html --cov-fail-under=80"
 testpaths = [
     "tests",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["llm_ci_runner"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
 ]
 
 [tool.mypy]
