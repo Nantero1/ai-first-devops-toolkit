@@ -151,7 +151,7 @@ cd ai-first-devops-toolkit
 uv sync
 
 # Run from source
-uv run llm_ci_runner.py --input-file examples/01-basic/simple-chat/input.json
+uv run llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
 ```
 
 ## Real-World Examples

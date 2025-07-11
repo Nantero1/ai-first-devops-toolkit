@@ -34,7 +34,7 @@ def parse_arguments() -> argparse.Namespace:
     """
     parser = argparse.ArgumentParser(
         prog="llm-ci-runner",
-        description="LLM CI Runner - AI-powered automation for CI/CD pipelines",
+        description="LLM CI Runner - AI-powered automation for pipelines",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -49,6 +49,12 @@ Examples:
 
   # YAML input files
   llm-ci-runner --input-file config.yaml --schema-file schema.yaml --output-file result.yaml
+
+Environment Variables:
+    AZURE_OPENAI_ENDPOINT    Azure OpenAI endpoint URL
+    AZURE_OPENAI_MODEL       Model deployment name
+    AZURE_OPENAI_API_VERSION API version (default: 2024-12-01-preview)
+    AZURE_OPENAI_API_KEY     API key (optional, uses RBAC if not provided)
         """,
     )
 

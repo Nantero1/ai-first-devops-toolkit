@@ -1,5 +1,5 @@
 """
-LLM CI Runner - AI-powered automation for CI/CD pipelines.
+LLM CI Runner - AI-powered automation for pipelines.
 
 This package provides a zero-friction interface for running arbitrary LLM-driven tasks
 in CI/CD pipelines, supporting structured outputs and enterprise authentication.

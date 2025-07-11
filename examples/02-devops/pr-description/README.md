@@ -146,7 +146,7 @@ llm-ci-runner \
     "related_issues": []
   },
   "metadata": {
-    "runner": "llm_ci_runner.py",
+    "runner": "llm-ci-runner",
     "timestamp": "auto-generated"
   }
 }

@@ -43,7 +43,7 @@ class TestSimpleExampleIntegration:
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
-                "llm_ci_runner.py",
+                "llm-ci-runner",
                 "--input-file",
                 str(input_file),
                 "--output-file",

@@ -65,7 +65,7 @@ async def main() -> None:
         # Display startup banner
         CONSOLE.print(
             Panel.fit(
-                "[bold blue]LLM CI Runner[/bold blue]\n[dim]AI-powered automation for CI/CD pipelines[/dim]",
+                "[bold blue]LLM CI Runner[/bold blue]\n[dim]AI-powered automation for pipelines[/dim]",
                 border_style="blue",
             )
         )
