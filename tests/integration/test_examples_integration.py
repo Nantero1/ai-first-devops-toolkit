@@ -287,7 +287,10 @@ class TestAllExamplesEndToEnd:
         examples = [
             ("tests/integration/data/simple-chat/input.json", create_text_output_mock),
             ("tests/integration/data/code-review/input.json", create_pr_review_mock),
-            ("tests/integration/data/simple-chat/input.json", create_minimal_response_mock),  # Using simple-chat for minimal test
+            (
+                "tests/integration/data/simple-chat/input.json",
+                create_minimal_response_mock,
+            ),  # Using simple-chat for minimal test
         ]
 
         results = []

@@ -124,7 +124,11 @@ class TestCLIArgumentParsing:
         assert "invalid choice" not in result.stderr.lower()
         assert "unrecognized arguments" not in result.stderr.lower()
         # Should reach Azure authentication stage (confirms log level parsing worked)
-        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
+        assert (
+            "azure" in result.stdout.lower()
+            or "endpoint" in result.stdout.lower()
+            or "authentication" in result.stdout.lower()
+        )
 
 
 class TestCLIFileHandling:
@@ -168,7 +172,11 @@ class TestCLIFileHandling:
         # Should not be an argument parsing error
         assert "unrecognized arguments" not in result.stderr.lower()
         # Should reach authentication stage and fail there
-        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
+        assert (
+            "azure" in result.stdout.lower()
+            or "endpoint" in result.stdout.lower()
+            or "authentication" in result.stdout.lower()
+        )
 
     def test_cli_with_invalid_json_input_shows_validation_error(self, temp_dir):
         """Test that invalid JSON input shows validation error."""
@@ -241,7 +249,11 @@ class TestCLIFileHandling:
         # Should not be an argument parsing error
         assert "unrecognized arguments" not in result.stderr.lower()
         # Should reach authentication stage, confirming schema was parsed correctly
-        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
+        assert (
+            "azure" in result.stdout.lower()
+            or "endpoint" in result.stdout.lower()
+            or "authentication" in result.stdout.lower()
+        )
 
 
 class TestCLIErrorHandling:
@@ -337,7 +349,11 @@ class TestCLIIntegrationWithExamples:
         # Should not be an argument parsing error
         assert "unrecognized arguments" not in result.stderr.lower()
         # Should reach authentication stage and fail there
-        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
+        assert (
+            "azure" in result.stdout.lower()
+            or "endpoint" in result.stdout.lower()
+            or "authentication" in result.stdout.lower()
+        )
 
     def test_cli_with_structured_output_example_processes_schema(self, temp_dir):
         """Test that CLI with structured output processes schema correctly."""
@@ -369,7 +385,11 @@ class TestCLIIntegrationWithExamples:
         # Should not be an argument parsing error
         assert "unrecognized arguments" not in result.stderr.lower()
         # Should reach authentication stage, confirming schema was parsed correctly
-        assert "azure" in result.stdout.lower() or "endpoint" in result.stdout.lower() or "authentication" in result.stdout.lower()
+        assert (
+            "azure" in result.stdout.lower()
+            or "endpoint" in result.stdout.lower()
+            or "authentication" in result.stdout.lower()
+        )
 
 
 class TestCLILoggingAndOutput:
@@ -436,6 +456,7 @@ class TestCLILoggingAndOutput:
         assert result.returncode == 1
         # Should show minimal output with error logging
         # The output should be less verbose than DEBUG mode
+
 
 # =====================
 # CLI Return Code Table

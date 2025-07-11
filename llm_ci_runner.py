@@ -47,7 +47,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
+from ruamel.yaml import YAML, YAMLError, scalarstring
 from azure.core.exceptions import ClientAuthenticationError
 
 # Azure authentication
@@ -333,7 +333,8 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
             # Detect format based on file extension
             if input_file.suffix.lower() in [".yaml", ".yml"]:
                 LOGGER.debug("🔍 Detected YAML format")
-                data = yaml.safe_load(f)
+                yaml_loader = YAML(typ="safe", pure=True)
+                data = yaml_loader.load(f)
             else:
                 LOGGER.debug("🔍 Detected JSON format")
                 data = json.load(f)
@@ -351,7 +352,7 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
 
         return data  # type: ignore[no-any-return]
 
-    except yaml.YAMLError as e:
+    except YAMLError as e:
         raise InputValidationError(f"Invalid YAML in input file: {e}") from e
     except json.JSONDecodeError as e:
         raise InputValidationError(f"Invalid JSON in input file: {e}") from e
@@ -512,7 +513,8 @@ def load_schema_file(schema_file: Path | None) -> type[KernelBaseModel] | None:
             # Detect format based on file extension
             if schema_file.suffix.lower() in [".yaml", ".yml"]:
                 LOGGER.debug("🔍 Detected YAML schema format")
-                schema_dict = yaml.safe_load(f)
+                yaml_loader = YAML(typ="safe")
+                schema_dict = yaml_loader.load(f)
             else:
                 LOGGER.debug("🔍 Detected JSON schema format")
                 schema_content = f.read().strip()
@@ -528,7 +530,7 @@ def load_schema_file(schema_file: Path | None) -> type[KernelBaseModel] | None:
         LOGGER.info(f"✅ Schema converted to Pydantic model: {model_name}")
         return dynamic_model
 
-    except yaml.YAMLError as e:
+    except YAMLError as e:
         raise InputValidationError(f"Invalid YAML in schema file: {e}") from e
     except json.JSONDecodeError as e:
         raise InputValidationError(f"Invalid JSON in schema file: {e}") from e
@@ -587,7 +589,8 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
             # Detect format based on file extension
             if template_vars_file.suffix.lower() in [".yaml", ".yml"]:
                 LOGGER.debug("🔍 Detected YAML template variables format")
-                vars_dict = yaml.safe_load(f)
+                yaml_loader = YAML(typ="safe", pure=True)
+                vars_dict = yaml_loader.load(f)
             else:
                 LOGGER.debug("🔍 Detected JSON template variables format")
                 vars_dict = json.load(f)
@@ -599,7 +602,7 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
         LOGGER.debug(f"   Variables: {list(vars_dict.keys())}")
         return vars_dict
 
-    except yaml.YAMLError as e:
+    except YAMLError as e:
         raise InputValidationError(f"Invalid YAML in template variables file: {e}") from e
     except json.JSONDecodeError as e:
         raise InputValidationError(f"Invalid JSON in template variables file: {e}") from e
@@ -964,6 +967,35 @@ async def execute_llm_task(
         raise LLMExecutionError(f"LLM execution failed: {e}") from e
 
 
+def yaml_recursively_force_literal(data: Any) -> Any:
+    """
+    Recursively traverse a data structure and ensure long or multiline strings are dumped as YAML block literals.
+
+    By default, ruamel.yaml outputs most strings in folded or plain style, even when content would be clearer
+    as a block literal (|). This helper is needed to enforce literal style for long or multiline text fields
+
+    Args:
+        data: The input Python data structure (dict, list, tuple, or scalar), potentially deeply nested.
+
+    Returns:
+        The input data with all qualifying string values converted to LiteralScalarString for YAML block style output.
+    """
+    if isinstance(data, dict):
+        for k, v in data.items():
+            data[k] = yaml_recursively_force_literal(v)
+    elif isinstance(data, list):
+        for i, v in enumerate(data):
+            data[i] = yaml_recursively_force_literal(v)
+    elif isinstance(data, tuple):
+        return tuple(yaml_recursively_force_literal(v) for v in data)
+    elif isinstance(data, str):
+        if "\n" in data or len(data) > 100:
+            return scalarstring.LiteralScalarString(data)
+        else:
+            return data
+    return data
+
+
 def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None:
     """
     Write LLM response to output file in JSON or YAML format based on file extension.
@@ -995,13 +1027,10 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
         with open(output_file, "w", encoding="utf-8") as f:
             if output_file.suffix.lower() in [".yaml", ".yml"]:
                 LOGGER.debug("🔍 Writing YAML output format")
-                yaml.dump(
-                    output_data,
-                    f,
-                    default_flow_style=False,
-                    allow_unicode=True,
-                    indent=2,
-                )
+                yaml_dumper = YAML()
+                yaml_dumper.indent(mapping=2, sequence=4, offset=2)
+                yaml_dumper.width = 120
+                yaml_dumper.dump(yaml_recursively_force_literal(output_data), f)
             else:
                 LOGGER.debug("🔍 Writing JSON output format")
                 json.dump(output_data, f, indent=2, ensure_ascii=False)
