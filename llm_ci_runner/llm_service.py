@@ -1,8 +1,7 @@
 """
-Azure service setup and authentication for LLM CI Runner.
+LLM service setup and authentication for LLM CI Runner.
 
-This module provides functionality for setting up Azure OpenAI services
-with proper authentication using both API keys and RBAC.
+Supports both Azure OpenAI (API key or RBAC) and OpenAI (API key required).
 """
 
 import logging
@@ -10,6 +9,7 @@ import os
 
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity.aio import DefaultAzureCredential
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import (
     AzureChatCompletion,
 )
@@ -24,6 +24,8 @@ from tenacity import (
 from .exceptions import AuthenticationError
 
 LOGGER = logging.getLogger(__name__)
+
+# --- Azure logic (unchanged, API key optional, RBAC fallback) ---
 
 
 async def get_azure_token_with_credential(
@@ -156,3 +158,65 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
             raise AuthenticationError(f"Azure authentication failed. Please check your credentials: {e}") from e
         except Exception as e:
             raise AuthenticationError(f"Failed to setup Azure service: {e}") from e
+
+
+# --- OpenAI logic (API key required) ---
+
+
+def has_azure_vars() -> bool:
+    """Check if required Azure OpenAI env vars are present (API key optional)."""
+    return bool(os.getenv("AZURE_OPENAI_ENDPOINT") and os.getenv("AZURE_OPENAI_MODEL"))
+
+
+def has_openai_vars() -> bool:
+    """Check if required OpenAI env vars are present."""
+    return bool(os.getenv("OPENAI_API_KEY") and os.getenv("OPENAI_CHAT_MODEL_ID"))
+
+
+async def setup_openai_service() -> tuple[OpenAIChatCompletion, None]:
+    """Setup OpenAI service with API key authentication."""
+    api_key = os.getenv("OPENAI_API_KEY")
+    model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
+    org_id = os.getenv("OPENAI_ORG_ID")
+    base_url = os.getenv("OPENAI_BASE_URL")
+    if not api_key:
+        raise AuthenticationError("OPENAI_API_KEY environment variable is required")
+    if not model_id:
+        raise AuthenticationError("OPENAI_CHAT_MODEL_ID environment variable is required")
+    LOGGER.info(f"🎯 Using OpenAI model: {model_id}")
+    if org_id:
+        LOGGER.info(f"🎯 Using OpenAI organization: {org_id}")
+    if base_url:
+        LOGGER.info(f"🎯 Using OpenAI base URL: {base_url}")
+    try:
+        service = OpenAIChatCompletion(
+            ai_model_id=model_id,
+            api_key=api_key,
+            service_id="openai",
+            org_id=org_id,
+        )
+        LOGGER.info("✅ OpenAI service setup completed successfully")
+        return service, None
+    except Exception as e:
+        raise AuthenticationError(f"Failed to setup OpenAI service: {e}") from e
+
+
+# --- Unified LLM service setup ---
+
+
+async def setup_llm_service() -> tuple[AzureChatCompletion | OpenAIChatCompletion, DefaultAzureCredential | None]:
+    """
+    Setup LLM service with Azure-first priority, OpenAI fallback.
+    Azure: endpoint/model required, API key optional (RBAC fallback).
+    OpenAI: API key and model required.
+    """
+    if has_azure_vars():
+        return await setup_azure_service()
+    elif has_openai_vars():
+        return await setup_openai_service()
+    else:
+        raise AuthenticationError(
+            "No valid LLM service configuration found. Please set either:\n"
+            "Azure: AZURE_OPENAI_ENDPOINT + AZURE_OPENAI_MODEL\n"
+            "OpenAI: OPENAI_API_KEY + OPENAI_CHAT_MODEL_ID"
+        )

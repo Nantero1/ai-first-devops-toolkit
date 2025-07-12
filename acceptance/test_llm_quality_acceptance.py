@@ -107,7 +107,7 @@ class TestGenericExampleEvaluation:
         output_path = Path(output_file)
 
         if output_path.suffix.lower() in [".yaml", ".yml"]:
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 result = yaml.safe_load(f)
         else:
             with open(output_file) as f:
@@ -147,13 +147,14 @@ class TestGenericExampleEvaluation:
 
         # Load schema for validation (support both JSON and YAML)
         from pathlib import Path
+
         import yaml
 
         schema_path = Path(schema_file)
 
         if schema_path.suffix.lower() in [".yaml", ".yml"]:
             # Load YAML schema
-            with open(schema_file, "r") as f:
+            with open(schema_file) as f:
                 schema = yaml.safe_load(f)
         else:
             # Load JSON schema

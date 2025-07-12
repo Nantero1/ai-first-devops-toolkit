@@ -7,8 +7,6 @@ Uses the Given-When-Then pattern.
 """
 
 import json
-import tempfile
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -55,7 +53,7 @@ class TestMainFunctionIntegration:
         assert output_file.exists()
 
         # Verify output content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             output_data = json.load(f)
 
         assert output_data["success"] is True
@@ -110,7 +108,7 @@ class TestMainFunctionIntegration:
         assert output_file.exists()
 
         # Verify output content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             output_data = json.load(f)
 
         assert output_data["success"] is True
@@ -159,7 +157,7 @@ class TestMainFunctionIntegration:
         assert output_file.exists()
 
         # Verify output content
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             output_data = json.load(f)
 
         assert output_data["success"] is True
@@ -231,7 +229,7 @@ context:
         assert output_file.exists()
 
         # Verify output content (should be YAML)
-        with open(output_file, "r") as f:
+        with open(output_file) as f:
             content = f.read()
 
         assert "success: true" in content

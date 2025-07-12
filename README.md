@@ -57,6 +57,10 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 - 🧑‍⚖️ **Acceptance Tests**: pytest framework with the LLM-as-Judge pattern for quality gates. Test your scripts before you run them in production.
 - 💰 **Coming soon**: token usage and cost estimation appended to each result for budgeting and optimisation
 
+## 🚀 The Only Enterprise AI DevOps Tool That Delivers RBAC Security, Robustness and Simplicity
+
+**LLM-CI-Runner stands alone in the market** as the only tool combining **100% schema enforcement**, **enterprise RBAC authentication**, and robust **Semantic Kernel integration with templates** in a single CLI solution. **No other tool delivers all three critical enterprise requirements together**.
+
 ## Installation
 
 ```bash
@@ -75,15 +79,26 @@ pip install llm-ci-runner
 
 ### 2. Set Environment Variables
 
+**Azure OpenAI (Priority 1):**
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 export AZURE_OPENAI_MODEL="gpt-4.1-nano"  # or any other GPT deployment name
 export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 ```
 
+**OpenAI (Fallback):**
+```bash
+export OPENAI_API_KEY="your-very-secret-api-key"
+export OPENAI_CHAT_MODEL_ID="gpt-4.1-nano"  # or any OpenAI model
+export OPENAI_ORG_ID="org-your-org-id"  # Optional
+```
+
 **Authentication Options:**
-- **RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed! See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for setup.
-- **API Key**: Set `AZURE_OPENAI_API_KEY` environment variable if not using RBAC.
+- **Azure RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed! See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for setup.
+- **Azure API Key**: Set `AZURE_OPENAI_API_KEY` environment variable if not using RBAC.
+- **OpenAI API Key**: Required for OpenAI fallback when Azure is not configured.
+
+**Priority**: Azure OpenAI takes priority when both Azure and OpenAI environment variables are present.
 
 ### 3a. Basic Usage
 
@@ -412,11 +427,13 @@ For complete CI/CD examples, see **[examples/uv-usage-example.md](https://github
 
 ## Authentication
 
-Uses Azure's `DefaultAzureCredential` supporting:
+**Azure OpenAI**: Uses Azure's `DefaultAzureCredential` supporting:
 - Environment variables (local development)
 - Managed Identity (recommended for Azure CI/CD)
 - Azure CLI (local development)
 - Service Principal (non-Azure CI/CD)
+
+**OpenAI**: Uses API key authentication with optional organization ID.
 
 ## Testing
 
@@ -443,11 +460,12 @@ uv run pytest acceptance/ -v
 ## Architecture
 
 Built on **Microsoft Semantic Kernel** for:
-- Enterprise-ready Azure OpenAI integration
+- Enterprise-ready Azure OpenAI and OpenAI integration
 - Future-proof model compatibility
 - **100% Schema Enforcement**: KernelBaseModel integration with token-level constraints
 - **Dynamic Model Creation**: Runtime JSON schema → Pydantic model conversion
-- **RBAC**: Azure RBAC via DefaultAzureCredential
+- **Azure RBAC**: Azure RBAC via DefaultAzureCredential
+- **Automatic Fallback**: Azure-first priority with OpenAI fallback
 
 ## The AI-First Development Journey
 

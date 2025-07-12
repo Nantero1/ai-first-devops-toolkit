@@ -8,7 +8,7 @@ mocked external services (Azure OpenAI) but real internal logic.
 
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 import respx
@@ -85,9 +85,17 @@ def mock_azure_openai_responses(respx_mock):
                 "created": 1234567890,
                 "model": "gpt-4o",
                 "choices": [
-                    {"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}
+                    {
+                        "index": 0,
+                        "message": {"role": "assistant", "content": content},
+                        "finish_reason": "stop",
+                    }
                 ],
-                "usage": {"prompt_tokens": 50, "completion_tokens": 20, "total_tokens": 70},
+                "usage": {
+                    "prompt_tokens": 50,
+                    "completion_tokens": 20,
+                    "total_tokens": 70,
+                },
             }
 
             return Response(200, json=response_data, headers={"content-type": "application/json"})
@@ -95,7 +103,12 @@ def mock_azure_openai_responses(respx_mock):
             # Return error response if something goes wrong
             return Response(
                 500,
-                json={"error": {"message": f"Mock error: {str(e)}", "type": "internal_error"}},
+                json={
+                    "error": {
+                        "message": f"Mock error: {str(e)}",
+                        "type": "internal_error",
+                    }
+                },
                 headers={"content-type": "application/json"},
             )
 
@@ -161,6 +174,29 @@ def integration_mock_azure_service():
     # Default response for get_chat_message_contents
     mock_service.get_chat_message_contents = AsyncMock()
 
+    return mock_service
+
+
+@pytest.fixture
+def mock_openai_service(monkeypatch):
+    """
+    Mock OpenAI environment variables for integration testing.
+    Sets required OpenAI env vars for integration tests.
+    """
+    monkeypatch.setenv("OPENAI_API_KEY", "non-an-api-key")
+    monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-4-test")
+    # Optionally: monkeypatch.setenv("OPENAI_ORG_ID", "org-test")
+    # Optionally: monkeypatch.setenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+
+@pytest.fixture
+def integration_mock_openai_service():
+    """
+    Mock OpenAI service for integration tests with realistic behavior.
+    Mirrors integration_mock_azure_service but for OpenAI.
+    """
+    mock_service = AsyncMock()
+    mock_service.get_chat_message_contents = AsyncMock()
     return mock_service
 
 
