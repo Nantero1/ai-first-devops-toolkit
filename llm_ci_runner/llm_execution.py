@@ -17,6 +17,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSetti
 from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import (
     AzureChatCompletion,
 )
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.kernel_pydantic import KernelBaseModel
@@ -52,7 +53,7 @@ CONSOLE = Console()
     reraise=True,
 )
 async def execute_llm_task(
-    service: AzureChatCompletion,
+    service: AzureChatCompletion | OpenAIChatCompletion,
     chat_history: ChatHistory,
     context: dict[str, Any] | None,
     schema_model: type[KernelBaseModel] | None,

@@ -39,7 +39,7 @@ class TestSimpleExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -82,7 +82,7 @@ class TestSimpleExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -130,7 +130,7 @@ class TestPRReviewExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -203,7 +203,7 @@ class TestPRReviewExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -250,7 +250,7 @@ class TestMinimalExampleIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -302,7 +302,7 @@ class TestAllExamplesEndToEnd:
             integration_mock_azure_service.get_chat_message_contents.return_value = mock_response
 
             with patch(
-                "llm_ci_runner.core.setup_azure_service",
+                "llm_ci_runner.core.setup_llm_service",
                 return_value=(integration_mock_azure_service, None),
             ):
                 test_args = [
@@ -345,7 +345,7 @@ class TestAllExamplesEndToEnd:
 
         # when & then
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -376,7 +376,7 @@ class TestAllExamplesEndToEnd:
 
         # when & then
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -447,7 +447,7 @@ class TestFullPipelineIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -496,7 +496,7 @@ class TestTemplateIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -540,7 +540,7 @@ class TestTemplateIntegration:
 
         # when
         with patch(
-            "llm_ci_runner.core.setup_azure_service",
+            "llm_ci_runner.core.setup_llm_service",
             return_value=(integration_mock_azure_service, None),
         ):
             test_args = [
@@ -568,3 +568,49 @@ class TestTemplateIntegration:
         assert "description" in result["response"]
         assert "impact" in result["response"]
         integration_mock_azure_service.get_chat_message_contents.assert_called_once()
+
+
+class TestSimpleExampleIntegrationOpenAI:
+    """Integration tests for simple-example.json using OpenAI service."""
+
+    @pytest.mark.asyncio
+    async def test_simple_example_with_openai_text_output(
+        self,
+        temp_integration_workspace,
+        mock_openai_service,
+        integration_mock_openai_service,
+    ):
+        """Test simple example with text output (no schema) using OpenAI."""
+        # given
+        input_file = Path("tests/integration/data/simple-chat/input.json")
+        output_file = temp_integration_workspace / "output" / "simple_openai_text_output.json"
+
+        # Mock the OpenAI service response
+        mock_response = create_text_output_mock()
+        integration_mock_openai_service.get_chat_message_contents.return_value = mock_response
+
+        # when
+        with patch(
+            "llm_ci_runner.core.setup_llm_service",
+            return_value=(integration_mock_openai_service, None),
+        ):
+            test_args = [
+                "llm-ci-runner",
+                "--input-file",
+                str(input_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "INFO",
+            ]
+            with patch("sys.argv", test_args):
+                await main()
+
+        # then
+        assert output_file.exists()
+        with open(output_file) as f:
+            result = json.load(f)
+        assert result["success"] is True
+        assert isinstance(result["response"], str)
+        assert "CI/CD stands for" in result["response"]
+        integration_mock_openai_service.get_chat_message_contents.assert_called_once()

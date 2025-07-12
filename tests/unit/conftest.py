@@ -38,7 +38,7 @@ def mock_azure_credential():
 @pytest.fixture
 def mock_azure_chat_completion():
     """Mock Azure ChatCompletion service."""
-    with patch("llm_ci_runner.azure_service.AzureChatCompletion") as mock_class:
+    with patch("llm_ci_runner.llm_service.AzureChatCompletion") as mock_class:
         mock_service = AsyncMock()
         mock_class.return_value = mock_service
         yield mock_service

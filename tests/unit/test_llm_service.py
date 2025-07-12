@@ -13,6 +13,8 @@ from llm_ci_runner import (
     azure_token_provider,
     get_azure_token_with_credential,
     setup_azure_service,
+    setup_llm_service,
+    setup_openai_service,
 )
 
 
@@ -42,7 +44,7 @@ class TestGetAzureTokenWithCredential:
         mock_token = Mock()
         mock_token.token = "default-token-456"
 
-        with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+        with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_credential_class:
             mock_credential = AsyncMock()
             mock_credential.get_token = AsyncMock(return_value=mock_token)
             mock_credential_class.return_value = mock_credential
@@ -62,7 +64,7 @@ class TestGetAzureTokenWithCredential:
         mock_token = Mock()
         mock_token.token = "no-param-token-789"
 
-        with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+        with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_credential_class:
             mock_credential = AsyncMock()
             mock_credential.get_token = AsyncMock(return_value=mock_token)
             mock_credential_class.return_value = mock_credential
@@ -93,7 +95,7 @@ class TestGetAzureTokenWithCredential:
     async def test_get_azure_token_with_default_credential_creation_failure(self):
         """Test that DefaultAzureCredential creation failures are wrapped in AuthenticationError."""
         # given
-        with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+        with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_credential_class:
             mock_credential_class.side_effect = Exception("Credential creation failed")
 
             # when & then
@@ -111,7 +113,7 @@ class TestGetAzureTokenWithCredential:
         mock_credential.get_token = AsyncMock(side_effect=Exception("Token error"))
 
         # when
-        with patch("llm_ci_runner.azure_service.LOGGER") as mock_logger:
+        with patch("llm_ci_runner.llm_service.LOGGER") as mock_logger:
             with pytest.raises(AuthenticationError):
                 await get_azure_token_with_credential(mock_credential)
 
@@ -130,7 +132,7 @@ class TestAzureTokenProvider:
     async def test_azure_token_provider_with_scopes_parameter(self):
         """Test azure_token_provider with scopes parameter (should be ignored)."""
         # given
-        with patch("llm_ci_runner.azure_service.get_azure_token_with_credential") as mock_get_token:
+        with patch("llm_ci_runner.llm_service.get_azure_token_with_credential") as mock_get_token:
             mock_get_token.return_value = "scoped-token-123"
 
             # when
@@ -144,7 +146,7 @@ class TestAzureTokenProvider:
     async def test_azure_token_provider_with_none_scopes(self):
         """Test azure_token_provider with None scopes parameter."""
         # given
-        with patch("llm_ci_runner.azure_service.get_azure_token_with_credential") as mock_get_token:
+        with patch("llm_ci_runner.llm_service.get_azure_token_with_credential") as mock_get_token:
             mock_get_token.return_value = "none-scopes-token-456"
 
             # when
@@ -158,7 +160,7 @@ class TestAzureTokenProvider:
     async def test_azure_token_provider_without_scopes_parameter(self):
         """Test azure_token_provider without scopes parameter."""
         # given
-        with patch("llm_ci_runner.azure_service.get_azure_token_with_credential") as mock_get_token:
+        with patch("llm_ci_runner.llm_service.get_azure_token_with_credential") as mock_get_token:
             mock_get_token.return_value = "default-provider-token-789"
 
             # when
@@ -172,7 +174,7 @@ class TestAzureTokenProvider:
     async def test_azure_token_provider_propagates_auth_error(self):
         """Test that azure_token_provider propagates AuthenticationError from underlying function."""
         # given
-        with patch("llm_ci_runner.azure_service.get_azure_token_with_credential") as mock_get_token:
+        with patch("llm_ci_runner.llm_service.get_azure_token_with_credential") as mock_get_token:
             mock_get_token.side_effect = AuthenticationError("Underlying auth error")
 
             # when & then
@@ -197,8 +199,8 @@ class TestAzureTokenProvider:
         assert any("retry" in attr.lower() for attr in function_attrs)
 
 
-class TestSetupAzureServiceErrorPaths:
-    """Tests for error paths in setup_azure_service function."""
+class TestSetupAzureService:
+    """Tests for setup_azure_service (Azure) and setup_llm_service (Azure/OpenAI) functions."""
 
     @pytest.mark.asyncio
     async def test_setup_azure_service_rbac_client_auth_error(self):
@@ -215,8 +217,8 @@ class TestSetupAzureServiceErrorPaths:
             },
             clear=True,
         ):
-            with patch("llm_ci_runner.azure_service.AzureChatCompletion") as mock_chat_completion:
-                with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+            with patch("llm_ci_runner.llm_service.AzureChatCompletion") as mock_chat_completion:
+                with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_credential_class:
                     # Setup DefaultAzureCredential to raise ClientAuthenticationError
                     mock_credential = AsyncMock()
                     mock_credential.get_token = AsyncMock(side_effect=ClientAuthenticationError("RBAC auth failed"))
@@ -242,8 +244,8 @@ class TestSetupAzureServiceErrorPaths:
             },
             clear=True,
         ):
-            with patch("llm_ci_runner.azure_service.AzureChatCompletion") as mock_chat_completion:
-                with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+            with patch("llm_ci_runner.llm_service.AzureChatCompletion") as mock_chat_completion:
+                with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_credential_class:
                     # Setup DefaultAzureCredential to raise generic error
                     mock_credential = AsyncMock()
                     mock_credential.get_token = AsyncMock(side_effect=Exception("Generic RBAC error"))
@@ -252,3 +254,98 @@ class TestSetupAzureServiceErrorPaths:
                     # when & then
                     with pytest.raises(AuthenticationError, match="Failed to setup Azure service"):
                         await setup_azure_service()
+
+
+class TestSetupOpenAIService:
+    """Tests for setup_openai_service and OpenAI fallback logic."""
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_success(self):
+        """Test successful OpenAI service setup with required env vars."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "non-an-api-key", "OPENAI_CHAT_MODEL_ID": "gpt-4-test"},
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.OpenAIChatCompletion") as mock_openai:
+                mock_service = AsyncMock()
+                mock_openai.return_value = mock_service
+
+                # when
+                service, credential = await setup_openai_service()
+
+                # then
+                assert service is mock_service
+                assert credential is None
+                mock_openai.assert_called_once_with(
+                    ai_model_id="gpt-4-test",
+                    api_key="non-an-api-key",
+                    service_id="openai",
+                    org_id=None,
+                )
+
+    @pytest.mark.asyncio
+    async def test_setup_llm_service_openai_fallback(self):
+        """Test OpenAI fallback when Azure vars are missing."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "non-an-api-key", "OPENAI_CHAT_MODEL_ID": "gpt-4-test"},
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.OpenAIChatCompletion") as mock_openai:
+                mock_service = AsyncMock()
+                mock_openai.return_value = mock_service
+
+                # when
+                service, credential = await setup_llm_service()
+
+                # then
+                assert service is mock_service
+                assert credential is None
+
+    @pytest.mark.asyncio
+    async def test_setup_llm_service_azure_priority(self):
+        """Test Azure takes priority when both configs are present."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {
+                "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
+                "AZURE_OPENAI_MODEL": "gpt-4-test",
+                "OPENAI_API_KEY": "non-an-api-key",
+                "OPENAI_CHAT_MODEL_ID": "gpt-4-test",
+            },
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.AzureChatCompletion") as mock_azure:
+                mock_service = AsyncMock()
+                mock_azure.return_value = mock_service
+                with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_cred:
+                    mock_cred.return_value = AsyncMock()
+                    # when
+                    service, credential = await setup_llm_service()
+                    # then
+                    assert service is mock_service
+
+    @pytest.mark.asyncio
+    async def test_setup_llm_service_no_config(self):
+        """Test error when neither Azure nor OpenAI config is present."""
+        # given
+        with patch.dict("os.environ", {}, clear=True):
+            # when/then
+            with pytest.raises(AuthenticationError, match="No valid LLM service configuration found"):
+                await setup_llm_service()
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_missing_env_vars(self):
+        """Test error when OpenAI env vars are incomplete."""
+        # given
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "non-an-api-key"}, clear=True):
+            # when/then
+            with pytest.raises(
+                AuthenticationError,
+                match="OPENAI_CHAT_MODEL_ID environment variable is required",
+            ):
+                await setup_openai_service()

@@ -47,10 +47,12 @@ from semantic_kernel.prompt_template import (
 )
 
 # Import core functionality for programmatic use
-from .azure_service import (
+from .llm_service import (
     azure_token_provider,
     get_azure_token_with_credential,
     setup_azure_service,
+    setup_llm_service,
+    setup_openai_service,
 )
 from .core import cli_main, main
 from .exceptions import (
@@ -98,7 +100,8 @@ __all__ = [
     "parse_rendered_template_to_chat_history",
     "render_template",
     "setup_azure_service",
-    "setup_logging",
+    "setup_llm_service",
+    "setup_openai_service",
     "write_output_file",
     # Core functionality
     "azure_token_provider",

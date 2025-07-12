@@ -13,7 +13,7 @@ import sys
 from rich.panel import Panel
 from rich.traceback import install as install_rich_traceback
 
-from .azure_service import setup_azure_service
+from .llm_service import setup_llm_service
 from .exceptions import (
     InputValidationError,
     LLMRunnerError,
@@ -48,7 +48,7 @@ async def main() -> None:
     1. Parse command line arguments
     2. Setup logging
     3. Load input data or templates
-    4. Setup Azure service
+    4. Setup LLM service (Azure or OpenAI)
     5. Execute LLM task
     6. Write output
 
@@ -70,9 +70,9 @@ async def main() -> None:
             )
         )
 
-        # Setup Azure service
-        LOGGER.info("🔐 Setting up Azure OpenAI service")
-        service, credential = await setup_azure_service()
+        # Setup LLM service (Azure or OpenAI)
+        LOGGER.info("🔐 Setting up LLM service (Azure/OpenAI)")
+        service, credential = await setup_llm_service()
 
         # Load schema if provided
         schema_model = load_schema_file(args.schema_file)
