@@ -178,6 +178,7 @@ async def setup_openai_service() -> tuple[OpenAIChatCompletion, None]:
     api_key = os.getenv("OPENAI_API_KEY")
     model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
     org_id = os.getenv("OPENAI_ORG_ID")
+    base_url = os.getenv("OPENAI_BASE_URL")
     if not api_key:
         raise AuthenticationError("OPENAI_API_KEY environment variable is required")
     if not model_id:
@@ -185,12 +186,15 @@ async def setup_openai_service() -> tuple[OpenAIChatCompletion, None]:
     LOGGER.info(f"🎯 Using OpenAI model: {model_id}")
     if org_id:
         LOGGER.info(f"🎯 Using OpenAI organization: {org_id}")
+    if base_url:
+        LOGGER.info(f"🎯 Using OpenAI base URL: {base_url}")
     try:
         service = OpenAIChatCompletion(
             ai_model_id=model_id,
             api_key=api_key,
             service_id="openai",
             org_id=org_id,
+            base_url=base_url,
         )
         LOGGER.info("✅ OpenAI service setup completed successfully")
         return service, None

@@ -284,6 +284,7 @@ class TestSetupOpenAIService:
                     api_key="non-an-api-key",
                     service_id="openai",
                     org_id=None,
+                    base_url=None,
                 )
 
     @pytest.mark.asyncio
@@ -338,6 +339,37 @@ class TestSetupOpenAIService:
             # when/then
             with pytest.raises(AuthenticationError, match="No valid LLM service configuration found"):
                 await setup_llm_service()
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_with_base_url(self):
+        """Test successful OpenAI service setup with base URL."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "non-an-api-key",
+                "OPENAI_CHAT_MODEL_ID": "gpt-4-test",
+                "OPENAI_BASE_URL": "https://api.openai.com/v1",
+            },
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.OpenAIChatCompletion") as mock_openai:
+                mock_service = AsyncMock()
+                mock_openai.return_value = mock_service
+
+                # when
+                service, credential = await setup_openai_service()
+
+                # then
+                assert service is mock_service
+                assert credential is None
+                mock_openai.assert_called_once_with(
+                    ai_model_id="gpt-4-test",
+                    api_key="non-an-api-key",
+                    service_id="openai",
+                    org_id=None,
+                    base_url="https://api.openai.com/v1",
+                )
 
     @pytest.mark.asyncio
     async def test_setup_openai_service_missing_env_vars(self):
