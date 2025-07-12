@@ -1,6 +1,6 @@
 [project]
 name = "llm-ci-runner"
-version = "1.3.0"
+version = "1.3.1"
 description = "A simple CI/CD utility for running LLM tasks with Semantic Kernel"
 readme = "README.md"
 license = {text = "MIT"}
