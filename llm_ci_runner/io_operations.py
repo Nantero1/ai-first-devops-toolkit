@@ -273,11 +273,11 @@ def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
 
 def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None:
     """
-    Write response to output file in JSON or YAML format.
+    Write response to output file in JSON, YAML, or direct text format.
 
     Automatically detects output format based on file extension.
     Creates parent directories if they don't exist.
-    Wraps response in standard format with success and metadata.
+    For .md files, writes direct text without JSON wrapper.
 
     Args:
         output_file: Path to the output file
@@ -292,21 +292,33 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
         # Create parent directories if they don't exist
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Wrap response in standard format
-        output_data = {
-            "success": True,
-            "response": response,
-            "metadata": {
-                "runner": "llm_ci_runner.py",
-                "timestamp": datetime.now().isoformat(),
-            },
-        }
-
         # Determine output format based on extension
         extension = output_file.suffix.lower()
 
-        if extension in [".yaml", ".yml"]:
-            # Write as YAML
+        if extension == ".md":
+            # Write direct text for markdown files (no JSON wrapper)
+            if isinstance(response, str):
+                content = response
+            else:
+                # If response is dict, extract the text content
+                content = response.get("response", str(response))
+
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            LOGGER.info(f"✅ Wrote direct text output: {output_file}")
+
+        elif extension in [".yaml", ".yml"]:
+            # Wrap response in standard format for YAML
+            output_data = {
+                "success": True,
+                "response": response,
+                "metadata": {
+                    "runner": "llm_ci_runner.py",
+                    "timestamp": datetime.now().isoformat(),
+                },
+            }
+
             yaml = YAML()
             yaml.default_flow_style = False
             yaml.indent(mapping=2, sequence=4, offset=2)
@@ -317,7 +329,16 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
             LOGGER.info(f"✅ Wrote YAML output: {output_file}")
 
         else:
-            # Write as JSON (default)
+            # Wrap response in standard format for JSON (default)
+            output_data = {
+                "success": True,
+                "response": response,
+                "metadata": {
+                    "runner": "llm_ci_runner.py",
+                    "timestamp": datetime.now().isoformat(),
+                },
+            }
+
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(output_data, f, indent=2, ensure_ascii=False)
 

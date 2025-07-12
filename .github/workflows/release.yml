@@ -87,8 +87,85 @@ jobs:
           uv run python -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
           echo "✅ pyproject.toml is valid"
 
-  release:
+  generate-release-notes:
     needs: validate
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    # Only allow maintainers to trigger LLM calls
+    environment: release
+    permissions:
+      contents: read      # Read repository for git history
+    outputs:
+      release_notes: ${{ steps.generate_notes.outputs.notes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Generate template variables
+        id: template_vars
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          MANUAL_INSTRUCTIONS="${{ github.event.inputs.release_notes || '' }}"
+          
+          # Generate template variables from git history
+          uv run python scripts/generate-release-notes.py "$VERSION" "$MANUAL_INSTRUCTIONS"
+          
+          # Read the generated template variables
+          if [ -f "template-vars.yaml" ]; then
+            echo "✅ Template variables generated successfully"
+          else
+            echo "❌ Failed to generate template variables"
+            exit 1
+          fi
+
+      - name: Generate release notes
+        id: generate_notes
+        run: |
+          # Generate release notes using our template
+          uv run llm-ci-runner \
+            --template-file examples/05-templates/release-notes/template.hbs \
+            --template-vars template-vars.yaml \
+            --output-file release-notes.md
+          
+          # Extract the generated notes from the output
+          if [ -f "release-notes.md" ]; then
+            # Read the markdown output directly
+            NOTES=$(cat release-notes.md)
+            
+            # Set the output
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "$NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            echo "✅ Release notes generated successfully"
+          else
+            echo "❌ Failed to generate release notes"
+            exit 1
+          fi
+        env:
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+
+  release:
+    needs: [validate, generate-release-notes]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.dry_run != 'true' }}
     # Required permissions for release operations
@@ -239,25 +316,7 @@ jobs:
           tag_name: "v${{ github.event.inputs.version }}"
           release_name: "Release v${{ github.event.inputs.version }}"
           body: |
-            ## What's Changed
-            
-            ${{ github.event.inputs.release_notes || format('Release v{0}', github.event.inputs.version) }}
-            
-            ## Installation
-            
-            ```bash
-            pip install llm-ci-runner==${{ github.event.inputs.version }}
-            ```
-            
-            ## Usage
-            
-            ```bash
-            llm-ci-runner --input-file input.json --schema-file schema.json
-            ```
-            
-            ## Changelog
-            
-            For detailed changes, see the [commit history](https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0)...v${{ github.event.inputs.version }}).
+            ${{ needs.generate-release-notes.outputs.release_notes || format('Release v{0}', github.event.inputs.version) }}
           draft: false
           prerelease: false
 

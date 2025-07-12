@@ -32,6 +32,7 @@ Dynamic prompt generation using YAML configuration and Handlebars templates.
 
 - **[pr-review-template/](05-templates/pr-review-template/)** - PR review with Handlebars templates and YAML variables
 - **[static-example/](05-templates/static-example/)** - Static template without variables (template-vars optional)
+- **[release-notes/](05-templates/release-notes/)** - Automated release notes generation from git history
 
 ## 🚀 Quick Start
 
@@ -67,6 +68,12 @@ llm-ci-runner \
   --template-file examples/05-templates/static-example/template.hbs \
   --schema-file examples/05-templates/static-example/schema.yaml \
   --output-file code-analysis-result.yaml
+
+# Release notes generation from git history
+llm-ci-runner \
+  --template-file examples/05-templates/release-notes/template.hbs \
+  --template-vars examples/05-templates/release-notes/template-vars.yaml \
+  --output-file release-notes.md
 ```
 
 ## 🎯 AI-First DevOps Principles
