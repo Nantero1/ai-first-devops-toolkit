@@ -194,7 +194,6 @@ async def setup_openai_service() -> tuple[OpenAIChatCompletion, None]:
             api_key=api_key,
             service_id="openai",
             org_id=org_id,
-            base_url=base_url,
         )
         LOGGER.info("✅ OpenAI service setup completed successfully")
         return service, None
