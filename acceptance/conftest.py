@@ -13,7 +13,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 import pytest
 from rich.console import Console
@@ -352,7 +352,7 @@ def examples_dir():
 def discovered_examples(examples_dir):
     """Auto-discover examples based on folder structure convention."""
 
-    def _discover_examples() -> List[Tuple[Path, Optional[Path], str]]:
+    def _discover_examples() -> list[tuple[Path, Path | None, str]]:
         """
         Recursively discover all example folders under examples/ containing input.json.
         If schema.json exists in the same folder, it's used for validation.
@@ -468,7 +468,7 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
 
     async def _evaluate_generic(
         input_file: Path,
-        schema_file: Optional[Path],
+        schema_file: Path | None,
         output_result: dict,
         example_name: str,
     ) -> dict[str, Any]:
@@ -491,7 +491,7 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
         # Load input context
         if is_template:
             # For templates, read the template content
-            with open(input_file, "r") as f:
+            with open(input_file) as f:
                 input_content = f.read()
             input_context = f"Template-based example: {example_name}. Template content: {input_content[:300]}..."
             evaluation_query = f"Template-based generation using: {input_content[:200]}..."

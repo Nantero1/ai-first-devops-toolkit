@@ -93,7 +93,10 @@ class TestSetupLogging:
         log_level = "INFO"
 
         # when
-        with patch("logging.basicConfig"), patch("logging.getLogger", return_value=mock_logger):
+        with (
+            patch("logging.basicConfig"),
+            patch("logging.getLogger", return_value=mock_logger),
+        ):
             logger = setup_logging(log_level)
 
         # then
@@ -205,9 +208,6 @@ class TestParseArguments:
                     parse_arguments()
                 except SystemExit as e:
                     # Capture the help output
-                    import io
-                    import sys
-                    from contextlib import redirect_stderr
 
                     # The help text should contain "optional"
                     # This is a basic test - in real usage, you'd capture stdout/stderr
@@ -226,7 +226,7 @@ class TestMainFunction:
         with (
             patch("llm_ci_runner.core.parse_arguments") as mock_parse,
             patch("llm_ci_runner.core.setup_logging"),
-            patch("llm_ci_runner.core.setup_azure_service", side_effect=KeyboardInterrupt()),
+            patch("llm_ci_runner.core.setup_llm_service", side_effect=KeyboardInterrupt()),
             patch("llm_ci_runner.core.LOGGER.warning"),
         ):
             from llm_ci_runner import main
@@ -297,7 +297,7 @@ class TestMainFunction:
             patch("llm_ci_runner.core.setup_logging") as mock_setup_log,
             patch("llm_ci_runner.core.load_input_file") as mock_load_input,
             patch("llm_ci_runner.core.create_chat_history") as mock_create_history,
-            patch("llm_ci_runner.core.setup_azure_service") as mock_setup_azure,
+            patch("llm_ci_runner.core.setup_llm_service") as mock_setup_llm,
             patch("llm_ci_runner.core.load_schema_file") as mock_load_schema,
             patch("llm_ci_runner.core.execute_llm_task") as mock_execute,
             patch("llm_ci_runner.core.write_output_file") as mock_write_output,
@@ -313,7 +313,7 @@ class TestMainFunction:
 
             mock_load_input.return_value = {"messages": [{"role": "user", "content": "test"}]}
             mock_create_history.return_value = Mock()
-            mock_setup_azure.return_value = (
+            mock_setup_llm.return_value = (
                 Mock(),
                 Mock(),
             )  # Return tuple (service, credential)

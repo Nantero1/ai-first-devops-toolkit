@@ -1,7 +1,7 @@
 """
 Unit tests for Semantic Kernel related functions in llm_ci_runner.py
 
-Tests create_chat_history, setup_azure_service, and execute_llm_task functions
+Tests create_chat_history, setup_llm_service, and execute_llm_task functions
 with heavy mocking following the Given-When-Then pattern.
 """
 
@@ -116,7 +116,7 @@ class TestCreateChatHistory:
 
 
 class TestSetupAzureService:
-    """Tests for setup_azure_service function."""
+    """Tests for setup_azure_service and setup_llm_service functions."""
 
     @pytest.mark.asyncio
     async def test_setup_azure_service_with_api_key(self, mock_environment_variables, mock_azure_chat_completion):
@@ -151,7 +151,7 @@ class TestSetupAzureService:
             # when
             from unittest.mock import AsyncMock
 
-            with patch("llm_ci_runner.azure_service.DefaultAzureCredential") as mock_credential_class:
+            with patch("llm_ci_runner.llm_service.DefaultAzureCredential") as mock_credential_class:
                 mock_credential = AsyncMock()
                 mock_credential.get_token = AsyncMock()
                 mock_credential_class.return_value = mock_credential
@@ -210,7 +210,7 @@ class TestSetupAzureService:
         ):
             # when & then
             with patch(
-                "llm_ci_runner.azure_service.AzureChatCompletion",
+                "llm_ci_runner.llm_service.AzureChatCompletion",
                 side_effect=ClientAuthenticationError("Auth failed"),
             ):
                 with pytest.raises(AuthenticationError, match="Azure authentication failed"):
@@ -232,7 +232,10 @@ class TestSetupAzureService:
             clear=True,
         ):
             # when & then
-            with patch("llm_ci_runner.azure_service.AzureChatCompletion", side_effect=Exception("Generic error")):
+            with patch(
+                "llm_ci_runner.llm_service.AzureChatCompletion",
+                side_effect=Exception("Generic error"),
+            ):
                 with pytest.raises(AuthenticationError, match="Error setting up Azure service"):
                     await setup_azure_service()
 

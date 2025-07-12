@@ -13,7 +13,7 @@ from azure.core.exceptions import ClientAuthenticationError
 from rich.console import Console
 from rich.panel import Panel
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion, OpenAIChatPromptExecutionSettings
 from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import (
     AzureChatCompletion,
 )
@@ -52,7 +52,7 @@ CONSOLE = Console()
     reraise=True,
 )
 async def execute_llm_task(
-    service: AzureChatCompletion,
+    service: AzureChatCompletion | OpenAIChatCompletion,
     chat_history: ChatHistory,
     context: dict[str, Any] | None,
     schema_model: type[KernelBaseModel] | None,

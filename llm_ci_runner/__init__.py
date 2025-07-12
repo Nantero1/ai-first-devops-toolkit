@@ -46,12 +46,6 @@ from semantic_kernel.prompt_template import (
     PromptTemplateConfig,
 )
 
-# Import core functionality for programmatic use
-from .azure_service import (
-    azure_token_provider,
-    get_azure_token_with_credential,
-    setup_azure_service,
-)
 from .core import cli_main, main
 from .exceptions import (
     AuthenticationError,
@@ -69,6 +63,15 @@ from .io_operations import (
 )
 from .llm_execution import execute_llm_task
 
+# Import core functionality for programmatic use
+from .llm_service import (
+    azure_token_provider,
+    get_azure_token_with_credential,
+    setup_azure_service,
+    setup_llm_service,
+    setup_openai_service,
+)
+
 # Import logger for testing compatibility
 from .logging_config import CONSOLE, LOGGER, setup_logging
 from .schema import create_dynamic_model_from_schema
@@ -82,12 +85,11 @@ from .templates import (
     render_template,
 )
 
-# Public API
 __all__ = [
     # Main entry points
     "cli_main",
     "main",
-    # Additional functions for testing compatibility
+    # Functions for testing compatibility
     "create_chat_history",
     "execute_llm_task",
     "load_input_file",
@@ -98,25 +100,14 @@ __all__ = [
     "parse_rendered_template_to_chat_history",
     "render_template",
     "setup_azure_service",
-    "setup_logging",
+    "setup_llm_service",
+    "setup_openai_service",
     "write_output_file",
     # Core functionality
     "azure_token_provider",
     "get_azure_token_with_credential",
-    "setup_azure_service",
-    "execute_llm_task",
     "create_dynamic_model_from_schema",
-    # Input/Output operations
-    "parse_arguments",
-    "load_input_file",
-    "write_output_file",
-    "load_schema_file",
-    "create_chat_history",
     # Template functionality
-    "load_template",
-    "load_template_vars",
-    "render_template",
-    "parse_rendered_template_to_chat_history",
     "get_template_format",
     "load_handlebars_template",
     "load_jinja2_template",
