@@ -89,24 +89,12 @@ __all__ = [
     # Main entry points
     "cli_main",
     "main",
-    # Additional functions for testing compatibility
-    "create_chat_history",
-    "execute_llm_task",
-    "load_input_file",
-    "load_schema_file",
-    "load_template",
-    "load_template_vars",
-    "parse_arguments",
-    "parse_rendered_template_to_chat_history",
-    "render_template",
-    "setup_azure_service",
-    "setup_llm_service",
-    "setup_openai_service",
-    "write_output_file",
     # Core functionality
     "azure_token_provider",
     "get_azure_token_with_credential",
     "setup_azure_service",
+    "setup_llm_service",
+    "setup_openai_service",
     "execute_llm_task",
     "create_dynamic_model_from_schema",
     # Input/Output operations
@@ -126,6 +114,7 @@ __all__ = [
     # Logging
     "setup_logging",
     "CONSOLE",
+    "LOGGER",
     # Exceptions
     "LLMRunnerError",
     "InputValidationError",
@@ -144,8 +133,6 @@ __all__ = [
     "OpenAIChatPromptExecutionSettings",
     "DefaultAzureCredential",
     "RichHandler",
-    # Logger for testing compatibility
-    "LOGGER",
 ]
 
 # Package metadata
