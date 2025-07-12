@@ -5,15 +5,15 @@
 | Name                               |    Stmts |     Miss |   Branch |   BrPart |      Cover |   Missing |
 |----------------------------------- | -------: | -------: | -------: | -------: | ---------: | --------: |
 | llm\_ci\_runner/\_\_init\_\_.py    |       20 |        0 |        0 |        0 |    100.00% |           |
-| llm\_ci\_runner/azure\_service.py  |       53 |        0 |        8 |        0 |    100.00% |           |
 | llm\_ci\_runner/core.py            |       65 |        9 |        6 |        2 |     84.51% |105, 123, 154-161, 174-175, 177-178 |
 | llm\_ci\_runner/exceptions.py      |       10 |        0 |        0 |        0 |    100.00% |           |
 | llm\_ci\_runner/io\_operations.py  |      151 |       20 |       52 |        9 |     82.76% |106, 160-163, 166, 182, 185, 188, 192, 211, 366, 395-404 |
 | llm\_ci\_runner/llm\_execution.py  |       63 |        5 |       14 |        1 |     87.01% |   118-125 |
+| llm\_ci\_runner/llm\_service.py    |       84 |        5 |       20 |        3 |     92.31% |183, 188, 190, 200-201 |
 | llm\_ci\_runner/logging\_config.py |       17 |        0 |        2 |        0 |    100.00% |           |
 | llm\_ci\_runner/schema.py          |       22 |        0 |        0 |        0 |    100.00% |           |
 | llm\_ci\_runner/templates.py       |       97 |        0 |       16 |        0 |    100.00% |           |
-|                          **TOTAL** |  **498** |   **34** |   **98** |   **12** | **90.60%** |           |
+|                          **TOTAL** |  **529** |   **39** |  **110** |   **15** | **89.98%** |           |
 
 
 ## Setup coverage badge

@@ -64,10 +64,10 @@
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_f86363723bc93fa9_io_operations_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="z_f86363723bc93fa9_logging_config_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="z_f86363723bc93fa9_llm_service_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.9.2">coverage.py v7.9.2</a>,
-            created at 2025-07-12 00:46 +0000
+            created at 2025-07-12 10:05 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -97,7 +97,7 @@
     <p class="run"><span class="n"><a id="t13" href="#t13">13</a></span><span class="t"><span class="key">from</span> <span class="nam">rich</span><span class="op">.</span><span class="nam">console</span> <span class="key">import</span> <span class="nam">Console</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t14" href="#t14">14</a></span><span class="t"><span class="key">from</span> <span class="nam">rich</span><span class="op">.</span><span class="nam">panel</span> <span class="key">import</span> <span class="nam">Panel</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t15" href="#t15">15</a></span><span class="t"><span class="key">from</span> <span class="nam">semantic_kernel</span> <span class="key">import</span> <span class="nam">Kernel</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">from</span> <span class="nam">semantic_kernel</span><span class="op">.</span><span class="nam">connectors</span><span class="op">.</span><span class="nam">ai</span><span class="op">.</span><span class="nam">open_ai</span> <span class="key">import</span> <span class="nam">OpenAIChatPromptExecutionSettings</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t16" href="#t16">16</a></span><span class="t"><span class="key">from</span> <span class="nam">semantic_kernel</span><span class="op">.</span><span class="nam">connectors</span><span class="op">.</span><span class="nam">ai</span><span class="op">.</span><span class="nam">open_ai</span> <span class="key">import</span> <span class="nam">OpenAIChatCompletion</span><span class="op">,</span> <span class="nam">OpenAIChatPromptExecutionSettings</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t17" href="#t17">17</a></span><span class="t"><span class="key">from</span> <span class="nam">semantic_kernel</span><span class="op">.</span><span class="nam">connectors</span><span class="op">.</span><span class="nam">ai</span><span class="op">.</span><span class="nam">open_ai</span><span class="op">.</span><span class="nam">services</span><span class="op">.</span><span class="nam">azure_chat_completion</span> <span class="key">import</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t18" href="#t18">18</a></span><span class="t">    <span class="nam">AzureChatCompletion</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t19" href="#t19">19</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -136,7 +136,7 @@
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t">    <span class="nam">reraise</span><span class="op">=</span><span class="key">True</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="key">async</span> <span class="key">def</span> <span class="nam">execute_llm_task</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">service</span><span class="op">:</span> <span class="nam">AzureChatCompletion</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t">    <span class="nam">service</span><span class="op">:</span> <span class="nam">AzureChatCompletion</span> <span class="op">|</span> <span class="nam">OpenAIChatCompletion</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t">    <span class="nam">chat_history</span><span class="op">:</span> <span class="nam">ChatHistory</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t">    <span class="nam">context</span><span class="op">:</span> <span class="nam">dict</span><span class="op">[</span><span class="nam">str</span><span class="op">,</span> <span class="nam">Any</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t">    <span class="nam">schema_model</span><span class="op">:</span> <span class="nam">type</span><span class="op">[</span><span class="nam">KernelBaseModel</span><span class="op">]</span> <span class="op">|</span> <span class="key">None</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
@@ -259,10 +259,10 @@
         <p>
             <a class="nav" href="z_f86363723bc93fa9_io_operations_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a class="nav" href="z_f86363723bc93fa9_logging_config_py.html">&#xbb; next</a>
+            <a class="nav" href="z_f86363723bc93fa9_llm_service_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.9.2">coverage.py v7.9.2</a>,
-            created at 2025-07-12 00:46 +0000
+            created at 2025-07-12 10:05 +0000
         </p>
     </div>
 </footer>
