@@ -7,7 +7,7 @@
 | llm\_ci\_runner/\_\_init\_\_.py    |       20 |        0 |        0 |        0 |    100.00% |           |
 | llm\_ci\_runner/core.py            |       65 |        9 |        6 |        2 |     84.51% |105, 123, 154-161, 174-175, 177-178 |
 | llm\_ci\_runner/exceptions.py      |       10 |        0 |        0 |        0 |    100.00% |           |
-| llm\_ci\_runner/io\_operations.py  |      159 |       26 |       56 |       10 |     79.53% |106, 162-165, 170, 186, 189, 192, 196, 217, 308-317, 395, 424-433 |
+| llm\_ci\_runner/io\_operations.py  |      159 |       26 |       56 |       10 |     79.53% |106, 160-163, 166, 182, 185, 188, 192, 211, 300-309, 387, 416-425 |
 | llm\_ci\_runner/llm\_execution.py  |       63 |        5 |       14 |        1 |     87.01% |   118-125 |
 | llm\_ci\_runner/llm\_service.py    |       84 |        5 |       20 |        3 |     92.31% |183, 188, 190, 200-201 |
 | llm\_ci\_runner/logging\_config.py |       17 |        0 |        2 |        0 |    100.00% |           |
