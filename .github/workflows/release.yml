@@ -29,6 +29,10 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+      - name: Display parameters
+        shell: bash
+        run: echo "${{ format('<h1>Parameters</h1><p>{0}</p>', tojson(inputs)) }}" > "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -309,16 +313,23 @@ jobs:
           "
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          
+          # Get release notes from previous job, or use default
+          if [ -n "${{ needs.generate-release-notes.outputs.release_notes }}" ]; then
+            RELEASE_NOTES="${{ needs.generate-release-notes.outputs.release_notes }}"
+          else
+            RELEASE_NOTES="Release v$VERSION"
+          fi
+          
+          # Create release using GitHub CLI
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes "$RELEASE_NOTES" \
+            --repo "${{ github.repository }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_WRITE }}
-        with:
-          tag_name: "v${{ github.event.inputs.version }}"
-          release_name: "Release v${{ github.event.inputs.version }}"
-          body: |
-            ${{ needs.generate-release-notes.outputs.release_notes || format('Release v{0}', github.event.inputs.version) }}
-          draft: false
-          prerelease: false
 
       - name: Publish to PyPI
         if: ${{ github.event.inputs.publish_to_pypi }}
