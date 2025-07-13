@@ -61,7 +61,7 @@ def environment_check(smoke_test_mode):
     if smoke_test_mode:
         console.print(
             Panel(
-                "🚀 Running in SMOKE TEST mode - no LLM calls will be made",
+                "🚀 Running in SMOKE TEST mode - LLM calls will be made, but no LLM-as-judge tests will be run",
                 title="Smoke Test Mode",
                 style="blue",
             )

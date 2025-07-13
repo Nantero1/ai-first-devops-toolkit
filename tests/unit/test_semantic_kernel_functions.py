@@ -382,3 +382,123 @@ class TestExecuteLlmTask:
 
         # Verify that the service was called (retry behavior depends on decorator implementation)
         assert service.get_chat_message_contents.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_llm_execution_error_re_raises(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test that LLMExecutionError is re-raised as-is."""
+        # given
+        mock_azure_service.get_chat_message_contents.side_effect = LLMExecutionError("Original LLM error")
+
+        # when & then
+        with pytest.raises(LLMExecutionError, match="Original LLM error"):
+            await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_generic_exception_raises_llm_error(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test that generic exceptions are wrapped in LLMExecutionError."""
+        # given
+        mock_azure_service.get_chat_message_contents.side_effect = Exception("Generic service error")
+
+        # when & then
+        with pytest.raises(LLMExecutionError, match="LLM execution failed"):
+            await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_schema_enforcement_failure_raises_error(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test that schema enforcement failures raise LLMExecutionError."""
+        # given
+        from pydantic import BaseModel
+
+        class MockSchema(BaseModel):
+            sentiment: str
+
+        # Mock service to return invalid JSON for structured output
+        mock_response = Mock()
+        mock_response.content = "invalid json"
+        mock_azure_service.get_chat_message_contents.return_value = [mock_response]
+
+        # when & then
+        with pytest.raises(LLMExecutionError, match="Schema enforcement failed"):
+            await execute_llm_task(mock_azure_service, mock_chat_history, None, MockSchema)
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_empty_result_list(self, mock_azure_service, mock_chat_history, mock_kernel):
+        """Test execute_llm_task with empty result list."""
+        # given
+        mock_azure_service.get_chat_message_contents.return_value = []
+
+        # when
+        result = await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+        # then
+        assert result == "[]"  # Should convert empty list to string
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_result_without_content(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test execute_llm_task with result that has no content attribute."""
+        # given
+        mock_result = Mock()
+        mock_result.content = "test content"  # Has content attribute
+        mock_azure_service.get_chat_message_contents.return_value = [mock_result]
+
+        # when
+        result = await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+        # then
+        assert result == "test content"  # Should extract content
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_function_result_with_value(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test execute_llm_task with FunctionResult that has value attribute."""
+        # given
+        mock_function_result = Mock()
+        mock_function_result.value = "function result value"
+        mock_azure_service.get_chat_message_contents.return_value = mock_function_result
+
+        # when
+        result = await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+        # then
+        assert result == "function result value"
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_function_result_with_list_value(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test execute_llm_task with FunctionResult that has list value."""
+        # given
+        mock_function_result = Mock()
+        mock_function_result.value = [Mock(content="list item content")]
+        mock_azure_service.get_chat_message_contents.return_value = mock_function_result
+
+        # when
+        result = await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+        # then
+        assert result == "list item content"
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_with_function_result_with_empty_list_value(
+        self, mock_azure_service, mock_chat_history, mock_kernel
+    ):
+        """Test execute_llm_task with FunctionResult that has empty list value."""
+        # given
+        mock_function_result = Mock()
+        mock_function_result.value = []
+        mock_azure_service.get_chat_message_contents.return_value = mock_function_result
+
+        # when
+        result = await execute_llm_task(mock_azure_service, mock_chat_history, None, None)
+
+        # then
+        assert result == str(mock_function_result)  # Should convert mock to string since empty list is falsy

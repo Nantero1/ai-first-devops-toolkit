@@ -350,3 +350,91 @@ class TestSetupOpenAIService:
                 match="OPENAI_CHAT_MODEL_ID environment variable is required",
             ):
                 await setup_openai_service()
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_missing_api_key(self):
+        """Test setup_openai_service with missing API key."""
+        # given
+        with patch.dict("os.environ", {"OPENAI_CHAT_MODEL_ID": "gpt-4"}, clear=True):
+            # when & then
+            with pytest.raises(
+                AuthenticationError,
+                match="OPENAI_API_KEY environment variable is required",
+            ):
+                await setup_openai_service()
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_with_org_id(self):
+        """Test setup_openai_service with organization ID."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_CHAT_MODEL_ID": "gpt-4",
+                "OPENAI_ORG_ID": "org-test",
+            },
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.OpenAIChatCompletion") as mock_service_class:
+                mock_service = AsyncMock()
+                mock_service_class.return_value = mock_service
+
+                # when
+                result = await setup_openai_service()
+
+                # then
+                assert result[0] == mock_service
+                assert result[1] is None
+                mock_service_class.assert_called_once_with(
+                    ai_model_id="gpt-4",
+                    api_key="test-key",
+                    service_id="openai",
+                    org_id="org-test",
+                )
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_with_base_url(self):
+        """Test setup_openai_service with base URL."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_CHAT_MODEL_ID": "gpt-4",
+                "OPENAI_BASE_URL": "https://custom.openai.com",
+            },
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.OpenAIChatCompletion") as mock_service_class:
+                mock_service = AsyncMock()
+                mock_service_class.return_value = mock_service
+
+                # when
+                result = await setup_openai_service()
+
+                # then
+                assert result[0] == mock_service
+                assert result[1] is None
+                mock_service_class.assert_called_once_with(
+                    ai_model_id="gpt-4",
+                    api_key="test-key",
+                    service_id="openai",
+                    org_id=None,
+                )
+
+    @pytest.mark.asyncio
+    async def test_setup_openai_service_exception_raises_auth_error(self):
+        """Test that setup_openai_service exceptions are wrapped in AuthenticationError."""
+        # given
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "test-key", "OPENAI_CHAT_MODEL_ID": "gpt-4"},
+            clear=True,
+        ):
+            with patch("llm_ci_runner.llm_service.OpenAIChatCompletion") as mock_service_class:
+                mock_service_class.side_effect = Exception("Service creation failed")
+
+                # when & then
+                with pytest.raises(AuthenticationError, match="Failed to setup OpenAI service"):
+                    await setup_openai_service()
