@@ -9,6 +9,7 @@ Simple examples to get started with the LLM Runner.
 
 - **[simple-chat/](01-basic/simple-chat/)** - Basic text-only LLM interaction
 - **[sentiment-analysis/](01-basic/sentiment-analysis/)** - Structured output with schema enforcement
+- **[multi-turn-conversation/](01-basic/multi-turn-conversation/)** - Assistant role messages and conversation flow
 
 ### 02-devops/ - DevOps Automation
 Real-world DevOps scenarios with AI-powered automation.
@@ -27,12 +28,18 @@ Advanced examples inspired by [AI-First DevOps](https://technologyworkroom.blogs
 
 - **[autonomous-development-plan/](04-ai-first/autonomous-development-plan/)** - AI creates comprehensive development plans
 
+### 06-output-showcase/ - Output Format Demonstrations
+Showcase the library's flexible output capabilities across different formats.
+
+- **[multi-format-output/](06-output-showcase/multi-format-output/)** - JSON, YAML, and Markdown output comparison
+
 ### 05-templates/ - Template-Driven Workflows
 Dynamic prompt generation using YAML configuration and Handlebars templates.
 
 - **[pr-review-template/](05-templates/pr-review-template/)** - PR review with Handlebars templates and YAML variables
 - **[static-example/](05-templates/static-example/)** - Static template without variables (template-vars optional)
 - **[release-notes/](05-templates/release-notes/)** - Automated release notes generation from git history
+- **[advanced-templates/](05-templates/advanced-templates/)** - Conditional rendering, loops, and complex variables
 
 ## 🚀 Quick Start
 
@@ -63,6 +70,13 @@ llm-ci-runner \
   --schema-file examples/05-templates/pr-review-template/schema.yaml \
   --output-file pr-review-result.yaml
 
+# Advanced templates with conditional rendering
+llm-ci-runner \
+  --template-file examples/05-templates/advanced-templates/template.hbs \
+  --template-vars examples/05-templates/advanced-templates/template-vars.yaml \
+  --schema-file examples/05-templates/advanced-templates/schema.yaml \
+  --output-file advanced-analysis.yaml
+
 # Static template without variables (template-vars optional)
 llm-ci-runner \
   --template-file examples/05-templates/static-example/template.hbs \
@@ -74,6 +88,22 @@ llm-ci-runner \
   --template-file examples/05-templates/release-notes/template.hbs \
   --template-vars examples/05-templates/release-notes/template-vars.yaml \
   --output-file release-notes.md
+
+# Multi-format output comparison
+llm-ci-runner \
+  --input-file examples/06-output-showcase/multi-format-output/input.json \
+  --schema-file examples/06-output-showcase/multi-format-output/schema.json \
+  --output-file api-docs.json
+
+llm-ci-runner \
+  --input-file examples/06-output-showcase/multi-format-output/input.json \
+  --schema-file examples/06-output-showcase/multi-format-output/schema.json \
+  --output-file api-docs.yaml
+
+llm-ci-runner \
+  --input-file examples/06-output-showcase/multi-format-output/input.json \
+  --schema-file examples/06-output-showcase/multi-format-output/schema.json \
+  --output-file api-docs.md
 ```
 
 ## 🎯 AI-First DevOps Principles
@@ -143,6 +173,7 @@ For comprehensive CI/CD integration examples, see **[uv-usage-example.md](uv-usa
 3. **Security** → `03-security/` - Master security automation
 4. **Templates** → `05-templates/` - Master dynamic workflows with YAML and Handlebars
 5. **AI-First** → `04-ai-first/` - Embrace the future of development
+6. **Output Showcase** → `06-output-showcase/` - Explore output flexibility
 
 ---
 

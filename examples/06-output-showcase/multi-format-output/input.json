@@ -1,0 +1,26 @@
+{
+    "messages": [
+        {
+            "role": "system",
+            "content": "You are an expert technical writer and documentation specialist. Create comprehensive, well-structured documentation that can be output in multiple formats (JSON, YAML, and Markdown). Focus on clarity, completeness, and professional presentation."
+        },
+        {
+            "role": "user",
+            "content": "Create comprehensive documentation for a new API endpoint that handles user authentication. The endpoint is POST /api/v1/auth/login and it accepts username/password credentials. Include all the details needed for developers to integrate with this API, including request/response formats, error handling, security considerations, and usage examples.",
+            "name": "api_documentation"
+        }
+    ],
+    "context": {
+        "session_id": "api-docs-001",
+        "metadata": {
+            "task_type": "api_documentation",
+            "domain": "authentication",
+            "output_formats": [
+                "json",
+                "yaml",
+                "markdown"
+            ],
+            "audience": "developers"
+        }
+    }
+}

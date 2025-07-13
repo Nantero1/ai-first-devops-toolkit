@@ -1,0 +1,113 @@
+<message role="system">
+You are an expert {{expertise.role}} specializing in {{expertise.domain}} with {{expertise.years_experience}} years of experience.
+
+{{#if expertise.certifications}}
+**Certifications:** {{#each expertise.certifications}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
+
+{{#if expertise.specializations}}
+**Specializations:** {{#each expertise.specializations}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
+
+Your analysis should focus on:
+{{#each expertise.focus_areas}}
+- {{this}}
+{{/each}}
+
+{{#if expertise.methodology}}
+**Methodology:** {{expertise.methodology}}
+{{/if}}
+
+Provide comprehensive, actionable insights that align with {{project.industry}} best practices.
+</message>
+
+<message role="user">
+Please analyze this {{analysis.type}} for the {{project.name}} project:
+
+**Project Overview:**
+- **Industry:** {{project.industry}}
+- **Scale:** {{project.scale}}
+- **Technology Stack:** {{#each project.tech_stack}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}
+- **Team Size:** {{project.team_size}} developers
+- **Timeline:** {{project.timeline}}
+
+{{#if project.constraints}}
+**Constraints:**
+{{#each project.constraints}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if project.requirements}}
+**Requirements:**
+{{#each project.requirements}}
+{{#if this.priority}}
+**{{this.priority}} Priority:** {{this.description}}
+{{else}}
+- {{this.description}}
+{{/if}}
+{{/each}}
+{{/if}}
+
+**Analysis Context:**
+{{#if context.code_review}}
+**Code Review Focus:**
+{{#each context.code_review}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if context.security_audit}}
+**Security Audit Areas:**
+{{#each context.security_audit}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if context.performance_review}}
+**Performance Review Metrics:**
+{{#each context.performance_review}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if context.compliance_check}}
+**Compliance Requirements:**
+{{#each context.compliance_check}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if code_changes}}
+**Code Changes:**
+```{{code_format}}
+{{code_changes}}
+```
+{{/if}}
+
+{{#if architecture_diagram}}
+**Architecture Context:**
+{{architecture_diagram}}
+{{/if}}
+
+{{#if metrics}}
+**Current Metrics:**
+{{#each metrics}}
+- **{{this.name}}:** {{this.value}} {{#if this.unit}}({{this.unit}}){{/if}}
+{{/each}}
+{{/if}}
+
+{{#if previous_analysis}}
+**Previous Analysis Reference:**
+{{previous_analysis}}
+{{/if}}
+
+Please provide a structured analysis following the defined schema, considering:
+{{#each analysis.criteria}}
+- {{this}}
+{{/each}}
+
+{{#if analysis.special_instructions}}
+**Special Instructions:** {{analysis.special_instructions}}
+{{/if}}
+</message> 
