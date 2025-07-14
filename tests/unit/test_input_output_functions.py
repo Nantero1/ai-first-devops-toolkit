@@ -286,7 +286,7 @@ class TestWriteOutputFile:
         assert written_data["success"] is True
         assert written_data["response"] == response
         assert "metadata" in written_data
-        assert written_data["metadata"]["runner"] == "llm_ci_runner.py"
+        assert written_data["metadata"]["runner"] == "llm-ci-runner"
 
     def test_write_text_response(self, temp_output_file):
         """Test writing text response to output file."""
@@ -364,7 +364,7 @@ class TestWriteOutputFile:
         assert written_data["success"] is True
         assert written_data["response"] == response
         assert "metadata" in written_data
-        assert written_data["metadata"]["runner"] == "llm_ci_runner.py"
+        assert written_data["metadata"]["runner"] == "llm-ci-runner"
 
     def test_write_yaml_text_response(self, temp_dir):
         """Test writing text response to YAML output file."""

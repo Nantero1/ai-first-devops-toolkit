@@ -17,16 +17,16 @@ LOGGER = logging.getLogger(__name__)
 
 
 def create_dynamic_model_from_schema(
-    schema_dict: dict[str, Any], model_name: str = "DynamicOutputModel"
+    schema_dict: dict[str, Any],
 ) -> type[KernelBaseModel]:
     """
     Create a dynamic Pydantic model from JSON schema that inherits from KernelBaseModel.
 
-    Uses the json-schema-to-pydantic library for robust schema conversion instead of manual implementation.
+    Uses the json-schema-to-pydantic library for robust schema conversion with KernelBaseModel as base class.
+    Model name is determined by the schema's 'title' field, or defaults to library's default naming.
 
     Args:
         schema_dict: JSON schema dictionary
-        model_name: Name for the generated model class
 
     Returns:
         Dynamic Pydantic model class inheriting from KernelBaseModel
@@ -34,28 +34,24 @@ def create_dynamic_model_from_schema(
     Raises:
         SchemaValidationError: If schema conversion fails
     """
-    LOGGER.debug(f"🏗️  Creating dynamic model: {model_name}")
-
     try:
-        # Use the dedicated library for robust JSON schema -> Pydantic conversion
-        base_generated_model = create_model_from_schema(schema_dict)
+        # Get model title for logging (safe for non-dict inputs)
+        model_title = (
+            schema_dict.get("title", "DynamicOutputModel") if isinstance(schema_dict, dict) else "DynamicOutputModel"
+        )
+        LOGGER.debug(f"🏗️  Creating dynamic model: {model_title}")
 
-        # Create a new class that inherits from both KernelBaseModel and the generated model
-        # This ensures we get KernelBaseModel functionality while keeping the schema structure
-        class DynamicKernelModel(KernelBaseModel, base_generated_model):  # type: ignore[valid-type, misc]
-            pass
-
-        # Set the name for better debugging
-        DynamicKernelModel.__name__ = model_name
-        DynamicKernelModel.__qualname__ = model_name
+        # Use the library's native support for base model types
+        # Model naming is handled by the library via schema's 'title' field
+        DynamicKernelModel = create_model_from_schema(schema_dict, base_model_type=KernelBaseModel)
 
         # Count fields for logging
-        field_count = len(base_generated_model.model_fields)
-        required_fields = [name for name, field in base_generated_model.model_fields.items() if field.is_required()]
+        field_count = len(DynamicKernelModel.model_fields)
+        required_fields = [name for name, field in DynamicKernelModel.model_fields.items() if field.is_required()]
 
         LOGGER.debug(f"✅ Created dynamic model with {field_count} fields")
         LOGGER.debug(f"   Required fields: {required_fields}")
-        LOGGER.debug(f"   All fields: {list(base_generated_model.model_fields.keys())}")
+        LOGGER.debug(f"   All fields: {list(DynamicKernelModel.model_fields.keys())}")
 
         return DynamicKernelModel
 

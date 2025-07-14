@@ -21,12 +21,13 @@ from llm_ci_runner import (
 class TestCreateDynamicModelFromSchema:
     """Tests for create_dynamic_model_from_schema function."""
 
-    @patch("llm_ci_runner.schema.create_model_from_schema")
-    def test_create_valid_model_with_all_field_types(self, mock_create_model):
+    def test_create_valid_model_with_all_field_types(self):
         """Test creating a dynamic model with various field types."""
         # given
         schema_dict = {
             "type": "object",
+            "title": "TestModel",
+            "description": "Test model for testing",
             "properties": {
                 "sentiment": {
                     "type": "string",
@@ -49,75 +50,102 @@ class TestCreateDynamicModelFromSchema:
             "required": ["sentiment", "confidence", "tags"],
             "additionalProperties": False,
         }
-        model_name = "TestModel"
-
-        # Mock the base generated model with a compatible metaclass
-        from pydantic import BaseModel
-
-        class MockGeneratedModel(BaseModel):
-            pass
-
-        MockGeneratedModel.model_fields = {
-            "sentiment": Mock(is_required=lambda: True),
-            "confidence": Mock(is_required=lambda: True),
-            "tags": Mock(is_required=lambda: True),
-            "optional_field": Mock(is_required=lambda: False),
-        }
-        mock_create_model.return_value = MockGeneratedModel
 
         # when
-        result_model = create_dynamic_model_from_schema(schema_dict, model_name)
+        result_model = create_dynamic_model_from_schema(schema_dict)
 
         # then
-        mock_create_model.assert_called_once_with(schema_dict)
-        assert result_model.__name__ == model_name
-        assert result_model.__qualname__ == model_name
-        # Verify it's a type
         assert isinstance(result_model, type)
+        assert result_model.__name__ == "TestModel"
 
-    @patch("llm_ci_runner.schema.create_model_from_schema")
-    def test_create_model_with_empty_properties_succeeds(self, mock_create_model):
+        # Test model fields
+        fields = result_model.model_fields
+        assert "sentiment" in fields
+        assert "confidence" in fields
+        assert "tags" in fields
+        assert "optional_field" in fields
+
+        # Test required fields
+        assert fields["sentiment"].is_required()
+        assert fields["confidence"].is_required()
+        assert fields["tags"].is_required()
+        assert not fields["optional_field"].is_required()
+
+        # Test field descriptions
+        assert fields["sentiment"].description == "Sentiment classification"
+        assert fields["confidence"].description == "Confidence score"
+        assert fields["tags"].description == "List of tags"
+        assert fields["optional_field"].description == "Optional field"
+
+        # Test that we can create an instance
+        instance = result_model(sentiment="positive", confidence=0.95, tags=["tag1", "tag2"])
+        assert instance.sentiment == "positive"
+        assert instance.confidence == 0.95
+        assert instance.tags == ["tag1", "tag2"]
+        assert instance.optional_field is None
+
+        # Test JSON schema generation
+        json_schema = result_model.model_json_schema()
+        assert json_schema["type"] == "object"
+        assert json_schema["title"] == "TestModel"
+        assert "sentiment" in json_schema["properties"]
+        assert "confidence" in json_schema["properties"]
+        assert "tags" in json_schema["properties"]
+        assert json_schema["required"] == ["sentiment", "confidence", "tags"]
+
+    def test_create_model_with_empty_properties_succeeds(self):
         """Test that empty properties creates a valid model."""
         # given
         schema_dict = {"type": "object", "properties": {}, "required": []}
 
-        # Mock with proper BaseModel
-        from pydantic import BaseModel
-
-        class MockEmptyModel(BaseModel):
-            pass
-
-        MockEmptyModel.model_fields = {}
-        mock_create_model.return_value = MockEmptyModel
-
         # when
         result = create_dynamic_model_from_schema(schema_dict)
 
         # then
         assert result is not None
-        mock_create_model.assert_called_once_with(schema_dict)
+        assert isinstance(result, type)
+        assert len(result.model_fields) == 0
 
-    @patch("llm_ci_runner.schema.create_model_from_schema")
-    def test_create_model_with_non_object_type_succeeds(self, mock_create_model):
-        """Test that non-object type is handled by the library."""
+        # Test that we can create an instance
+        instance = result()
+        assert isinstance(instance, result)
+
+    def test_create_model_with_basic_types(self):
+        """Test creating a model with basic field types."""
         # given
-        schema_dict = {"type": "string", "properties": {"field": {"type": "string"}}}
-
-        # Mock with proper BaseModel
-        from pydantic import BaseModel
-
-        class MockStringTypeModel(BaseModel):
-            field: str = ""
-
-        MockStringTypeModel.model_fields = {"field": Mock(is_required=lambda: False)}
-        mock_create_model.return_value = MockStringTypeModel
+        schema_dict = {
+            "type": "object",
+            "title": "BasicTypesModel",
+            "properties": {
+                "string_field": {"type": "string", "description": "String field"},
+                "int_field": {"type": "integer", "description": "Integer field"},
+                "float_field": {"type": "number", "description": "Float field"},
+                "bool_field": {"type": "boolean", "description": "Boolean field"},
+            },
+            "required": ["string_field", "int_field"],
+        }
 
         # when
-        result = create_dynamic_model_from_schema(schema_dict)
+        result_model = create_dynamic_model_from_schema(schema_dict)
 
         # then
-        assert result is not None
-        mock_create_model.assert_called_once_with(schema_dict)
+        assert result_model.__name__ == "BasicTypesModel"
+
+        fields = result_model.model_fields
+        assert len(fields) == 4
+
+        # Test required fields
+        assert fields["string_field"].is_required()
+        assert fields["int_field"].is_required()
+        assert not fields["float_field"].is_required()
+        assert not fields["bool_field"].is_required()
+
+        # Test instance creation
+        instance = result_model(string_field="test", int_field=42)
+        assert instance.string_field == "test"
+        assert instance.int_field == 42
+        assert instance.float_field is None
+        assert instance.bool_field is None
 
     def test_create_model_with_non_dict_schema_raises_error(self):
         """Test that non-dictionary schema raises SchemaValidationError."""
@@ -128,24 +156,24 @@ class TestCreateDynamicModelFromSchema:
         with pytest.raises(SchemaValidationError, match="Failed to create dynamic model"):
             create_dynamic_model_from_schema(schema_dict)
 
-    def test_create_model_with_library_exception_raises_schema_error(self):
-        """Test that library exceptions are wrapped in SchemaValidationError."""
-        # given
+    def test_create_model_with_invalid_schema_raises_error(self):
+        """Test that invalid schema raises SchemaValidationError."""
+        # given - use a schema that will actually cause the library to fail
         schema_dict = {
             "type": "object",
-            "properties": {"field": {"type": "string"}},
-            "required": ["field"],
+            "properties": {
+                "field": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/nonexistent"  # This will cause a reference error
+                    },
+                }
+            },
         }
 
         # when & then
-        with patch("llm_ci_runner.schema.create_model_from_schema") as mock_create_model:
-            mock_create_model.side_effect = Exception("Library error")
-
-            with pytest.raises(
-                SchemaValidationError,
-                match="Failed to create dynamic model: Library error",
-            ):
-                create_dynamic_model_from_schema(schema_dict)
+        with pytest.raises(SchemaValidationError, match="Failed to create dynamic model"):
+            create_dynamic_model_from_schema(schema_dict)
 
     @pytest.mark.parametrize(
         "required_fields, field_name, expected_required",
@@ -155,8 +183,7 @@ class TestCreateDynamicModelFromSchema:
             ([], "field1", False),
         ],
     )
-    @patch("llm_ci_runner.schema.create_model_from_schema")
-    def test_required_field_handling(self, mock_create_model, required_fields, field_name, expected_required):
+    def test_required_field_handling(self, required_fields, field_name, expected_required):
         """Test that required fields are handled correctly."""
         # given
         schema_dict = {
@@ -165,23 +192,57 @@ class TestCreateDynamicModelFromSchema:
             "required": required_fields,
         }
 
-        # Mock with proper BaseModel
-        from pydantic import BaseModel
+        # when
+        result_model = create_dynamic_model_from_schema(schema_dict)
 
-        class MockRequiredModel(BaseModel):
-            pass
+        # then
+        fields = result_model.model_fields
+        if field_name in fields:
+            assert fields[field_name].is_required() == expected_required
 
-        # Dynamically add the field to the mock model
-        setattr(MockRequiredModel, field_name, "")
-        MockRequiredModel.model_fields = {field_name: Mock(is_required=lambda: expected_required)}
-        mock_create_model.return_value = MockRequiredModel
+    def test_model_inherits_from_kernel_base_model(self):
+        """Test that the created model inherits from KernelBaseModel."""
+        # given
+        schema_dict = {
+            "type": "object",
+            "title": "KernelTestModel",
+            "properties": {"test_field": {"type": "string", "description": "Test field"}},
+            "required": ["test_field"],
+        }
 
         # when
         result_model = create_dynamic_model_from_schema(schema_dict)
 
         # then
-        mock_create_model.assert_called_once_with(schema_dict)
-        assert result_model is not None
+        from semantic_kernel.kernel_pydantic import KernelBaseModel
+
+        assert issubclass(result_model, KernelBaseModel)
+
+        # Test that it can be instantiated
+        instance = result_model(test_field="test_value")
+        assert instance.test_field == "test_value"
+        assert isinstance(instance, KernelBaseModel)
+
+    def test_model_name_setting(self):
+        """Test that model names are set correctly via schema title."""
+        # given
+        custom_name = "CustomModelName"
+        schema_dict = {
+            "type": "object",
+            "title": custom_name,
+            "properties": {"field": {"type": "string"}},
+            "required": [],
+        }
+
+        # when
+        result_model = create_dynamic_model_from_schema(schema_dict)
+
+        # then
+        assert result_model.__name__ == custom_name
+
+        # Test JSON schema also reflects the name
+        json_schema = result_model.model_json_schema()
+        assert json_schema["title"] == custom_name
 
 
 class TestPydanticModelConversion:
@@ -238,6 +299,7 @@ class TestPydanticModelConversion:
         # given
         schema_dict = {
             "type": "object",
+            "title": "TestDynamicModel",
             "properties": {
                 "sentiment": {
                     "type": "string",
@@ -256,7 +318,7 @@ class TestPydanticModelConversion:
         }
 
         # Create dynamic model
-        dynamic_model = create_dynamic_model_from_schema(schema_dict, "TestDynamicModel")
+        dynamic_model = create_dynamic_model_from_schema(schema_dict)
         model_instance = dynamic_model(sentiment="positive", confidence=0.95)
 
         # when
@@ -273,6 +335,7 @@ class TestPydanticModelConversion:
         # given
         schema_dict = {
             "type": "object",
+            "title": "TestDynamicModel",
             "properties": {
                 "name": {"type": "string", "description": "Test name"},
                 "score": {
@@ -287,7 +350,7 @@ class TestPydanticModelConversion:
         }
 
         # Create dynamic model
-        dynamic_model = create_dynamic_model_from_schema(schema_dict, "TestDynamicModel")
+        dynamic_model = create_dynamic_model_from_schema(schema_dict)
         model_instance = dynamic_model(name="test", score=85)
 
         # when
@@ -374,6 +437,7 @@ class TestPydanticModelConversion:
         # given
         schema_dict = {
             "type": "object",
+            "title": "ComplexTestModel",
             "properties": {
                 "name": {"type": "string", "description": "Test name"},
                 "metadata": {
@@ -410,7 +474,7 @@ class TestPydanticModelConversion:
         }
 
         # Create dynamic model
-        dynamic_model = create_dynamic_model_from_schema(schema_dict, "ComplexTestModel")
+        dynamic_model = create_dynamic_model_from_schema(schema_dict)
         model_instance = dynamic_model(
             name="test",
             metadata={"version": "1.0", "tags": ["tag1", "tag2"]},
@@ -472,6 +536,7 @@ class TestPydanticModelConversion:
         # given
         schema_dict = {
             "type": "object",
+            "title": "KernelTestModel",
             "properties": {
                 "test_field": {"type": "string", "description": "Test field"},
             },
@@ -480,7 +545,7 @@ class TestPydanticModelConversion:
         }
 
         # Create dynamic model
-        dynamic_model = create_dynamic_model_from_schema(schema_dict, "KernelTestModel")
+        dynamic_model = create_dynamic_model_from_schema(schema_dict)
 
         # when & then
         from semantic_kernel.kernel_pydantic import KernelBaseModel
@@ -505,16 +570,26 @@ class TestLoadSchemaFile:
         schema_file = temp_schema_file
 
         # when
-        with patch("llm_ci_runner.schema.create_dynamic_model_from_schema") as mock_create_model:
-            mock_model = Mock()
-            mock_model.__name__ = "TestModel"
-            mock_create_model.return_value = mock_model
-
-            result = load_schema_file(schema_file)
+        result = load_schema_file(schema_file)
 
         # then
         assert result is not None
-        mock_create_model.assert_called_once()
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+        model, schema_dict = result
+        assert isinstance(model, type)
+        assert isinstance(schema_dict, dict)
+
+        # Test that the model was created correctly
+        assert hasattr(model, "model_fields")
+        assert "sentiment" in model.model_fields
+        assert "confidence" in model.model_fields
+
+        # Test that the schema dict matches the original
+        assert schema_dict["type"] == "object"
+        assert "sentiment" in schema_dict["properties"]
+        assert "confidence" in schema_dict["properties"]
 
     def test_load_schema_with_none_file_returns_none(self):
         """Test that None file path returns None."""
@@ -547,17 +622,19 @@ class TestLoadSchemaFile:
         with pytest.raises(InputValidationError, match="Invalid JSON in schema file:"):
             load_schema_file(invalid_json_file)
 
-    def test_load_schema_with_create_model_error_raises_schema_error(self, temp_schema_file):
+    def test_load_schema_with_create_model_error_raises_schema_error(self, temp_dir):
         """Test that model creation errors are wrapped in InputValidationError."""
         # given
-        schema_file = temp_schema_file
+        invalid_schema_file = temp_dir / "invalid_schema.json"
+        with open(invalid_schema_file, "w") as f:
+            # Create a schema that will cause model creation to fail with a reference error
+            f.write(
+                '{"type": "object", "properties": {"field": {"type": "array", "items": {"$ref": "#/definitions/nonexistent"}}}}'
+            )
 
         # when & then
-        with patch("llm_ci_runner.schema.create_dynamic_model_from_schema") as mock_create_model:
-            mock_create_model.side_effect = Exception("Model creation failed")
-
-            with pytest.raises(InputValidationError, match="Failed to load schema file"):
-                load_schema_file(schema_file)
+        with pytest.raises(InputValidationError, match="Failed to load schema file"):
+            load_schema_file(invalid_schema_file)
 
     def test_load_schema_with_file_read_error_raises_schema_error(self):
         """Test that file read errors are wrapped in InputValidationError."""
@@ -595,25 +672,31 @@ additionalProperties: false
             f.write(schema_content)
 
         # when
-        with patch("llm_ci_runner.schema.create_dynamic_model_from_schema") as mock_create_model:
-            mock_model = Mock()
-            mock_model.__name__ = "TestModel"
-            mock_create_model.return_value = mock_model
-
-            result = load_schema_file(schema_file)
+        result = load_schema_file(schema_file)
 
         # then
         assert result is not None
         assert isinstance(result, tuple)
         assert len(result) == 2
-        assert result[0] == mock_model
-        assert isinstance(result[1], dict)
-        mock_create_model.assert_called_once()
+
+        model, schema_dict = result
+        assert isinstance(model, type)
+        assert isinstance(schema_dict, dict)
+
         # Verify the YAML was parsed correctly
-        call_args = mock_create_model.call_args[0][0]
-        assert call_args["type"] == "object"
-        assert "sentiment" in call_args["properties"]
-        assert call_args["required"] == ["sentiment", "confidence"]
+        assert schema_dict["type"] == "object"
+        assert "sentiment" in schema_dict["properties"]
+        assert schema_dict["required"] == ["sentiment", "confidence"]
+
+        # Test that the model was created correctly
+        assert hasattr(model, "model_fields")
+        assert "sentiment" in model.model_fields
+        assert "confidence" in model.model_fields
+
+        # Test instance creation
+        instance = model(sentiment="positive", confidence=0.95)
+        assert instance.sentiment == "positive"
+        assert instance.confidence == 0.95
 
     def test_load_invalid_yaml_schema_raises_error(self, temp_dir):
         """Test that invalid YAML schema raises InputValidationError."""

@@ -321,8 +321,7 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
             }
 
             output_data_literal = yaml_recursively_force_literal(output_data)
-            yaml = YAML()
-            yaml = YAML(typ="safe", pure=True)
+            yaml = YAML(pure=True)
             yaml.default_flow_style = False
             yaml.indent(mapping=2, sequence=4, offset=2)
 
