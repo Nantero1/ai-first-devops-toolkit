@@ -66,7 +66,7 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
     LOGGER.debug(f"📂 Loading template variables from: {template_vars_file}")
 
     try:
-        yaml = YAML(typ="safe")
+        yaml = YAML(typ="safe", pure=True)
 
         with open(template_vars_file, encoding="utf-8") as f:
             content = f.read()
@@ -164,7 +164,9 @@ def load_jinja2_template(template_file: Path) -> Jinja2PromptTemplate:
         raise InputValidationError(f"Failed to load Jinja2 template: {e}") from e
 
 
-def load_template(template_file: Path) -> HandlebarsPromptTemplate | Jinja2PromptTemplate:
+def load_template(
+    template_file: Path,
+) -> HandlebarsPromptTemplate | Jinja2PromptTemplate:
     """
     Load a template from file, automatically detecting the format.
 
@@ -216,7 +218,7 @@ async def render_template(
         # Render the template with variables
         rendered_content = await template.render(kernel, arguments)
 
-        LOGGER.info("✅ Template rendered successfully")
+        LOGGER.debug("✅ Template rendered successfully")
         LOGGER.debug(f"   Rendered length: {len(rendered_content)} characters")
 
         return rendered_content
@@ -280,5 +282,5 @@ def parse_rendered_template_to_chat_history(rendered_content: str) -> ChatHistor
 
         LOGGER.debug(f"   Added {role_str} message: {len(content)} characters")
 
-    LOGGER.info(f"✅ Parsed {len(matches)} messages from template")
+    LOGGER.debug(f"✅ Parsed {len(matches)} messages from template")
     return chat_history

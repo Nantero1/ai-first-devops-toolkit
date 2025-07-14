@@ -89,7 +89,7 @@ async def main() -> None:
         # Process input based on mode
         if args.input_file:
             # Traditional input file mode
-            LOGGER.info("📂 Processing input file mode")
+            LOGGER.info("📂 Processing input files")
 
             # Load input data
             input_data = load_input_file(args.input_file)
@@ -100,7 +100,7 @@ async def main() -> None:
 
         elif args.template_file:
             # Template-based mode
-            LOGGER.info("📄 Processing template mode")
+            LOGGER.info("📄 Processing templates")
 
             # Load template
             template = load_template(args.template_file)

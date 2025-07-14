@@ -95,7 +95,7 @@ async def execute_llm_task(
     try:
         LOGGER.debug("🔐 Attempting Semantic Kernel with schema enforcement")
         result = await _execute_semantic_kernel_with_schema(kernel, chat_history, schema_model, schema_dict)
-        LOGGER.info("✅ Semantic Kernel execution successful")
+        LOGGER.debug("✅ Semantic Kernel execution successful")
         return result
     except Exception as e:
         LOGGER.warning(f"⚠️ Semantic Kernel failed: {e}")

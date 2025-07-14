@@ -1,5 +1,7 @@
 {
     "type": "object",
+    "title": "Changelog",
+    "description": "Changelog fields required for our changelog generation",
     "properties": {
         "version": {
             "type": "string",

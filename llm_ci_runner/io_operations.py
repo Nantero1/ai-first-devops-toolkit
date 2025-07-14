@@ -133,7 +133,7 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
         raise InputValidationError(f"Input file not found: {input_file}")
 
     try:
-        yaml = YAML(typ="safe")
+        yaml = YAML(typ="safe", pure=True)
 
         with open(input_file, encoding="utf-8") as f:
             content = f.read()
@@ -188,7 +188,7 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
                 raise InputValidationError(f"Message {i} must have 'content' field")
 
             role = message["role"]
-            if role not in ["system", "user", "assistant"]:
+            if role not in ["system", "user", "assistant", "tool"]:
                 raise InputValidationError(
                     f"Message {i} has invalid role '{role}'. Valid roles: system, user, assistant"
                 )
@@ -245,6 +245,7 @@ def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
             "system": AuthorRole.SYSTEM,
             "user": AuthorRole.USER,
             "assistant": AuthorRole.ASSISTANT,
+            "tool": AuthorRole.TOOL,
         }
 
         if role_str not in role_mapping:
@@ -267,7 +268,7 @@ def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
         except Exception as e:
             raise InputValidationError(f"Failed to create message {i}: {e}") from e
 
-    LOGGER.info(f"✅ Created ChatHistory with {len(messages)} messages")
+    LOGGER.debug(f"✅ Created ChatHistory with {len(messages)} messages")
     return chat_history
 
 
@@ -314,17 +315,19 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
                 "success": True,
                 "response": response,
                 "metadata": {
-                    "runner": "llm_ci_runner.py",
+                    "runner": "llm-ci-runner",
                     "timestamp": datetime.now().isoformat(),
                 },
             }
 
+            output_data_literal = yaml_recursively_force_literal(output_data)
             yaml = YAML()
+            yaml = YAML(typ="safe", pure=True)
             yaml.default_flow_style = False
             yaml.indent(mapping=2, sequence=4, offset=2)
 
             with open(output_file, "w", encoding="utf-8") as f:
-                yaml.dump(output_data, f)
+                yaml.dump(output_data_literal, f)
 
             LOGGER.info(f"✅ Wrote YAML output: {output_file}")
 
@@ -334,7 +337,7 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
                 "success": True,
                 "response": response,
                 "metadata": {
-                    "runner": "llm_ci_runner.py",
+                    "runner": "llm-ci-runner",
                     "timestamp": datetime.now().isoformat(),
                 },
             }
@@ -371,7 +374,7 @@ def load_schema_file(schema_file: Path | None) -> tuple[type, dict[str, Any]] | 
         raise InputValidationError(f"Schema file not found: {schema_file}")
 
     try:
-        yaml = YAML(typ="safe")
+        yaml = YAML(typ="safe", pure=True)
 
         with open(schema_file, encoding="utf-8") as f:
             content = f.read()

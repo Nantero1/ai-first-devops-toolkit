@@ -4,6 +4,38 @@
 
 *Note: This file is updated only upon user request and focuses on capturing important, reusable lessons learned during development. Each entry follows format: Priority: Category → Issue: [Problem] → Fix: [Solution] → Why: [Impact]. Use grep/automated tools to verify changes and prevent regressions.*
 
+## Logging Best Practices
+
+**Critical**: CLI Tool Logging Philosophy for CI/CD Environments
+→ Issue: CLI tools need clean, predictable logging that serves both interactive users and CI/CD pipelines with clear level separation.
+→ Solution: Follow strict PEP 282 pattern: INFO = user-facing progress and business events (branch selection, settings applied, major steps), DEBUG = technical details for developers, Rich output = actual results presentation separate from logging system.
+→ Impact: Perfect CI/CD logs showing execution path and settings without noise, while preserving debugging capability.
+
+**Critical**: Context-Dependent Logging Levels  
+→ Issue: JSON parsing failure severity depends on context - ERROR when schema enforcement expected, DEBUG when optional fallback.
+→ Solution: Map logging levels to user expectations: schema_model exists = ERROR (broken promise), no schema_model = DEBUG (expected behavior).
+→ Impact: Proper error visibility for users, prevents confusion about system behavior.
+
+**Important**: Eliminate Duplicate Success Messages in Execution Flow
+→ Issue: Schema loading and ChatHistory creation logged at INFO level multiple times in single execution flow creating log noise and confusion.
+→ Solution: Move technical success confirmations (schema creation, template rendering, chat history creation) to DEBUG level. Keep only business-relevant completion messages at INFO level.
+→ Impact: Clean CI/CD output showing only meaningful progress, eliminates duplicate information, maintains debugging capability.
+
+**Important**: Meta-Logging Should Be DEBUG Level
+→ Issue: Logging initialization messages like "LLM Runner initialized with log level: INFO" are technical metadata, not user-facing progress.
+→ Solution: Move logging configuration messages to DEBUG level - users care about what the tool does, not how it's configured to report.
+→ Impact: Cleaner INFO output focused on actual business operations, follows CLI tool best practices.
+
+**Enhancement**: Preserve User-Facing Rich Output Separate from Logging
+→ Issue: Removing beautiful Rich console LLM response display during "logging improvements" degrades user experience.
+→ Solution: Keep CONSOLE.print() for LLM responses completely separate from logging system - users expect to see their results beautifully formatted.
+→ Impact: Maintains core value proposition of beautiful, readable output while having clean logging.
+
+**Important**: Emoji Consistency Matches Log Level Severity
+→ Issue: Using warning emojis (⚠️) in DEBUG messages creates confusion about severity.
+→ Solution: Match emoji severity to log level: 🔄 for DEBUG fallbacks, ⚠️ for WARNING, ❌ for ERROR.
+→ Impact: Clear visual communication of actual issue severity.
+
 ## Component Development
 
 **Important**: Template Engine Unification Strategy

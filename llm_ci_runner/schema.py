@@ -53,7 +53,7 @@ def create_dynamic_model_from_schema(
         field_count = len(base_generated_model.model_fields)
         required_fields = [name for name, field in base_generated_model.model_fields.items() if field.is_required()]
 
-        LOGGER.info(f"✅ Created dynamic model with {field_count} fields")
+        LOGGER.debug(f"✅ Created dynamic model with {field_count} fields")
         LOGGER.debug(f"   Required fields: {required_fields}")
         LOGGER.debug(f"   All fields: {list(base_generated_model.model_fields.keys())}")
 

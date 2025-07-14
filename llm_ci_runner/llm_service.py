@@ -113,7 +113,7 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
     if not model:
         raise AuthenticationError("AZURE_OPENAI_MODEL environment variable is required")
 
-    LOGGER.info(f"🎯 Using Azure OpenAI endpoint: {endpoint}")
+    LOGGER.debug(f"🎯 Using Azure OpenAI endpoint: {endpoint}")
     LOGGER.info(f"🎯 Using model: {model}")
     LOGGER.debug(f"🎯 Using API version: {api_version}")
 
