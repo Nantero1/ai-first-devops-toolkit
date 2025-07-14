@@ -13,3 +13,4 @@ htmlcov/
 /test-results.xml
 test-results/
 dist/
+.coverage.*

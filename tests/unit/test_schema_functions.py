@@ -184,6 +184,318 @@ class TestCreateDynamicModelFromSchema:
         assert result_model is not None
 
 
+class TestPydanticModelConversion:
+    """Tests for Pydantic model conversion methods (model_dump() and dict())."""
+
+    def test_static_pydantic_model_model_dump_method(self):
+        """Test that static Pydantic models have model_dump() method."""
+        # given
+        from pydantic import BaseModel, Field
+
+        class TestStaticModel(BaseModel):
+            """Static Pydantic model for testing conversion methods."""
+
+            name: str = Field(..., description="Test name")
+            value: int = Field(..., description="Test value")
+            optional_field: str = Field(default="default", description="Optional field")
+
+        model_instance = TestStaticModel(name="test", value=42)
+
+        # when
+        result = model_instance.model_dump()
+
+        # then
+        assert isinstance(result, dict)
+        assert result["name"] == "test"
+        assert result["value"] == 42
+        assert result["optional_field"] == "default"
+        assert len(result) == 3
+
+    def test_static_pydantic_model_dict_method(self):
+        """Test that static Pydantic models have dict() method (for backward compatibility)."""
+        # given
+        from pydantic import BaseModel, Field
+
+        class TestStaticModel(BaseModel):
+            """Static Pydantic model for testing dict() method."""
+
+            name: str = Field(..., description="Test name")
+            value: int = Field(..., description="Test value")
+
+        model_instance = TestStaticModel(name="test", value=42)
+
+        # when
+        result = model_instance.model_dump()
+
+        # then
+        assert isinstance(result, dict)
+        assert result["name"] == "test"
+        assert result["value"] == 42
+        assert len(result) == 2
+
+    def test_dynamic_kernel_model_model_dump_method(self):
+        """Test that dynamic KernelBaseModel models have model_dump() method."""
+        # given
+        schema_dict = {
+            "type": "object",
+            "properties": {
+                "sentiment": {
+                    "type": "string",
+                    "enum": ["positive", "negative", "neutral"],
+                    "description": "Sentiment classification",
+                },
+                "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Confidence score",
+                },
+            },
+            "required": ["sentiment", "confidence"],
+            "additionalProperties": False,
+        }
+
+        # Create dynamic model
+        dynamic_model = create_dynamic_model_from_schema(schema_dict, "TestDynamicModel")
+        model_instance = dynamic_model(sentiment="positive", confidence=0.95)
+
+        # when
+        result = model_instance.model_dump()
+
+        # then
+        assert isinstance(result, dict)
+        assert result["sentiment"] == "positive"
+        assert result["confidence"] == 0.95
+        assert len(result) == 2
+
+    def test_dynamic_kernel_model_dict_method(self):
+        """Test that dynamic KernelBaseModel models have dict() method."""
+        # given
+        schema_dict = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Test name"},
+                "score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Test score",
+                },
+            },
+            "required": ["name", "score"],
+            "additionalProperties": False,
+        }
+
+        # Create dynamic model
+        dynamic_model = create_dynamic_model_from_schema(schema_dict, "TestDynamicModel")
+        model_instance = dynamic_model(name="test", score=85)
+
+        # when
+        result = model_instance.model_dump()
+
+        # then
+        assert isinstance(result, dict)
+        assert result["name"] == "test"
+        assert result["score"] == 85
+        assert len(result) == 2
+
+    def test_model_dump_with_exclude_unset_option(self):
+        """Test model_dump() with exclude_unset option."""
+        # given
+        from pydantic import BaseModel, Field
+        from typing import Optional
+
+        class TestModel(BaseModel):
+            """Test model with optional fields."""
+
+            required_field: str = Field(..., description="Required field")
+            optional_field: str = Field(default="default", description="Optional field")
+            unset_field: Optional[str] = Field(default=None, description="Unset field")
+
+        model_instance = TestModel(required_field="test")
+
+        # when
+        result = model_instance.model_dump(exclude_unset=True)
+
+        # then
+        assert isinstance(result, dict)
+        assert result["required_field"] == "test"
+        assert "optional_field" not in result  # exclude_unset excludes fields with defaults
+        assert "unset_field" not in result
+        assert len(result) == 1
+
+    def test_model_dump_with_include_none_option(self):
+        """Test model_dump() with include_none option."""
+        # given
+        from pydantic import BaseModel, Field
+        from typing import Optional
+
+        class TestModel(BaseModel):
+            """Test model with None values."""
+
+            required_field: str = Field(..., description="Required field")
+            optional_field: Optional[str] = Field(default=None, description="Optional field")
+
+        model_instance = TestModel(required_field="test", optional_field=None)
+
+        # when
+        result = model_instance.model_dump(exclude_none=False)
+
+        # then
+        assert isinstance(result, dict)
+        assert result["required_field"] == "test"
+        assert result["optional_field"] is None
+        assert len(result) == 2
+
+    def test_dict_method_backward_compatibility(self):
+        """Test that dict() method works for backward compatibility."""
+        # given
+        from pydantic import BaseModel, Field
+
+        class TestModel(BaseModel):
+            """Test model for backward compatibility."""
+
+            field1: str = Field(..., description="Field 1")
+            field2: int = Field(..., description="Field 2")
+
+        model_instance = TestModel(field1="value1", field2=123)
+
+        # when
+        result = model_instance.model_dump()
+
+        # then
+        assert isinstance(result, dict)
+        assert result["field1"] == "value1"
+        assert result["field2"] == 123
+        assert len(result) == 2
+
+    def test_dynamic_model_with_complex_schema(self):
+        """Test dynamic model conversion with complex schema (nested objects, arrays)."""
+        # given
+        schema_dict = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Test name"},
+                "metadata": {
+                    "type": "object",
+                    "properties": {
+                        "version": {"type": "string", "description": "Version"},
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Tags",
+                        },
+                    },
+                    "required": ["version", "tags"],
+                },
+                "scores": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "category": {"type": "string", "description": "Category"},
+                            "score": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1,
+                                "description": "Score",
+                            },
+                        },
+                        "required": ["category", "score"],
+                    },
+                },
+            },
+            "required": ["name", "metadata", "scores"],
+            "additionalProperties": False,
+        }
+
+        # Create dynamic model
+        dynamic_model = create_dynamic_model_from_schema(schema_dict, "ComplexTestModel")
+        model_instance = dynamic_model(
+            name="test",
+            metadata={"version": "1.0", "tags": ["tag1", "tag2"]},
+            scores=[
+                {"category": "quality", "score": 0.85},
+                {"category": "performance", "score": 0.92},
+            ],
+        )
+
+        # when
+        result = model_instance.model_dump()
+
+        # then
+        assert isinstance(result, dict)
+        assert result["name"] == "test"
+        assert result["metadata"]["version"] == "1.0"
+        assert result["metadata"]["tags"] == ["tag1", "tag2"]
+        assert len(result["scores"]) == 2
+        assert result["scores"][0]["category"] == "quality"
+        assert result["scores"][0]["score"] == 0.85
+        assert result["scores"][1]["category"] == "performance"
+        assert result["scores"][1]["score"] == 0.92
+
+    def test_model_conversion_methods_consistency(self):
+        """Test that model_dump() and dict() produce consistent results."""
+        # given
+        from pydantic import BaseModel, Field
+
+        class TestModel(BaseModel):
+            """Test model for conversion consistency."""
+
+            string_field: str = Field(..., description="String field")
+            int_field: int = Field(..., description="Integer field")
+            float_field: float = Field(..., description="Float field")
+            bool_field: bool = Field(..., description="Boolean field")
+
+        model_instance = TestModel(
+            string_field="test",
+            int_field=42,
+            float_field=3.14,
+            bool_field=True,
+        )
+
+        # when
+        model_dump_result = model_instance.model_dump()
+        dict_result = model_instance.model_dump()
+
+        # then
+        assert isinstance(model_dump_result, dict)
+        assert isinstance(dict_result, dict)
+        assert model_dump_result == dict_result
+        assert model_dump_result["string_field"] == "test"
+        assert model_dump_result["int_field"] == 42
+        assert model_dump_result["float_field"] == 3.14
+        assert model_dump_result["bool_field"] is True
+
+    def test_kernel_base_model_inheritance(self):
+        """Test that dynamic models properly inherit from KernelBaseModel."""
+        # given
+        schema_dict = {
+            "type": "object",
+            "properties": {
+                "test_field": {"type": "string", "description": "Test field"},
+            },
+            "required": ["test_field"],
+            "additionalProperties": False,
+        }
+
+        # Create dynamic model
+        dynamic_model = create_dynamic_model_from_schema(schema_dict, "KernelTestModel")
+
+        # when & then
+        from semantic_kernel.kernel_pydantic import KernelBaseModel
+
+        assert issubclass(dynamic_model, KernelBaseModel)
+
+        # Test that it can be instantiated
+        model_instance = dynamic_model(test_field="test_value")
+        assert model_instance.test_field == "test_value"
+
+        # Test conversion methods
+        result = model_instance.model_dump()
+        assert result["test_field"] == "test_value"
+
+
 class TestLoadSchemaFile:
     """Tests for load_schema_file function."""
 
@@ -291,7 +603,11 @@ additionalProperties: false
             result = load_schema_file(schema_file)
 
         # then
-        assert result == mock_model
+        assert result is not None
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert result[0] == mock_model
+        assert isinstance(result[1], dict)
         mock_create_model.assert_called_once()
         # Verify the YAML was parsed correctly
         call_args = mock_create_model.call_args[0][0]

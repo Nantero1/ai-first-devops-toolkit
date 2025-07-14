@@ -38,7 +38,8 @@
                 "description",
                 "authentication",
                 "rate_limiting"
-            ]
+            ],
+            "additionalProperties": false
         },
         "request_format": {
             "type": "object",
@@ -73,19 +74,22 @@
                             "type",
                             "required",
                             "description"
-                        ]
+                        ],
+                        "additionalProperties": false
                     }
                 },
                 "example_request": {
                     "type": "object",
-                    "description": "Example request body"
+                    "description": "Example request body",
+                    "additionalProperties": false
                 }
             },
             "required": [
                 "content_type",
                 "parameters",
                 "example_request"
-            ]
+            ],
+            "additionalProperties": false
         },
         "response_format": {
             "type": "object",
@@ -101,14 +105,16 @@
                         },
                         "body": {
                             "type": "object",
-                            "description": "Success response body structure"
+                            "description": "Success response body structure",
+                            "additionalProperties": false
                         }
                     },
                     "required": [
                         "status_code",
                         "description",
                         "body"
-                    ]
+                    ],
+                    "additionalProperties": false
                 },
                 "error_responses": {
                     "type": "array",
@@ -126,7 +132,8 @@
                             },
                             "body": {
                                 "type": "object",
-                                "description": "Error response body structure"
+                                "description": "Error response body structure",
+                                "additionalProperties": false
                             }
                         },
                         "required": [
@@ -134,7 +141,8 @@
                             "error_code",
                             "description",
                             "body"
-                        ]
+                        ],
+                        "additionalProperties": false
                     },
                     "minItems": 2,
                     "maxItems": 6
@@ -143,7 +151,8 @@
             "required": [
                 "success_response",
                 "error_responses"
-            ]
+            ],
+            "additionalProperties": false
         },
         "security_considerations": {
             "type": "array",
@@ -164,7 +173,8 @@
                     "aspect",
                     "description",
                     "recommendation"
-                ]
+                ],
+                "additionalProperties": false
             },
             "minItems": 3,
             "maxItems": 8
@@ -192,7 +202,8 @@
                     "title",
                     "code",
                     "description"
-                ]
+                ],
+                "additionalProperties": false
             },
             "minItems": 2,
             "maxItems": 5
@@ -212,10 +223,12 @@
                                 "type": "string"
                             },
                             "input": {
-                                "type": "object"
+                                "type": "object",
+                                "additionalProperties": false
                             },
                             "expected_output": {
-                                "type": "object"
+                                "type": "object",
+                                "additionalProperties": false
                             }
                         },
                         "required": [
@@ -223,7 +236,8 @@
                             "description",
                             "input",
                             "expected_output"
-                        ]
+                        ],
+                        "additionalProperties": false
                     },
                     "minItems": 3,
                     "maxItems": 8
@@ -240,7 +254,8 @@
             "required": [
                 "test_cases",
                 "curl_examples"
-            ]
+            ],
+            "additionalProperties": false
         },
         "implementation_notes": {
             "type": "array",

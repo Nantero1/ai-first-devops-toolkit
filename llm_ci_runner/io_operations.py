@@ -348,7 +348,7 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
         raise LLMRunnerError(f"Error writing output file: {e}") from e
 
 
-def load_schema_file(schema_file: Path | None) -> type | None:
+def load_schema_file(schema_file: Path | None) -> tuple[type, dict[str, Any]] | None:
     """
     Load schema file and create dynamic model.
 
@@ -356,7 +356,7 @@ def load_schema_file(schema_file: Path | None) -> type | None:
         schema_file: Path to the schema file (optional)
 
     Returns:
-        Dynamic model class or None if no schema provided
+        Tuple of (dynamic model class, original schema dict) or None if no schema provided
 
     Raises:
         InputValidationError: If schema loading fails
@@ -390,9 +390,9 @@ def load_schema_file(schema_file: Path | None) -> type | None:
         from .schema import create_dynamic_model_from_schema
 
         model = create_dynamic_model_from_schema(schema_dict)
-        LOGGER.info("✅ Loaded schema and created dynamic model")
+        LOGGER.debug("✅ Loaded schema and created dynamic model")
 
-        return model
+        return model, schema_dict
 
     except json.JSONDecodeError as e:
         raise InputValidationError(f"Invalid JSON in schema file: {e}") from e

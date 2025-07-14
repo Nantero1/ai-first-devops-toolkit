@@ -119,7 +119,7 @@ def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
 
         template = HandlebarsPromptTemplate(prompt_template_config=config)
 
-        LOGGER.info("✅ Handlebars template loaded successfully")
+        LOGGER.debug("✅ Handlebars template loaded successfully")
         LOGGER.debug(f"   Template length: {len(template_content)} characters")
 
         return template

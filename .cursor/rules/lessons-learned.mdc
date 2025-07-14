@@ -152,6 +152,152 @@ Testing Infrastructure and Practices: Mocking Across Process Boundaries → Issu
 
 **Critical**: Systematic Test Failure Resolution After Modularization → Issue: Large-scale refactoring (single-file to modular structure) caused 7+ test failures across multiple categories (API patterns, mock paths, error messages), creating overwhelming debugging scenario requiring systematic approach. → Solution: (1) **Replace vs Fix Strategy**: When original working tests exist, replace broken tests with proven patterns rather than attempting to fix incorrect implementations, (2) **Phase-Based Resolution**: Fix import/module errors first, then API pattern mismatches, then exception handling, finally individual test logic, (3) **Mock Path Mapping**: Create systematic mapping from single-file paths (llm_ci_runner.X) to modular paths (llm_ci_runner.module.X), (4) **Incremental Validation**: Test after each phase to prevent cascade failures, (5) **Zero-Risk Principle**: Use battle-tested original code patterns throughout. → Impact: Successfully transformed 7 failing tests to 113/113 passing (100% success) while preserving all original functionality and test coverage. Methodology is reusable for any large-scale architectural refactoring. Key insight: Test failures often indicate refactoring mistakes in the implementation, not broken original logic.
 
-**Critical**: Markdown Output + Schema Incompatibility → Issue: Using schema enforcement with markdown output produces JSON structure instead of clean markdown because schema enforcement returns structured JSON object, but markdown output handler extracts text using response.get("response", str(response)) which results in JSON string representation in markdown file. → Solution: (1) **Output Format Strategy**: Use schemas only for JSON/YAML outputs where structured data is valuable, omit schemas for markdown output to get clean, readable documentation, (2) **Documentation Clarity**: Add explicit notes in examples explaining when to use schemas (JSON/YAML) vs when to omit them (markdown), (3) **Code Evidence**: llm_ci_runner/io_operations.py lines 295-305 shows markdown handler extracts response.get("response", str(response)) which produces JSON structure instead of clean text. → Impact: Prevents confusion in documentation examples, ensures users get expected clean markdown output, and establishes clear guidance for output format selection. Key insight: Schema enforcement and direct text output are mutually exclusive - choose based on desired output format.  
+**Critical**: Markdown Output + Schema Incompatibility → Issue: Using schema enforcement with markdown output produces JSON structure instead of clean markdown because schema enforcement returns structured JSON object, but markdown output handler extracts text using response.get("response", str(response)) which results in JSON string representation in markdown file. → Solution: (1) **Output Format Strategy**: Use schemas only for JSON/YAML outputs where structured data is valuable, omit schemas for markdown output to get clean, readable documentation, (2) **Documentation Clarity**: Add explicit notes in examples explaining when to use schemas (JSON/YAML) vs when to omit them (markdown), (3) **Code Evidence**: llm_ci_runner/io_operations.py lines 295-305 shows markdown handler extracts response.get("response", str(response)) which produces JSON structure instead of clean text. → Impact: Prevents confusion in documentation examples, ensures users get expected clean markdown output, and establishes clear guidance for output format selection. Key insight: Schema enforcement and direct text output are mutually exclusive - choose based on desired output format.
+
+**Critical**: Azure OpenAI Schema Validation Requirements → Issue: Azure OpenAI structured output feature rejects schemas with error "additionalProperties is required to be supplied and to be false" for object properties, preventing schema enforcement from working. → Solution: (1) **Explicit additionalProperties**: Add "additionalProperties": false to all object properties in JSON schemas used with Azure OpenAI, (2) **Comprehensive Coverage**: Include additionalProperties: false for all nested objects, array items, and top-level objects, (3) **Validation Strategy**: Test schemas with Azure OpenAI before using in production to catch validation errors early. → Impact: Ensures schemas work with Azure OpenAI structured outputs, prevents runtime validation failures, and establishes requirement for all production schemas. Key insight: Azure OpenAI has stricter schema validation requirements than standard JSON Schema - all objects must explicitly disallow additional properties.
+
+**Critical**: Strict Schema Enforcement Implementation → Issue: Users require strict schema compliance - if schema enforcement fails, the operation should fail rather than fall back to text mode. → Solution: (1) **Remove Text Mode Fallback**: Eliminate text mode fallback from execution chain, (2) **Fail Fast**: Raise LLMExecutionError immediately when schema enforcement fails, (3) **Clear Error Messages**: Provide specific error messages for each SDK failure (Semantic Kernel vs Azure SDK vs OpenAI SDK), (4) **Function Signature Fix**: Handle tuple return from load_schema_file() properly with null checks. → Impact: Ensures users get strict schema compliance or clear failure messages, prevents unexpected text output when schema enforcement fails, and maintains reliability for production use cases. Key insight: Schema enforcement is binary - either it works with strict compliance or it fails with clear error messages.  
+  
+**Critical**: Azure OpenAI Schema Complexity Limits  
+→ Issue: Complex schemas with many nested objects/arrays rejected by Azure OpenAI even with correct additionalProperties: false  
+→ Solution: Simplify schemas to basic fields first, test with minimal examples, then gradually add complexity  
+→ Impact: Prevents circular debugging, identifies actual schema limits vs code issues  
+
+**Important**: Azure OpenAI response_format Parameter Requirements  
+→ Issue: Passing Pydantic model class to response_format instead of original JSON schema dictionary  
+→ Solution: Pass original schema_dict to preserve additionalProperties: false settings  
+→ Impact: Ensures schema validation works correctly with Azure OpenAI's strict requirements  
+
+**Important**: Pydantic Schema Generation Limitations  
+→ Issue: json-schema-to-pydantic library converts additionalProperties: false to true in generated schemas  
+→ Solution: Use original JSON schema dictionary for response_format, Pydantic model for validation only  
+→ Impact: Maintains strict schema enforcement while working around library limitations  
+
+## Azure OpenAI SDK Compatibility Issues
+**Issue**: OpenAI Python SDK v1.x does not support Azure OpenAI deployments for structured output/function calling, causing 404 errors and unsupported features when used with Azure endpoints.
+
+**Solution**: Use Azure-specific SDKs (`AsyncAzureOpenAI`) or REST API for Azure OpenAI advanced features. Implement endpoint detection to route Azure requests to Azure SDK and OpenAI requests to OpenAI SDK.
+
+**Impact**: Enables reliable structured output and schema enforcement for Azure OpenAI deployments. Maintains backward compatibility with OpenAI endpoints.
+
+**References**: 
+- [Microsoft Tech Community Blog](https://techcommunity.microsoft.com/blog/azure-ai-services-blog/use-azure-openai-and-apim-with-the-openai-agents-sdk/4392537)
+- [Azure OpenAI API Version Lifecycle](https://learn.microsoft.com/en-us/azure/ai-services/openai/api-version-lifecycle?tabs=key)
+
+**Implementation Notes**:
+- Fallback logic: SK → Azure SDK (Azure) → OpenAI SDK (OpenAI) → fail (no text mode)
+- Schema validation required for Azure compliance (`additionalProperties: false` everywhere)
+- Endpoint detection critical for proper SDK routing
+- Strict schema enforcement - users get schema compliance or clear failure
+
+## Error Resolution
+
+### Semantic Kernel Schema Enforcement Limitations
+**Issue**: Semantic Kernel fails with complex schemas due to Azure OpenAI's strict JSON Schema compliance requirements.
+
+**Solution**: Implement Azure SDK integration for reliable structured output with Azure OpenAI. Use schema validation to ensure Azure compliance.
+
+**Impact**: Provides robust schema enforcement for Azure OpenAI deployments while maintaining compatibility with OpenAI endpoints.
+
+## Performance
+
+### Fallback Chain Optimization
+**Issue**: Current fallback (SK → OpenAI SDK → text) only works for text mode with Azure endpoints.
+
+**Solution**: Implement endpoint-aware fallback: SK → Azure SDK (Azure) → OpenAI SDK (OpenAI) → text mode.
+
+**Impact**: Optimizes performance by using appropriate SDK for each endpoint type, reducing unnecessary fallback attempts.
+
+## Security
+
+### Azure OpenAI Authentication
+**Issue**: Different authentication methods required for Azure vs OpenAI endpoints.
+
+**Solution**: Use Azure-specific authentication (`azure_ad_token_provider`) for Azure endpoints and API key for OpenAI endpoints.
+
+**Impact**: Ensures secure authentication for both Azure and OpenAI deployments.
+
+## Accessibility
+
+### Error Message Clarity
+**Issue**: Generic error messages make debugging Azure OpenAI issues difficult.
+
+**Solution**: Implement specific error messages for Azure vs OpenAI failures with detailed logging.
+
+**Impact**: Improves developer experience and reduces debugging time for Azure OpenAI integration issues.
+
+## Code Organization
+
+### SDK Routing Architecture
+**Issue**: Single SDK approach doesn't work for both Azure and OpenAI endpoints.
+
+**Solution**: Implement endpoint detection and SDK routing based on endpoint type.
+
+**Impact**: Maintains clean separation of concerns while supporting both Azure and OpenAI deployments.
+
+## Testing
+
+### Multi-Endpoint Testing Strategy
+**Issue**: Testing only with one endpoint type doesn't catch SDK compatibility issues.
+
+**Solution**: Test with both Azure and OpenAI endpoints to ensure proper SDK routing and fallback logic.
+
+**Impact**: Ensures robust testing coverage for both Azure and OpenAI deployments.  
+  
+  
+## Testing: Schema/LLM Execution Test Fix Methodology
+**Issue**: Legacy and new tests for schema/model logic and LLM execution were either too broad, over-mocked, or not covering all critical paths, leading to fragile or incomplete coverage after major refactoring.
+
+**Solution**:
+- Use focused, KISS-style tests for each main code path (structured mode, text mode, error paths)
+- For structured mode, patch `load_schema_file` to return a tuple (mock_schema_model, mock_schema_dict) and ensure the mock model has a `__name__` attribute
+- For text mode, pass `schema_file=None` and check for correct fallback and output
+- For error paths, patch environment variables and service mocks to trigger Azure/OpenAI SDK error handling, and assert on the specific error messages
+- Use only the minimal mocking required for each test, following Given-When-Then and keeping each test focused on a single concept
+- Ensure all tests have descriptive names, clear assertions, and cover both success and failure scenarios
+- For schema/model tests, cover valid/invalid schema files, dynamic model creation, Pydantic conversion, and error handling for file and schema issues
+
+**Impact**:
+- Maximizes coverage for critical code paths (schema enforcement, fallback, error handling)
+- Ensures tests are robust, maintainable, and easy to extend
+- Follows project test guidelines and KISS principle
+- Prevents regression and silent failures in schema/model and LLM execution logic  
+  
+## Integration Testing
+
+**Critical**: Integration Test Mock Architecture  
+→ Issue: Tests making real API calls instead of using mocks, causing 401 authentication errors and unreliable tests.  
+→ Solution: Implement comprehensive mocking strategy: 1) Mock external APIs only (Azure/OpenAI SDKs), 2) Use proper ChatMessageContent objects via create_mock_chat_message_content(), 3) Add service_id configuration, 4) Include SDK fallback path mocking.  
+→ Impact: Prevents real API calls, ensures test reliability, follows integration test best practices.
+
+**Important**: Mock Object Format Compatibility  
+→ Issue: Using dictionary mocks {"role": "assistant", "content": "..."} instead of proper ChatMessageContent objects causes 'dict' object has no attribute 'content' errors.  
+→ Solution: Always use create_mock_chat_message_content() from mock factory to create proper ChatMessageContent objects that match real API responses.  
+→ Impact: Ensures mock compatibility with production code, prevents attribute errors.
+
+**Critical**: Service ID Configuration in Tests  
+→ Issue: Semantic Kernel fails to find services when service_id doesn't match expected values ("azure_openai" vs "openai").  
+→ Solution: Explicitly set mock_service.service_id = "azure_openai" or "openai" to match kernel.get_service() calls.  
+→ Impact: Prevents service lookup failures and unwanted fallback to real SDK calls.
+
+**Important**: Environment Variable Isolation in Tests  
+→ Issue: OpenAI tests affected by Azure environment variables from shell, causing wrong execution path selection.  
+→ Solution: Use monkeypatch.delenv() to clear conflicting environment variables and monkeypatch.setenv() to set test-specific values.  
+→ Impact: Ensures test isolation and predictable execution paths.
+
+**Enhancement**: Systematic Test Fixing Methodology  
+→ Issue: Large-scale test failures after architectural changes require systematic approach.  
+→ Solution: 1) Identify common patterns in failures, 2) Apply same fix template across similar tests, 3) Fix mock formats, command names, and SDK mocking consistently, 4) Verify each test type works before moving to next.  
+→ Impact: Enables efficient fixing of multiple test failures with consistent patterns.
+
+**Critical**: Integration Test Philosophy Enforcement  
+→ Issue: Tests mocking internal functions instead of following integration test principles.  
+→ Solution: Integration tests should ONLY mock external APIs (Azure OpenAI, OpenAI), not internal functions. Use unit tests for internal mocking.  
+→ Impact: Ensures proper test coverage separation and meaningful integration testing.  
+
+**Critical**: Mock Import Synchronization After Refactoring  
+→ Issue: Integration tests fail when mocking old import paths after code refactoring (e.g., OpenAI → AsyncOpenAI).  
+→ Solution: Update all patch() calls to match current import structure; use AsyncMock for await expressions.  
+→ Impact: Prevents test failures after refactoring, ensures tests stay in sync with code changes.  
   
   

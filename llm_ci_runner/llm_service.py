@@ -115,7 +115,7 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
 
     LOGGER.info(f"🎯 Using Azure OpenAI endpoint: {endpoint}")
     LOGGER.info(f"🎯 Using model: {model}")
-    LOGGER.info(f"🎯 Using API version: {api_version}")
+    LOGGER.debug(f"🎯 Using API version: {api_version}")
 
     # Check for API key authentication
     api_key = os.getenv("AZURE_OPENAI_API_KEY")

@@ -96,7 +96,7 @@ properties:
               enum: ["high", "medium", "low"]
             optimization:
               type: string
-        required: ["component", "issue", "impact", "optimization"]
+          required: ["component", "issue", "impact", "optimization"]
       recommendations:
         type: array
         items:
@@ -121,7 +121,7 @@ properties:
             implementation_effort:
               type: string
               enum: ["low", "medium", "high"]
-        required: ["name", "description", "benefit", "implementation_effort"]
+          required: ["name", "description", "benefit", "implementation_effort"]
       anti_patterns:
         type: array
         items:
@@ -135,7 +135,7 @@ properties:
               type: string
             mitigation:
               type: string
-        required: ["name", "description", "risk", "mitigation"]
+          required: ["name", "description", "risk", "mitigation"]
     required: ["patterns", "anti_patterns"]
   implementation_plan:
     type: object
@@ -171,7 +171,7 @@ properties:
                     items:
                       type: string
                 required: ["task", "priority", "effort_days"]
-            required: ["phase", "duration_weeks", "tasks"]
+          required: ["phase", "duration_weeks", "tasks"]
         minItems: 2
         maxItems: 4
       resource_requirements:
@@ -237,7 +237,7 @@ properties:
               type: string
             impact:
               type: string
-        required: ["category", "debt_level", "description", "impact"]
+          required: ["category", "debt_level", "description", "impact"]
     required: ["total_debt", "categories"]
   monitoring_recommendations:
     type: array

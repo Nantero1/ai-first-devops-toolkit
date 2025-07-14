@@ -76,7 +76,15 @@ async def main() -> None:
         service, credential = await setup_llm_service()
 
         # Load schema if provided
-        schema_model = load_schema_file(args.schema_file)
+        schema_result = load_schema_file(args.schema_file)
+        schema_model = None
+        schema_dict = None
+        if schema_result:
+            schema_model, schema_dict = schema_result
+            LOGGER.debug(f"📋 Schema loaded - model: {type(schema_model)}, dict: {type(schema_dict)}")
+            LOGGER.debug(f"📋 Schema dict keys: {list(schema_dict.keys()) if schema_dict else 'None'}")
+        else:
+            LOGGER.debug("📋 No schema loaded")
 
         # Process input based on mode
         if args.input_file:
@@ -86,7 +94,6 @@ async def main() -> None:
             # Load input data
             input_data = load_input_file(args.input_file)
             messages = input_data["messages"]
-            context = input_data.get("context")
 
             # Create chat history
             chat_history = create_chat_history(messages)
@@ -116,16 +123,47 @@ async def main() -> None:
             # Parse rendered content to chat history
             chat_history = parse_rendered_template_to_chat_history(rendered_content)
 
-            # No context in template mode
-            context = None
-
         else:
             # This should never happen due to argument validation
             raise InputValidationError("No input method specified")
 
         # Execute LLM task
         LOGGER.info("🚀 Starting LLM execution")
-        response = await execute_llm_task(service, chat_history, context, schema_model)
+
+        # Create kernel for execution
+        from semantic_kernel import Kernel
+
+        kernel = Kernel()
+        kernel.add_service(service)
+
+        from semantic_kernel.contents import ChatHistory
+
+        # Convert ChatHistory to list for execute_llm_task
+        if isinstance(chat_history, ChatHistory):
+            chat_history_list: list[dict[str, str]] = []
+            for msg in chat_history.messages:
+                chat_history_list.append(
+                    {
+                        "role": (msg.role.value if hasattr(msg.role, "value") else str(msg.role)),
+                        "content": msg.content,
+                    }
+                )
+        else:
+            chat_history_list = chat_history  # type: ignore
+
+        result = await execute_llm_task(
+            kernel,
+            chat_history_list,
+            args.schema_file,
+            args.output_file,
+            args.log_level,
+        )
+
+        # Extract response from result
+        if isinstance(result, dict) and "output" in result:
+            response = result["output"]
+        else:
+            response = result
 
         # Write output
         LOGGER.info("📝 Writing output")

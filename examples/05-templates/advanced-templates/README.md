@@ -2,6 +2,16 @@
 
 This example demonstrates **advanced Handlebars template features** including conditional rendering, loops, nested templates, and complex variable structures. It showcases the full power of the template system for dynamic prompt generation.
 
+## 🚀 **Quick Start - Try It Now!**
+
+```bash
+llm-ci-runner \
+  --template-file examples/05-templates/advanced-templates/template.hbs \
+  --template-vars examples/05-templates/advanced-templates/template-vars.yaml \
+  --schema-file examples/05-templates/advanced-templates/schema.yaml \
+  --output-file advanced-analysis.yaml
+```
+
 ## 🌟 **Features Demonstrated**
 
 - **✅ Conditional Rendering**: `{{#if}}` and `{{#unless}}` blocks for dynamic content
