@@ -55,6 +55,7 @@ async def main() -> None:
     Raises:
         SystemExit: On any error with appropriate exit code
     """
+    credential = None
     try:
         # Parse arguments
         args = parse_arguments()
@@ -159,6 +160,15 @@ async def main() -> None:
             )
         )
         sys.exit(1)
+    finally:
+        # Properly close Azure credential to prevent unclosed client session warnings
+        if credential is not None:
+            try:
+                await credential.close()
+                LOGGER.debug("🔒 Azure credential closed successfully")
+            except Exception as e:
+                LOGGER.debug(f"Warning: Failed to close Azure credential: {e}")
+                # Don't raise - this is cleanup, not critical
 
 
 def cli_main() -> None:
