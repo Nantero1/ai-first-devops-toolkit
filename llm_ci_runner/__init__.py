@@ -65,8 +65,6 @@ from .llm_execution import execute_llm_task
 
 # Import core functionality for programmatic use
 from .llm_service import (
-    azure_token_provider,
-    get_azure_token_with_credential,
     setup_azure_service,
     setup_llm_service,
     setup_openai_service,
@@ -104,8 +102,6 @@ __all__ = [
     "setup_openai_service",
     "write_output_file",
     # Core functionality
-    "azure_token_provider",
-    "get_azure_token_with_credential",
     "create_dynamic_model_from_schema",
     "generate_one_shot_example",
     # Template functionality
