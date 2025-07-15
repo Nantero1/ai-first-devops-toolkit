@@ -60,16 +60,17 @@ Below is the original README.md:
 
 ## TLDR: What This Tool Does
 
-**Purpose**: Zero-friction LLM integration for pipelines with **100% guaranteed schema compliance**. This is your foundation for AI-first integration practices.
+**Purpose**: Transform any unstructured business knowledge into reliable, structured data that powers intelligent automation across your entire organization.
 
 **Perfect For**:
-- 🤖 **AI-Generated Code Reviews**: Automated PR analysis with structured findings
-- 📝 **Intelligent Documentation**: Generate changelogs, release notes, and docs automatically  
-- 🔍 **Security Analysis**: AI-powered vulnerability detection with structured reports
-- 🎯 **Quality Gates**: Enforce standards through AI-driven validation
-- 🚀 **Autonomous Development**: Enable AI agents to make decisions in your pipelines
-- 🎯 **JIRA Ticket Updates**: Update JIRA tickets based on LLM output
-- 🔗 **Unlimited Integration Possibilities**: Chain it multiple times and use as glue code in your tool stack
+- 🏦 **Financial Operations**: Convert loan applications, audits, and regulatory docs into structured compliance data
+- 🏥 **Healthcare Systems**: Transform patient records, clinical notes, and research data into medical formats  
+- ⚖️ **Legal & Compliance**: Process contracts, court docs, and regulatory texts into actionable risk assessments
+- 🏭 **Supply Chain**: Turn logistics reports, supplier communications, and forecasts into optimization insights
+- 👥 **Human Resources**: Convert resumes, performance reviews, and feedback into structured talent analytics
+- 🛡️ **Security Operations**: Transform threat reports, incident logs, and assessments into standard frameworks
+- 🚀 **DevOps & Engineering**: Use commit logs, deployment reports, and system logs for automated AI actions
+- 🔗 **Enterprise Integration**: Connect any business process to downstream systems with guaranteed consistency
 ---
 
 ### Simple structured output example
@@ -197,7 +198,7 @@ llm-ci-runner \
   --output-file jinja2-result.yaml
 ```
 
-For more examples see the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples/05-templates).
+For more examples see the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples).
 
 **Benefits of Template Approach:**
 - 🎯 **Reusable Templates**: Create once, use across multiple scenarios
@@ -238,9 +239,10 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 - **⚡ Rapid Workflow Automation**: Enable automation across customer service, supply-chain planning, HR case handling, and security triage
 - **🔗 Safe Pipeline Composition**: Structured contracts let AI-first pipelines remain observable and composable while capitalizing on unstructured enterprise data
 
-## 100 Diverse AI Automation Use Cases
+## 100 AI Automation Use Cases for AI-First DevOps
 
 **DevOps & Engineering** 🔧
+
 1. 🤖 AI-generated PR review – automated pull request analysis with structured review findings
 2. 📝 Release note composer – map commits to semantic-version bump rules and structured changelogs
 3. 🔍 Vulnerability scanner – map code vulnerabilities to OWASP standards with actionable remediation
@@ -253,6 +255,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 10. 🎯 SLA breach summarizer – file structured JIRA tickets with SMART action items
 
 **Governance, Risk & Compliance** 🏛️
+
 11. 📊 Regulatory delta analyzer – emit change-impact matrices from new compliance requirements
 12. 🌱 ESG report synthesizer – map CSR prose to GRI indicators and sustainability metrics
 13. 📋 SOX-404 narrative converter – transform controls descriptions into testable audit checklists  
@@ -265,6 +268,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 20. 🛡️ Safety inspection checker – transform narratives into OSHA citation checklists
 
 **Financial Services** 🏦
+
 21. 🏦 Loan application analyzer – transform free-text applications into Basel-III risk-model inputs
 22. 📊 Earnings call sentiment quantifier – output KPI deltas and investor sentiment scores
 23. 💹 Budget variance explainer – produce drill-down pivot JSON for financial analysis
@@ -277,6 +281,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 30. 🏦 Insurance claim assessor – return structured claim-decision objects with risk scores
 
 **Healthcare & Life Sciences** 🏥
+
 31. 🏥 Patient intake processor – build HL7/FHIR-compliant patient records from free-form intake forms
 32. 🧠 Mental health triage assistant – structure referral notes with priority classifications and care pathways
 33. 📊 Radiology report coder – output SNOMED-coded JSON from diagnostic imaging narratives
@@ -289,6 +294,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 40. 👩‍⚕️ Clinical observation compiler – convert research notes into structured data for trials
 
 **Legal & Compliance** ⚖️
+
 41. 🏛️ Legal contract parser – extract clauses and compute risk scores from contract documents
 42. 📝 Court opinion digest – summarize judicial opinions into structured precedent and citation graphs
 43. 🏛️ Legal discovery summarizer – extract key issues and risks from large document sets
@@ -301,6 +307,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 50. ⚖️ Expert witness report normalizer – create citation-linked outlines from testimony records
 
 **Customer Experience & Sales** 🛒
+
 51. 🎧 Tier-1 support chatbot – convert customer queries into tickets with reproducible troubleshooting steps  
 52. ⭐ Review sentiment miner – produce product-feature tallies from customer feedback analysis
 53. 📉 Churn risk email summarizer – export CRM risk scores from customer communication patterns
@@ -313,6 +320,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 60. 🎯 Marketing copy generator – create brand-compliant content with tone and messaging constraints
 
 **HR & People Operations** 👥
+
 61. 📄 CV-to-JD matcher – rank candidates with explainable competency scores and fit analysis
 62. 🎤 Interview transcript summarizer – export structured competency rubrics with evaluation criteria
 63. ✅ Onboarding policy compliance checker – produce new-hire checklist completion tracking
@@ -325,6 +333,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 70. 📊 Diversity metric synthesizer – summarize inclusion survey data into actionable insights
 
 **Supply Chain & Manufacturing** 🏭
+
 71. 📊 Demand forecast summarizer – output SKU-level predictions from market analysis and sales data
 72. 📋 Purchase order processor – convert supplier communications into structured ERP line-items
 73. 🌱 Supplier risk scanner – generate ESG compliance scores from vendor assessment reports
@@ -337,6 +346,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 80. 🏭 Production yield analyzer – generate efficiency reports from manufacturing floor logs
 
 **Security & Risk Management** 🔒
+
 81. 🛡️ MITRE ATT&CK mapper – translate IDS alerts into tactic-technique JSON for threat intelligence
 82. 🎣 Phishing email extractor – produce IOC STIX bundles from security incident reports
 83. 🔐 Zero-trust policy generator – convert narrative access requests into structured policy rules
@@ -349,6 +359,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 90. 🏗️ Security audit tracker – link ISO-27001 controls to evidence artifacts for compliance
 
 **Knowledge & Productivity** 📚
+
 91. 🎙️ Meeting transcript processor – extract action items with owners and deadlines into project tracking JSON
 92. 📚 Research paper summarizer – export citation graphs and key findings for literature review databases
 93. 📋 SOP generator – convert process narratives into step-by-step validation checklists
@@ -359,6 +370,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 98. 🎯 Personal OKR journal parser – output progress dashboards with milestone tracking
 99. 💼 White paper composer – transform technical discussions into structured thought leadership content
 100. 🧩 Universal transformer – convert any unstructured domain knowledge into your custom schema-validated JSON
+
 
 ## Input Formats
 
