@@ -58,7 +58,7 @@ command:
     title: LLM CI Runner is installed and accessible
     timeout: 60000
     stdout:
-      - "LLM CI Runner - AI-powered automation for CI/CD pipelines"
+      - "LLM CI Runner - AI-powered automation for pipelines"
 
   # Test main application
   llm-ci-runner --help:
@@ -66,7 +66,7 @@ command:
     title: LLM CI Runner is installed and accessible
     timeout: 60000
     stdout:
-      - "LLM CI Runner - AI-powered automation for CI/CD pipelines"
+      - "LLM CI Runner - AI-powered automation for pipelines"
 
   # Test Python packages are installed
   uv run python -c "import semantic_kernel; print('semantic-kernel available')":
