@@ -266,7 +266,7 @@ llm-ci-runner \
     }
   },
   "metadata": {
-    "runner": "llm_ci_runner.py",
+    "runner": "llm-ci-runner",
     "timestamp": "auto-generated"
   }
 }

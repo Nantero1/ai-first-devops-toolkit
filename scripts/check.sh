@@ -7,13 +7,16 @@ uv sync --group dev
 
 echo -e "\033[32mChecking for formatting errors...\033[0m"
 uv run ruff format .
+uv run ruff check --fix llm_ci_runner/
+
+echo -e "\033[32mChecking for security vulnerabilities...\033[0m"
+uv run pip-audit
 
 echo -e "\033[32mChecking for type errors...\033[0m"
-uv run mypy llm_ci_runner.py
+uv run mypy llm_ci_runner/
 
 echo -e "\033[32mRunning unit tests...\033[0m"
-export PYTHONPATH=$(pwd):$PYTHONPATH
-uv run pytest tests/unit/
+uv run pytest tests/
 
 echo -e ""
 echo -e "\033[32mWill now run acceptance tests...\033[0m"

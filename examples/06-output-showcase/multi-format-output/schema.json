@@ -1,0 +1,279 @@
+{
+    "type": "object",
+    "properties": {
+        "api_overview": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "description": "API endpoint URL"
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "DELETE",
+                        "PATCH"
+                    ],
+                    "description": "HTTP method"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Brief description of the endpoint"
+                },
+                "authentication": {
+                    "type": "string",
+                    "description": "Authentication requirements"
+                },
+                "rate_limiting": {
+                    "type": "string",
+                    "description": "Rate limiting information"
+                }
+            },
+            "required": [
+                "endpoint",
+                "method",
+                "description",
+                "authentication",
+                "rate_limiting"
+            ],
+            "additionalProperties": false
+        },
+        "request_format": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string",
+                    "description": "Expected content type"
+                },
+                "parameters": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string"
+                            },
+                            "required": {
+                                "type": "boolean"
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "example": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "type",
+                            "required",
+                            "description"
+                        ],
+                        "additionalProperties": false
+                    }
+                },
+                "example_request": {
+                    "type": "object",
+                    "description": "Example request body",
+                    "additionalProperties": false
+                }
+            },
+            "required": [
+                "content_type",
+                "parameters",
+                "example_request"
+            ],
+            "additionalProperties": false
+        },
+        "response_format": {
+            "type": "object",
+            "properties": {
+                "success_response": {
+                    "type": "object",
+                    "properties": {
+                        "status_code": {
+                            "type": "integer"
+                        },
+                        "description": {
+                            "type": "string"
+                        },
+                        "body": {
+                            "type": "object",
+                            "description": "Success response body structure",
+                            "additionalProperties": false
+                        }
+                    },
+                    "required": [
+                        "status_code",
+                        "description",
+                        "body"
+                    ],
+                    "additionalProperties": false
+                },
+                "error_responses": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "status_code": {
+                                "type": "integer"
+                            },
+                            "error_code": {
+                                "type": "string"
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "body": {
+                                "type": "object",
+                                "description": "Error response body structure",
+                                "additionalProperties": false
+                            }
+                        },
+                        "required": [
+                            "status_code",
+                            "error_code",
+                            "description",
+                            "body"
+                        ],
+                        "additionalProperties": false
+                    },
+                    "minItems": 2,
+                    "maxItems": 6
+                }
+            },
+            "required": [
+                "success_response",
+                "error_responses"
+            ],
+            "additionalProperties": false
+        },
+        "security_considerations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "aspect": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "recommendation": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "aspect",
+                    "description",
+                    "recommendation"
+                ],
+                "additionalProperties": false
+            },
+            "minItems": 3,
+            "maxItems": 8
+        },
+        "usage_examples": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "language": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "language",
+                    "title",
+                    "code",
+                    "description"
+                ],
+                "additionalProperties": false
+            },
+            "minItems": 2,
+            "maxItems": 5
+        },
+        "testing": {
+            "type": "object",
+            "properties": {
+                "test_cases": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "description": {
+                                "type": "string"
+                            },
+                            "input": {
+                                "type": "object",
+                                "additionalProperties": false
+                            },
+                            "expected_output": {
+                                "type": "object",
+                                "additionalProperties": false
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "description",
+                            "input",
+                            "expected_output"
+                        ],
+                        "additionalProperties": false
+                    },
+                    "minItems": 3,
+                    "maxItems": 8
+                },
+                "curl_examples": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 2,
+                    "maxItems": 5
+                }
+            },
+            "required": [
+                "test_cases",
+                "curl_examples"
+            ],
+            "additionalProperties": false
+        },
+        "implementation_notes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 3,
+            "maxItems": 8
+        }
+    },
+    "required": [
+        "api_overview",
+        "request_format",
+        "response_format",
+        "security_considerations",
+        "usage_examples",
+        "testing",
+        "implementation_notes"
+    ],
+    "additionalProperties": false
+}

@@ -29,6 +29,10 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
+      - name: Display parameters
+        shell: bash
+        run: echo "${{ format('<h1>Parameters</h1><p>{0}</p>', tojson(inputs)) }}" > "$GITHUB_STEP_SUMMARY"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -73,9 +77,9 @@ jobs:
 
       - name: Run linting
         run: |
-          uv run ruff check *.py
-          uv run ruff format --check *.py
-          uv run mypy llm_ci_runner.py
+          uv run ruff check llm_ci_runner/
+          uv run ruff format --check llm_ci_runner/
+          uv run mypy llm_ci_runner/
 
       - name: Check for security vulnerabilities
         run: |
@@ -87,8 +91,85 @@ jobs:
           uv run python -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
           echo "✅ pyproject.toml is valid"
 
-  release:
+  generate-release-notes:
     needs: validate
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    # Only allow maintainers to trigger LLM calls
+    environment: release
+    permissions:
+      contents: read      # Read repository for git history
+    outputs:
+      release_notes: ${{ steps.generate_notes.outputs.notes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up uv with caching
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/uv.lock"
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --group dev
+
+      - name: Generate template variables
+        id: template_vars
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          MANUAL_INSTRUCTIONS="${{ github.event.inputs.release_notes || '' }}"
+          
+          # Generate template variables from git history
+          uv run python scripts/generate-release-notes.py "$VERSION" "$MANUAL_INSTRUCTIONS"
+          
+          # Read the generated template variables
+          if [ -f "template-vars.yaml" ]; then
+            echo "✅ Template variables generated successfully"
+          else
+            echo "❌ Failed to generate template variables"
+            exit 1
+          fi
+
+      - name: Generate release notes
+        id: generate_notes
+        run: |
+          # Generate release notes using our template
+          uv run llm-ci-runner \
+            --template-file examples/05-templates/release-notes/template.hbs \
+            --template-vars template-vars.yaml \
+            --output-file release-notes.md
+          
+          # Extract the generated notes from the output
+          if [ -f "release-notes.md" ]; then
+            # Read the markdown output directly
+            NOTES=$(cat release-notes.md)
+            
+            # Set the output
+            echo "notes<<EOF" >> $GITHUB_OUTPUT
+            echo "$NOTES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            
+            echo "✅ Release notes generated successfully"
+          else
+            echo "❌ Failed to generate release notes"
+            exit 1
+          fi
+        env:
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+
+  release:
+    needs: [validate, generate-release-notes]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.dry_run != 'true' }}
     # Required permissions for release operations
@@ -128,7 +209,7 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           
           # Use Python to update version more precisely - only target the project version
-          python -c "
+          uv run python -c "
           import re
           import sys
           
@@ -178,23 +259,16 @@ jobs:
           print(f'Successfully updated project version to {version}')
           "
 
-      - name: Commit and tag
+      - name: Commit version change
         run: |
           VERSION="${{ github.event.inputs.version }}"
           
           # Add the version change
           git add pyproject.toml
           git commit -m "chore: bump version to $VERSION [skip ci]"
-          
-          # Create and push the tag
-          git tag -a "v$VERSION" -m "Release v$VERSION"
-          
-          # Push both commit and tag
-          # This works because we're using GH_TOKEN_WRITE which has bypass permissions
           git push origin main
-          git push origin "v$VERSION"
           
-          echo "Tagged and pushed v$VERSION"
+          echo "Committed version change to $VERSION"
 
       - name: Build package
         run: |
@@ -231,35 +305,38 @@ jobs:
           print('Package installation test passed')
           "
 
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
+      - name: Write release notes to file
+        if: ${{ needs.generate-release-notes.outputs.release_notes != '' }}
+        shell: bash
+        run: echo "${{ needs.generate-release-notes.outputs.release_notes }}" > release-notes.txt
+
+      - name: Create GitHub Release with generated notes (also creates Git tag)
+        if: ${{ needs.generate-release-notes.outputs.release_notes != '' }}
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          # This command creates both the GitHub release and the Git tag "v$VERSION"
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes-file release-notes.txt \
+            --repo "${{ github.repository }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN_WRITE }}
-        with:
-          tag_name: "v${{ github.event.inputs.version }}"
-          release_name: "Release v${{ github.event.inputs.version }}"
-          body: |
-            ## What's Changed
-            
-            ${{ github.event.inputs.release_notes || format('Release v{0}', github.event.inputs.version) }}
-            
-            ## Installation
-            
-            ```bash
-            pip install llm-ci-runner==${{ github.event.inputs.version }}
-            ```
-            
-            ## Usage
-            
-            ```bash
-            llm-ci-runner --input-file input.json --schema-file schema.json
-            ```
-            
-            ## Changelog
-            
-            For detailed changes, see the [commit history](https://github.com/${{ github.repository }}/compare/$(git describe --tags --abbrev=0)...v${{ github.event.inputs.version }}).
-          draft: false
-          prerelease: false
+          
+      - name: Create GitHub Release with default notes (also creates Git tag)
+        if: ${{ needs.generate-release-notes.outputs.release_notes == '' }}
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          # This command creates both the GitHub release and the Git tag "v$VERSION"
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes "Release v$VERSION" \
+            --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_WRITE }}
+
+      # Note: No need for a separate tag step, as gh release create automatically creates a tag
 
       - name: Publish to PyPI
         if: ${{ github.event.inputs.publish_to_pypi }}
@@ -272,40 +349,55 @@ jobs:
           
           echo "✅ Published to PyPI successfully"
 
-      - name: Verify PyPI installation
+      - name: Verify PyPI installation - Step 1 (Wait)
         if: ${{ github.event.inputs.publish_to_pypi }}
+        shell: bash
         run: |
-          # Wait a moment for PyPI to process the upload
-          sleep 30
+          # Wait for PyPI to process the upload
+          echo "Waiting for PyPI to process the upload (60s)..."
+          sleep 60
           
-          # Test installation from PyPI
-          uv run python -c "
-          import subprocess
-          import sys
+      - name: Verify PyPI installation - Step 2 (Try Install)
+        if: ${{ github.event.inputs.publish_to_pypi }}
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Testing installation of llm-ci-runner==${VERSION} from PyPI..."
           
-          print('Testing installation from PyPI...')
-          result = subprocess.run([
-              'uv', 'run', 'pip', 'install', 
-              'llm-ci-runner==${{ github.event.inputs.version }}',
-              '--index-url', 'https://pypi.org/simple/'
-          ], capture_output=True, text=True)
+          # Try up to 3 times with increasing delays
+          for attempt in {1..3}; do
+            echo "Installation attempt ${attempt}/3"
+            
+            # Try to install the package
+            if uv run pip install llm-ci-runner==${VERSION} --index-url https://pypi.org/simple/ --no-cache-dir; then
+              echo "✅ Package installed successfully"
+              break
+            else
+              if [ $attempt -lt 3 ]; then
+                wait_time=$((attempt * 30))
+                echo "Package not yet available on PyPI. Waiting ${wait_time}s before retry..."
+                sleep $wait_time
+              else
+                echo "❌ PyPI installation failed after 3 attempts"
+                exit 1
+              fi
+            fi
+          done
           
-          if result.returncode != 0:
-              print(f'PyPI installation failed: {result.stderr}')
-              sys.exit(1)
-          
+      - name: Verify PyPI installation - Step 3 (Test Command)
+        if: ${{ github.event.inputs.publish_to_pypi }}
+        shell: bash
+        run: |
           # Test that the command works
-          result = subprocess.run([
-              'uv', 'run', 'llm-ci-runner', '--help'
-          ], capture_output=True, text=True)
+          if uv run llm-ci-runner --help; then
+            echo "✅ Command test passed"
+          else
+            echo "❌ Command test failed"
+            exit 1
+          fi
           
-          if result.returncode != 0:
-              print(f'Command test failed: {result.stderr}')
-              sys.exit(1)
-          
-          print('✅ PyPI installation and command test passed')
-          "
-
+          echo "✅ PyPI installation and verification completed successfully"
+  
       - name: Cleanup and summary
         if: always()
         run: |

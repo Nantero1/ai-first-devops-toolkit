@@ -1,0 +1,14 @@
+name: release
+on:
+  workflow_run:
+    workflows: ["Manual Release"]
+    types:
+      - completed
+
+protection_rules:
+  required_reviewers:
+    type: Users
+    reviewers:
+      - Nantero1
+  wait_timer:
+    minutes: 0 

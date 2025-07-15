@@ -91,7 +91,7 @@ Iterates through complex nested objects.
 ### **Primary Command**
 
 ```bash
-python llm_ci_runner.py \
+llm-ci-runner \
     --template-file examples/05-templates/jinja2-example/template.jinja \
     --template-vars examples/05-templates/jinja2-example/template-vars.yaml \
     --schema-file examples/05-templates/jinja2-example/schema.yaml \
@@ -101,7 +101,7 @@ python llm_ci_runner.py \
 ### **Alternative with .j2 Extension**
 
 ```bash
-python llm_ci_runner.py \
+llm-ci-runner \
     --template-file examples/05-templates/jinja2-example/template.j2 \
     --template-vars examples/05-templates/jinja2-example/template-vars.yaml \
     --schema-file examples/05-templates/jinja2-example/schema.yaml \

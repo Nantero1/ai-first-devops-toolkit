@@ -72,7 +72,7 @@ llm-ci-runner \
                "with a minor concern about the learning curve."
   },
   "metadata": {
-    "runner": "llm_ci_runner.py",
+    "runner": "llm-ci-runner",
     "timestamp": "auto-generated"
   }
 }

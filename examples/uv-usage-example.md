@@ -144,7 +144,7 @@ jobs:
     
     - name: Generate PR Description (from source)
       run: |
-        uv run --frozen llm_ci_runner.py \
+        uv run --frozen llm-ci-runner \
           --input-file examples/02-devops/pr-description/input.json \
           --output-file pr-description.json \
           --schema-file examples/02-devops/pr-description/schema.json
@@ -513,7 +513,7 @@ done
 **For Development/Source Usage:**
 ```bash
 # Use uv run for source-based execution
-uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json
+uv run --frozen llm-ci-runner --input-file input.json --output-file output.json
 ```
 
 ### 2. Conditional Workflows
@@ -904,7 +904,7 @@ fi
 **For Development/Source Usage:**
 ```bash
 # Error handling with uv run
-if ! uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json; then
+if ! uv run --frozen llm-ci-runner --input-file input.json --output-file output.json; then
   echo "❌ LLM execution failed"
   exit 1
 fi
@@ -940,10 +940,10 @@ timeout 300 llm-ci-runner --input-file input.json --output-file output.json
 export PATH="$HOME/.local/bin:$PATH"
 
 # Debug with source
-uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+uv run --frozen llm-ci-runner --input-file input.json --output-file output.json --log-level DEBUG
 
 # Timeout with source
-timeout 300 uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json
+timeout 300 uv run --frozen llm-ci-runner --input-file input.json --output-file output.json
 ```
 
 ### Debug Mode
@@ -956,7 +956,7 @@ llm-ci-runner --input-file input.json --output-file output.json --log-level DEBU
 **For Development/Source Usage:**
 ```bash
 # Debug with uv run
-uv run --frozen llm_ci_runner.py --input-file input.json --output-file output.json --log-level DEBUG
+uv run --frozen llm-ci-runner --input-file input.json --output-file output.json --log-level DEBUG
 ```
 
 This comprehensive guide shows how to implement AI-first DevOps practices in real-world scenarios. Each example demonstrates the power of combining structured outputs, LLM-as-judge validation, and CI/CD integration for exponential productivity gains. 
