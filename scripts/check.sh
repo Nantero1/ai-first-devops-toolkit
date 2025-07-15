@@ -9,6 +9,9 @@ echo -e "\033[32mChecking for formatting errors...\033[0m"
 uv run ruff format .
 uv run ruff check --fix llm_ci_runner/
 
+echo -e "\033[32mChecking for security vulnerabilities...\033[0m"
+uv run pip-audit
+
 echo -e "\033[32mChecking for type errors...\033[0m"
 uv run mypy llm_ci_runner/
 
