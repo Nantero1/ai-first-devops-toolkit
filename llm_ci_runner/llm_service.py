@@ -72,7 +72,7 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
         except Exception as e:
             raise AuthenticationError(f"Error setting up Azure service: {e}") from e
     else:
-        LOGGER.info("🔐 Using RBAC authentication with DefaultAzureCredential and azure_ad_token_provider")
+        LOGGER.info("🔐 Using RBAC authentication with DefaultAzureCredential")
 
         try:
             credential = DefaultAzureCredential()

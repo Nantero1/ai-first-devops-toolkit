@@ -23,14 +23,7 @@ When you use this example, here is what happens step by step:
             "content": "Explain what CI/CD means in software development in one paragraph.",
             "name": "developer"
         }
-    ],
-    "context": {
-        "session_id": "simple-example-001",
-        "metadata": {
-            "task_type": "explanation",
-            "domain": "software_development"
-        }
-    }
+    ]
 }
 ```
 

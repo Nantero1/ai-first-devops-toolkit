@@ -1,6 +1,6 @@
-# AI-First DevOps Examples
+# AI-First Examples
 
-This directory contains comprehensive examples demonstrating AI-first DevOps principles and practices. Each example is self-contained with its input, schema, and documentation.
+This directory contains comprehensive examples demonstrating AI-first principles and practices. Each example is self-contained with its input, schema, and documentation.
 
 ## 📁 Organization
 
@@ -108,15 +108,15 @@ llm-ci-runner \
 
 ## 🎯 AI-First DevOps Principles
 
-These examples embody the principles from [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html):
+These examples embody the principles from [Building AI-First](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html):
 
-| Traditional Approach | AI-First Approach (These Examples) |
-|---------------------|-----------------------------------|
-| Manual documentation | 🤖 AI-generated docs with guaranteed consistency |
-| Human code reviews | 🤖 AI-powered reviews with structured findings |
-| Reactive security | 🔍 Proactive AI security analysis |
-| Manual planning | 🎯 AI-driven development planning |
-| Linear productivity | 📈 Exponential gains through intelligent automation |
+| Traditional Approach | AI-First Approach (These Examples)                 |
+| -------------------- | -------------------------------------------------- |
+| Manual documentation | 🤖 AI-generated docs with guaranteed consistency    |
+| Human code reviews   | 🤖 AI-powered reviews with structured findings      |
+| Reactive security    | 🔍 Proactive AI security analysis                   |
+| Manual planning      | 🎯 AI-driven development planning                   |
+| Linear productivity  | 📈 Exponential gains through intelligent automation |
 
 ## 📋 Example Structure
 
