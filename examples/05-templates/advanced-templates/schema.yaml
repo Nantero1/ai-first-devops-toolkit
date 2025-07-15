@@ -1,3 +1,5 @@
+name: Advanced Review Output Schema
+description: Schema for advanced LLM-driven review output, supporting deep analysis and structured recommendations.
 type: object
 required:
   - summary
@@ -12,6 +14,8 @@ properties:
     type: string
     description: "Executive summary of the analysis findings"
     maxLength: 300
+    examples:
+      - "This review highlights key strengths and critical issues in the new payment module."
   overall_assessment:
     type: object
     properties:
@@ -50,7 +54,17 @@ properties:
               enum: ["critical", "high", "medium", "low", "info"]
             category:
               type: string
-              enum: ["authentication", "authorization", "data_protection", "input_validation", "session_management", "encryption", "logging", "other"]
+              enum:
+                [
+                  "authentication",
+                  "authorization",
+                  "data_protection",
+                  "input_validation",
+                  "session_management",
+                  "encryption",
+                  "logging",
+                  "other",
+                ]
             description:
               type: string
               minLength: 20
@@ -256,4 +270,4 @@ properties:
       required: ["metric", "threshold", "alert_level", "implementation"]
     minItems: 3
     maxItems: 10
-additionalProperties: false 
+additionalProperties: false

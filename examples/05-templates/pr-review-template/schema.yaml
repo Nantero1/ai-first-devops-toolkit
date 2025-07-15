@@ -1,3 +1,5 @@
+name: Pull Request Review Schema
+description: Schema for structured PR review output, guiding LLMs to generate comprehensive, actionable PR analysis.
 type: object
 required:
   - description
@@ -13,6 +15,8 @@ properties:
     description: "Comprehensive markdown description of the PR analysis"
     minLength: 100
     maxLength: 2000
+    examples:
+      - "This PR refactors the authentication module, improving security and maintainability. All endpoints now use JWT."
   summary:
     type: string
     description: "Brief one-line summary of the changes"
@@ -65,4 +69,4 @@ properties:
     description: "Related issue numbers"
     items:
       type: integer
-      minimum: 1 
+      minimum: 1

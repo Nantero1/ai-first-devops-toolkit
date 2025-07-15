@@ -74,7 +74,7 @@ from .llm_service import (
 
 # Import logger for testing compatibility
 from .logging_config import CONSOLE, LOGGER, setup_logging
-from .schema import create_dynamic_model_from_schema
+from .schema import create_dynamic_model_from_schema, generate_one_shot_example
 from .templates import (
     get_template_format,
     load_handlebars_template,
@@ -107,6 +107,7 @@ __all__ = [
     "azure_token_provider",
     "get_azure_token_with_credential",
     "create_dynamic_model_from_schema",
+    "generate_one_shot_example",
     # Template functionality
     "get_template_format",
     "load_handlebars_template",

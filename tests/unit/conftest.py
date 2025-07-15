@@ -109,3 +109,73 @@ def mock_semantic_kernel_imports():
             "author_role": mock_author_role,
             "settings": mock_settings,
         }
+
+
+# AUTOUSE FIXTURES - Automatically applied to ALL unit tests
+@pytest.fixture(autouse=True)
+def mock_external_apis(request):
+    """Autouse fixture to mock all external API calls in unit tests."""
+    # Skip mocking for tests that specifically test client creation errors or SDK fallback behavior
+    skip_conditions = [
+        "client_creation" in request.node.name.lower(),
+        "missing_" in request.node.name.lower(),
+        "sdk_fallback" in request.node.name.lower(),
+        "fallback" in request.node.name.lower(),
+    ]
+
+    if any(skip_conditions):
+        yield None
+        return
+
+    # Mock Azure OpenAI client
+    mock_azure_response = Mock()
+    mock_azure_response.choices = [Mock()]
+    mock_azure_response.choices[0].message = Mock()
+    mock_azure_response.choices[0].message.content = '{"test": "result"}'
+
+    # Mock OpenAI client
+    mock_openai_response = Mock()
+    mock_openai_response.choices = [Mock()]
+    mock_openai_response.choices[0].message = Mock()
+    mock_openai_response.choices[0].message.content = '{"test": "result"}'
+
+    with (
+        patch("llm_ci_runner.llm_execution.AsyncAzureOpenAI") as mock_azure_client,
+        patch("llm_ci_runner.llm_execution.AsyncOpenAI") as mock_openai_client,
+        patch("llm_ci_runner.llm_execution._create_azure_client") as mock_create_azure,
+        patch("llm_ci_runner.llm_execution._create_openai_client") as mock_create_openai,
+    ):
+        # Configure Azure client
+        mock_azure_instance = AsyncMock()
+        mock_azure_instance.beta.chat.completions.parse = AsyncMock(return_value=mock_azure_response)
+        mock_azure_instance.chat.completions.create = AsyncMock(return_value=mock_azure_response)
+        mock_create_azure.return_value = mock_azure_instance
+        mock_azure_client.return_value = mock_azure_instance
+
+        # Configure OpenAI client
+        mock_openai_instance = AsyncMock()
+        mock_openai_instance.beta.chat.completions.parse = AsyncMock(return_value=mock_openai_response)
+        mock_openai_instance.chat.completions.create = AsyncMock(return_value=mock_openai_response)
+        mock_create_openai.return_value = mock_openai_instance
+        mock_openai_client.return_value = mock_openai_instance
+
+        yield {
+            "azure_client": mock_azure_instance,
+            "openai_client": mock_openai_instance,
+        }
+
+
+# Removed unnecessary mock_realistic_chat_history_behavior fixture
+# Tests can create simple chat_history data directly: [{"role": "user", "content": "Hello"}]
+
+
+@pytest.fixture(autouse=True)
+def clear_azure_environment_for_openai_tests(request, monkeypatch):
+    """Autouse fixture to clear Azure env vars for OpenAI-specific tests."""
+    # Only clear Azure env vars if test name contains 'openai'
+    if "openai" in request.node.name.lower():
+        monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
+        monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
+        # Set OpenAI env vars
+        monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-4")

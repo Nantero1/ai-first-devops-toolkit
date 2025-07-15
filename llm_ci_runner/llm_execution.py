@@ -7,6 +7,7 @@ to OpenAI SDK when schema enforcement fails. Handles both structured and text ou
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -22,7 +23,9 @@ if TYPE_CHECKING:
 
 from .exceptions import LLMExecutionError
 from .io_operations import create_chat_history, load_schema_file
-from .logging_config import LOGGER
+from .schema import generate_one_shot_example
+
+LOGGER = logging.getLogger(__name__)
 
 # Configuration constants for LLM execution
 # Removed default constants - using underlying library defaults instead
@@ -91,10 +94,13 @@ async def execute_llm_task(
             LOGGER.warning(f"⚠️ Failed to load schema: {e}")
             LOGGER.debug("📝 Continuing without schema enforcement")
 
+    # Enhance prompt with one-shot example if schema is provided
+    enhanced_chat_history = _enhance_prompt_with_one_shot_example(chat_history, schema_model)
+
     # Path 1: Try Semantic Kernel with schema enforcement
     try:
         LOGGER.debug("🔐 Attempting Semantic Kernel with schema enforcement")
-        result = await _execute_semantic_kernel_with_schema(kernel, chat_history, schema_model, schema_dict)
+        result = await _execute_semantic_kernel_with_schema(kernel, enhanced_chat_history, schema_model, schema_dict)
         LOGGER.debug("✅ Semantic Kernel execution successful")
         return result
     except Exception as e:
@@ -108,7 +114,7 @@ async def execute_llm_task(
         # Try Azure SDK for Azure OpenAI endpoints
         try:
             LOGGER.debug("🔐 Attempting Azure SDK with schema enforcement")
-            result = await _execute_sdk_with_schema("azure", chat_history, schema_model, schema_dict)
+            result = await _execute_sdk_with_schema("azure", enhanced_chat_history, schema_model, schema_dict)
             LOGGER.info("✅ Azure SDK execution successful")
             return result
         except Exception as e:
@@ -118,7 +124,7 @@ async def execute_llm_task(
         # Try OpenAI SDK for OpenAI endpoints
         try:
             LOGGER.info("🔐 Attempting OpenAI SDK with schema enforcement")
-            result = await _execute_sdk_with_schema("openai", chat_history, schema_model, schema_dict)
+            result = await _execute_sdk_with_schema("openai", enhanced_chat_history, schema_model, schema_dict)
             LOGGER.info("✅ OpenAI SDK execution successful")
             return result
         except Exception as e:
@@ -460,3 +466,55 @@ def _process_text_response(response: str) -> dict[str, Any]:
         "mode": "text",
         "schema_enforced": False,
     }
+
+
+def _enhance_prompt_with_one_shot_example(chat_history: list, schema_model: Any | None) -> list:
+    """Enhance the last user message with a one-shot example when schema model is provided.
+
+    Adds a concise example to help the model understand the expected output format
+    without overwhelming the context.
+
+    Args:
+        chat_history: Original chat history
+        schema_model: Optional Pydantic model class
+
+    Returns:
+        Enhanced chat history with one-shot example if schema provided
+    """
+    if not schema_model or not chat_history:
+        return chat_history
+
+    # Generate minimal example using the schema model
+    try:
+        example = generate_one_shot_example(schema_model)
+        example_json = json.dumps(example, indent=2)
+        required_fields = [name for name, field in schema_model.model_fields.items() if field.is_required()]
+
+        # Create enhanced chat history
+        enhanced_history = chat_history.copy()
+
+        # Find the last user message to enhance
+        for i in reversed(range(len(enhanced_history))):
+            msg = enhanced_history[i]
+            if isinstance(msg, dict) and msg.get("role") == "user":
+                # Add one-shot example guidance to the user message
+                original_content = msg["content"]
+                enhanced_content = f"""{original_content}
+
+Please provide your response in the following JSON format (this is just an example structure):
+
+```json
+{example_json}
+```
+
+Make sure to include all required fields ({required_fields}) and respect any length constraints specified in the schema."""
+
+                enhanced_history[i] = {**msg, "content": enhanced_content}
+                break
+
+        LOGGER.debug("✨ Enhanced prompt with one-shot example")
+        return enhanced_history
+
+    except Exception as e:
+        LOGGER.warning(f"⚠️ Failed to enhance prompt with example: {e}")
+        return chat_history

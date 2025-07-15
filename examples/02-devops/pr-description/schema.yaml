@@ -1,3 +1,5 @@
+name: PR Description Schema
+description: Schema for generating clear, structured PR descriptions for LLM-based automation and review.
 type: object
 required:
   - description
@@ -13,12 +15,14 @@ properties:
     minLength: 100
     maxLength: 2000
     description: "Comprehensive PR description in markdown format"
-  
+    examples:
+      - "This PR introduces a new feature for user profile editing, updates the API, and adds tests."
+
   summary:
     type: string
     maxLength: 200
     description: "Brief summary of changes"
-  
+
   change_type:
     type: string
     enum:
@@ -30,7 +34,7 @@ properties:
       - "chore"
       - "breaking"
     description: "Type of change"
-  
+
   impact:
     type: string
     enum:
@@ -39,7 +43,7 @@ properties:
       - "high"
       - "critical"
     description: "Impact on users and system"
-  
+
   testing_notes:
     type: array
     minItems: 1
@@ -47,7 +51,7 @@ properties:
     description: "Testing requirements and notes"
     items:
       type: string
-  
+
   deployment_notes:
     type: array
     minItems: 0
@@ -55,15 +59,15 @@ properties:
     description: "Deployment considerations"
     items:
       type: string
-  
+
   breaking_changes:
     type: array
     description: "List of breaking changes if any"
     items:
       type: string
-  
+
   related_issues:
     type: array
     description: "Related issue numbers or references"
     items:
-      type: string 
+      type: string

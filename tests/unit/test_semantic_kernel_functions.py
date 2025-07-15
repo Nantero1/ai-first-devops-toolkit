@@ -269,11 +269,15 @@ class TestExecuteLlmTask:
     """Tests for execute_llm_task function."""
 
     @pytest.mark.asyncio
-    async def test_execute_llm_task_text_mode(self, mock_kernel, mock_chat_history):
+    async def test_execute_llm_task_text_mode(self, mock_kernel):
         """Test executing LLM task in text mode (no schema)."""
         # given
         kernel = mock_kernel
-        chat_history = mock_chat_history
+        # Create realistic chat history that supports len() and iteration
+        chat_history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+        ]
         schema_file = None
         mock_kernel.get_service.return_value.get_chat_message_contents.return_value = create_text_output_mock()
 
@@ -286,11 +290,15 @@ class TestExecuteLlmTask:
         assert result["schema_enforced"] == False
 
     @pytest.mark.asyncio
-    async def test_execute_llm_task_structured_mode(self, mock_kernel, mock_chat_history):
+    async def test_execute_llm_task_structured_mode(self, mock_kernel):
         """Test executing LLM task in structured mode (with schema)."""
         # given
         kernel = mock_kernel
-        chat_history = mock_chat_history
+        # Create realistic chat history that supports len() and iteration
+        chat_history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+        ]
         schema_file = "mock_schema_file"
 
         with patch("llm_ci_runner.llm_execution.load_schema_file") as mock_load_schema:
@@ -526,11 +534,15 @@ class TestSchemaLoadingErrors:
     """Tests for schema loading error handling."""
 
     @pytest.mark.asyncio
-    async def test_execute_llm_task_schema_loading_error_continues(self, mock_kernel, mock_chat_history):
+    async def test_execute_llm_task_schema_loading_error_continues(self, mock_kernel):
         """Test schema loading error handling continues execution."""
         # given
         kernel = mock_kernel
-        chat_history = mock_chat_history
+        # Create realistic chat history that supports len() and iteration
+        chat_history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+        ]
         schema_file = "invalid_schema.json"
 
         mock_kernel.get_service.return_value.get_chat_message_contents.return_value = create_text_output_mock()
