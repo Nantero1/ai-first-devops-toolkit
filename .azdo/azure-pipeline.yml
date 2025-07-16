@@ -51,27 +51,10 @@ extends:
             parameters:
               requirementFiles: ""
               pythonBinary: "UV_NO_SYNC=0 uv run --group dev --frozen python"
-              # TODO: set to true, after solving DOTNET issue
               codeCoverage: false
               container:
                 image: cdos-marketplace-docker/llm-runtime:latest
                 endpoint: "sc-generic-docker"
-              
-          # TODO:
-          # - template: Jobs/sonarqube_cli_generic.yml@Templates
-          #   parameters:
-          #     sonarQube: 'sc-cdos-sonar'
-          #     dependsOn:
-          #       - run_python_tests
-          #     cliProjectKey: 'CDOS_marketplace-llm-runtime_345475696jfg'
-          #     extraProperties: |
-          #       sonar.language=python
-          #       sonar.python.coverage.reportPaths=coverage.xml
-          #       sonar.python.xunit.reportPaths=test-results.xml
-          #       sonar.python.version=3.12
-          #     coverageXmlArtifact: "coverage.xml"
-          #     cliSources: './'
-          #     testResultsArtifact: "TestResults"
 
       - stage: build
         displayName: Build
@@ -82,14 +65,13 @@ extends:
           - template: Jobs/docker.yml@Templates
             parameters:
               imageName: llm-runtime
-               # ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
-              latestTag: true
+              latestTag: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
               dgoss: true
               xrayScan: true
               xrayFailBuild: false
               buildArch:
                 - linux/amd64
-#                - linux/arm64
+                - linux/arm64
               secretArgs:
                 ARTIFACTORY_USR: cdos-write
                 ARTIFACTORY_PSW: $(ARTIFACTORY-DELIVERY-TOKEN)
