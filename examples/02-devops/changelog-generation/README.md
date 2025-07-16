@@ -37,16 +37,7 @@ When you use this example, here is what happens step by step:
                 ""
                 "Categorize as: features, bugfixes, breaking_changes, improvements, documentation, deprecations."
         }
-    ],
-    "context": {
-        "session_id": "changelog-gen-001",
-        "metadata": {
-            "task_type": "changelog_generation",
-            "domain": "documentation",
-            "version": "2.1.0",
-            "release_date": "2025-01-07"
-        }
-    }
+    ]
 }
 ```
 

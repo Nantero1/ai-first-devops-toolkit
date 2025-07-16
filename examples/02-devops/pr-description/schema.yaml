@@ -1,4 +1,4 @@
-name: PR Description Schema
+title: PR Description Schema
 description: Schema for generating clear, structured PR descriptions for LLM-based automation and review.
 type: object
 required:

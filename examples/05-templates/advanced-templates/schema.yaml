@@ -1,4 +1,4 @@
-name: Advanced Review Output Schema
+title: Advanced Review Output Schema
 description: Schema for advanced LLM-driven review output, supporting deep analysis and structured recommendations.
 type: object
 required:

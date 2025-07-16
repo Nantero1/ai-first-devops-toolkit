@@ -1,4 +1,4 @@
-name: Code Review Output Schema
+title: Code Review Output Schema
 description: Schema for LLM-generated code review output, providing structured feedback and ratings.
 $schema: "http://json-schema.org/draft-07/schema#"
 type: object
