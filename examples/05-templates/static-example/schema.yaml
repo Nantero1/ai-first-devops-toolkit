@@ -1,4 +1,4 @@
-name: Static Code Analysis Output Schema
+title: Static Code Analysis Output Schema
 description: Schema for LLM-generated static code analysis, providing structured quality and issue reporting.
 type: object
 required:

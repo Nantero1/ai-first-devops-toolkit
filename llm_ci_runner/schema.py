@@ -37,10 +37,13 @@ def create_dynamic_model_from_schema(
     """
     try:
         # Get model title for logging (safe for non-dict inputs)
-        model_title = (
+        model_title_safe = (
             schema_dict.get("title", "DynamicOutputModel") if isinstance(schema_dict, dict) else "DynamicOutputModel"
         )
-        LOGGER.debug(f"🏗️  Creating dynamic model: {model_title}")
+        model_title_safe = "".join(word.capitalize() for word in model_title_safe.split())
+        if isinstance(schema_dict, dict):
+            schema_dict["title"] = model_title_safe
+        LOGGER.debug(f"🏗️  Creating dynamic model: {model_title_safe}")
 
         # Use the library's native support for base model types
         # Model naming is handled by the library via schema's 'title' field
