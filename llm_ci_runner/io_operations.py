@@ -7,7 +7,6 @@ and parsing command line arguments with proper error handling.
 
 import argparse
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +15,7 @@ from semantic_kernel.contents import ChatHistory, ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 
 from .exceptions import InputValidationError, LLMRunnerError
+from .formatters import detect_output_format, format_output_content, write_formatted_file
 from .logging_config import LOGGER
 
 
@@ -274,79 +274,32 @@ def create_chat_history(messages: list[dict[str, Any]]) -> ChatHistory:
 
 def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None:
     """
-    Write response to output file in JSON, YAML, or direct text format.
+    Write response to output file using unified formatters.
 
-    Automatically detects output format based on file extension.
-    Creates parent directories if they don't exist.
-    For .md files, writes direct text without JSON wrapper.
+    Automatically detects output format based on file extension and uses
+    centralized formatting logic for consistency.
 
     Args:
         output_file: Path to the output file
         response: Response data to write
 
     Raises:
-        InputValidationError: If writing fails
+        LLMRunnerError: If writing fails
     """
-    LOGGER.debug(f"📝 Writing output to: {output_file}")
-
     try:
-        # Create parent directories if they don't exist
-        output_file.parent.mkdir(parents=True, exist_ok=True)
+        # Detect output format and create formatted output
+        output_format = detect_output_format(output_file)
 
-        # Determine output format based on extension
-        extension = output_file.suffix.lower()
+        # For file writing, we always use the raw data regardless of console format
+        # The formatter handles metadata wrapper and format-specific logic
+        formatted_output = format_output_content(
+            response, output_format, "structured" if isinstance(response, dict) else "text"
+        )
 
-        if extension == ".md":
-            # Write direct text for markdown files (no JSON wrapper)
-            if isinstance(response, str):
-                content = response
-            else:
-                # If response is dict, extract the text content
-                content = response.get("response", str(response))
-
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(content)
-
-            LOGGER.info(f"✅ Wrote direct text output: {output_file}")
-
-        elif extension in [".yaml", ".yml"]:
-            # Wrap response in standard format for YAML
-            output_data = {
-                "success": True,
-                "response": response,
-                "metadata": {
-                    "runner": "llm-ci-runner",
-                    "timestamp": datetime.now().isoformat(),
-                },
-            }
-
-            output_data_literal = yaml_recursively_force_literal(output_data)
-            yaml = YAML(pure=True)
-            yaml.default_flow_style = False
-            yaml.indent(mapping=2, sequence=4, offset=2)
-
-            with open(output_file, "w", encoding="utf-8") as f:
-                yaml.dump(output_data_literal, f)
-
-            LOGGER.info(f"✅ Wrote YAML output: {output_file}")
-
-        else:
-            # Wrap response in standard format for JSON (default)
-            output_data = {
-                "success": True,
-                "response": response,
-                "metadata": {
-                    "runner": "llm-ci-runner",
-                    "timestamp": datetime.now().isoformat(),
-                },
-            }
-
-            with open(output_file, "w", encoding="utf-8") as f:
-                json.dump(output_data, f, indent=2, ensure_ascii=False)
-
-            LOGGER.info(f"✅ Wrote JSON output: {output_file}")
-
+        # Write using unified formatter
+        write_formatted_file(formatted_output, output_file)
     except Exception as e:
+        LOGGER.error(f"❌ Error writing output file: {e}")
         raise LLMRunnerError(f"Error writing output file: {e}") from e
 
 
@@ -400,28 +353,3 @@ def load_schema_file(schema_file: Path | None) -> tuple[type, dict[str, Any]] | 
         raise InputValidationError(f"Invalid JSON in schema file: {e}") from e
     except Exception as e:
         raise InputValidationError(f"Failed to load schema file: {e}") from e
-
-
-def yaml_recursively_force_literal(data: Any) -> Any:
-    """
-    Recursively convert data to use literal YAML style.
-
-    This ensures that multi-line strings are preserved as literal blocks
-    in YAML output, making them more readable.
-
-    Args:
-        data: Data to convert
-
-    Returns:
-        Data with literal YAML style applied
-    """
-    from ruamel.yaml import scalarstring
-
-    if isinstance(data, dict):
-        return {k: yaml_recursively_force_literal(v) for k, v in data.items()}
-    elif isinstance(data, list):
-        return [yaml_recursively_force_literal(item) for item in data]
-    elif isinstance(data, str) and "\n" in data:
-        return scalarstring.LiteralScalarString(data)
-    else:
-        return data

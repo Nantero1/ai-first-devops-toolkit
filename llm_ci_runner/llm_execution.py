@@ -13,8 +13,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from openai import AsyncAzureOpenAI, AsyncOpenAI
-from rich.console import Console
-from rich.panel import Panel
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSettings
 
@@ -22,6 +20,7 @@ if TYPE_CHECKING:
     from semantic_kernel.services.chat_completion_service import ChatCompletionService  # type: ignore[import-not-found]
 
 from .exceptions import LLMExecutionError
+from .formatters import detect_output_format, display_formatted_console, format_output_content
 from .io_operations import create_chat_history, load_schema_file
 from .schema import generate_one_shot_example
 
@@ -31,7 +30,256 @@ LOGGER = logging.getLogger(__name__)
 # Removed default constants - using underlying library defaults instead
 
 # LOGGER is already imported from logging_config
-CONSOLE = Console()
+
+
+class LLMExecutor:
+    """Executes LLM tasks with schema enforcement and clean architecture.
+
+    Eliminates parameter pollution by encapsulating execution state and dependencies.
+    Provides unified interface for Semantic Kernel and SDK fallback mechanisms.
+
+    Attributes:
+        kernel: Semantic Kernel instance for primary execution
+        schema_model: Optional Pydantic model for schema enforcement
+        schema_dict: Optional schema dictionary representation
+        output_file: Optional output file path for results
+        output_format: Detected output format (json, yaml, etc.)
+    """
+
+    def __init__(
+        self,
+        kernel: Kernel,
+        schema_file: str | None = None,
+        output_file: str | None = None,
+    ):
+        """Initialize LLM executor with dependencies.
+
+        Args:
+            kernel: Semantic Kernel instance
+            schema_file: Optional path to schema file for enforcement
+            output_file: Optional path for output file
+        """
+        self.kernel = kernel
+        self.output_file = output_file
+        self.schema_model, self.schema_dict = self._load_schema(schema_file)
+        self.output_format = self._detect_output_format()
+
+        LOGGER.debug(
+            f"🤖 LLMExecutor initialized - "
+            f"schema: {'Yes' if self.schema_model else 'No'}, "
+            f"output: {self.output_format if self.output_file else 'console-only'}"
+        )
+
+    def _load_schema(self, schema_file: str | None) -> tuple[type | None, dict[str, Any] | None]:
+        """Load schema model and dictionary from file.
+
+        Args:
+            schema_file: Optional path to schema file
+
+        Returns:
+            Tuple of (schema_model, schema_dict) or (None, None) if no schema
+        """
+        if not schema_file:
+            return None, None
+
+        try:
+            schema_result = load_schema_file(Path(schema_file))
+            if schema_result:
+                schema_model, schema_dict = schema_result
+                LOGGER.debug(f"📋 Schema loaded - model: {type(schema_model)}, dict: {type(schema_dict)}")
+                LOGGER.debug(f"📋 Schema dict keys: {list(schema_dict.keys())}")
+                return schema_model, schema_dict
+        except Exception as e:
+            LOGGER.warning(f"⚠️ Failed to load schema: {e}")
+            LOGGER.debug("📝 Continuing without schema enforcement")
+
+        return None, None
+
+    def _detect_output_format(self) -> str:
+        """Detect output format from file extension using unified formatter.
+
+        Returns:
+            Format string: 'yaml', 'json', 'text', or 'markdown'
+        """
+        return detect_output_format(Path(self.output_file) if self.output_file else None)
+
+    async def _execute_semantic_kernel_with_schema(self, chat_history: list) -> dict[str, Any]:
+        """Execute LLM task using Semantic Kernel with schema enforcement.
+
+        Args:
+            chat_history: List of chat messages
+
+        Returns:
+            Dictionary containing execution results
+
+        Raises:
+            Exception: If Semantic Kernel execution fails
+        """
+        # Get the chat completion service
+        service: ChatCompletionService | None = self.kernel.get_service("azure_openai")
+        if not service:
+            # Try alternative service IDs
+            service = self.kernel.get_service("openai")
+        if not service:
+            raise Exception("No chat completion service found")
+
+        # Create settings with schema enforcement
+        settings = OpenAIChatPromptExecutionSettings(
+            service_id="azure_openai",
+        )
+
+        # Set response_format for schema enforcement
+        if self.schema_model and self.schema_dict:
+            # Use the original schema_dict for Azure OpenAI to preserve additionalProperties: false
+            # Add required name and schema fields for Azure OpenAI
+            schema_with_name = self.schema_dict.copy()
+            schema_with_name["name"] = self.schema_model.__name__
+            settings.response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "schema": schema_with_name,
+                    "name": self.schema_model.__name__,
+                },
+            }
+            LOGGER.info(f"🔒 Using 100% schema enforcement with model: {self.schema_model.__name__}")
+            LOGGER.debug("   → Token-level constraint enforcement active")
+            LOGGER.debug(f"   → response_format type: {type(settings.response_format)}")
+        else:
+            LOGGER.debug("📝 Using text output mode (no schema)")
+
+        # Convert list to ChatHistory for Semantic Kernel compatibility
+        sk_chat_history = create_chat_history(chat_history)
+
+        # Execute with Semantic Kernel
+        result = await service.get_chat_message_contents(
+            chat_history=sk_chat_history,
+            settings=settings,
+        )
+
+        # Extract content from ChatMessageContent objects
+        if result and len(result) > 0:
+            content = result[0].content
+        else:
+            content = ""
+
+        return _process_structured_response(content, self.schema_model, self.schema_dict, self.output_format)
+
+    async def _execute_sdk_with_schema(self, client_type: str, chat_history: list) -> dict[str, Any]:
+        """Execute LLM task using appropriate SDK with schema enforcement.
+
+        Unified execution logic for both Azure and OpenAI SDKs.
+
+        Args:
+            client_type: Either "azure" or "openai"
+            chat_history: List of chat messages
+
+        Returns:
+            Dictionary containing execution results
+
+        Raises:
+            ValueError: If client configuration is invalid
+            Exception: If SDK execution fails
+        """
+        # Create appropriate client and get model
+        client: AsyncAzureOpenAI | AsyncOpenAI
+        if client_type == "azure":
+            client = await _create_azure_client()
+            model = os.getenv("AZURE_OPENAI_MODEL")
+            if not model:
+                raise ValueError("AZURE_OPENAI_MODEL is required for Azure SDK")
+        else:  # openai
+            client = await _create_openai_client()
+            model = os.getenv("OPENAI_CHAT_MODEL_ID")
+            if not model:
+                raise ValueError("OPENAI_CHAT_MODEL_ID is required for OpenAI SDK")
+
+        # Common message preparation
+        messages = _convert_chat_history_to_openai_format(chat_history)
+
+        # Common execution logic
+        if self.schema_model and self.schema_dict:
+            LOGGER.info(f"🔒 Using {client_type.upper()} SDK with model: {self.schema_model.__name__}")
+            schema_prepared = _prepare_schema_for_sdk(self.schema_model, self.schema_dict)
+            response = await client.beta.chat.completions.parse(
+                model=model,
+                messages=messages,  # type: ignore
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "schema": schema_prepared,
+                        "name": self.schema_model.__name__,
+                    },
+                },  # type: ignore
+            )
+            result = response.choices[0].message.content
+        else:
+            LOGGER.info(f"📝 Using {client_type.upper()} SDK in text mode")
+            response = await client.chat.completions.create(
+                model=model,
+                messages=messages,  # type: ignore
+            )
+            result = response.choices[0].message.content
+
+        return _process_structured_response(result or "", self.schema_model, self.schema_dict, self.output_format)
+
+    async def execute(self, chat_history: list[dict]) -> dict[str, Any]:
+        """Execute LLM task with dual-path architecture and schema enforcement.
+
+        Implements fallback strategy:
+        1. Try Semantic Kernel with schema enforcement
+        2. If SK fails → Try appropriate SDK (Azure/OpenAI) with schema enforcement
+        3. If schema enforcement fails → Raise error
+
+        Args:
+            chat_history: List of chat messages
+
+        Returns:
+            Dictionary containing execution results
+
+        Raises:
+            LLMExecutionError: If all execution paths fail
+        """
+        LOGGER.debug("🤖 Executing LLM task with clean architecture")
+
+        # Enhance prompt with one-shot example if schema is provided
+        enhanced_chat_history = _enhance_prompt_with_one_shot_example(chat_history, self.schema_model)
+
+        # Path 1: Try Semantic Kernel with schema enforcement
+        try:
+            LOGGER.debug("🔐 Attempting Semantic Kernel with schema enforcement")
+            result = await self._execute_semantic_kernel_with_schema(enhanced_chat_history)
+            LOGGER.debug("✅ Semantic Kernel execution successful")
+            return result
+        except Exception as e:
+            LOGGER.warning(f"⚠️ Semantic Kernel failed: {e}")
+            LOGGER.info("🔄 Falling back to OpenAI SDK")
+
+        # Path 2: Try appropriate SDK based on endpoint type
+        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+
+        if azure_endpoint:
+            # Try Azure SDK for Azure OpenAI endpoints
+            try:
+                LOGGER.debug("🔐 Attempting Azure SDK with schema enforcement")
+                result = await self._execute_sdk_with_schema("azure", enhanced_chat_history)
+                LOGGER.info("✅ Azure SDK execution successful")
+                return result
+            except Exception as e:
+                LOGGER.warning(f"⚠️ Azure SDK failed: {e}")
+                raise LLMExecutionError(f"Schema enforcement failed with Azure SDK: {e}") from e
+        else:
+            # Try OpenAI SDK for OpenAI endpoints
+            try:
+                LOGGER.info("🔐 Attempting OpenAI SDK with schema enforcement")
+                result = await self._execute_sdk_with_schema("openai", enhanced_chat_history)
+                LOGGER.info("✅ OpenAI SDK execution successful")
+                return result
+            except Exception as e:
+                LOGGER.warning(f"⚠️ OpenAI SDK failed: {e}")
+                raise LLMExecutionError(f"Schema enforcement failed with OpenAI SDK: {e}") from e
+
+        # If we reach here, no endpoint was detected
+        raise LLMExecutionError("No valid endpoint configuration found")
 
 
 def _prepare_schema_for_sdk(schema_model: type, schema_dict: dict[str, Any]) -> dict[str, Any]:
@@ -54,23 +302,17 @@ async def execute_llm_task(
     chat_history: list,
     schema_file: str | None = None,
     output_file: str | None = None,
-    log_level: str = "INFO",
 ) -> dict[str, Any]:
-    """Execute LLM task with strict schema enforcement.
+    """Execute LLM task with clean class-based architecture.
 
-    Implements dual-path architecture:
-    1. Try Semantic Kernel with schema enforcement
-    2. If Semantic Kernel fails → Try appropriate SDK (Azure/OpenAI) with schema enforcement
-    3. If schema enforcement fails → Raise error (no text mode fallback)
-
-    Users rely on strict schema compliance - if schema enforcement fails, the operation fails.
+    Modern implementation using LLMExecutor class to eliminate parameter pollution
+    and provide clean, testable architecture.
 
     Args:
         kernel: Semantic Kernel instance
         chat_history: List of chat messages
         schema_file: Optional schema file path
         output_file: Optional output file path
-        log_level: Logging level
 
     Returns:
         Dictionary containing execution results
@@ -78,131 +320,15 @@ async def execute_llm_task(
     Raises:
         LLMExecutionError: If all execution paths fail
     """
-    LOGGER.debug("🤖 Executing LLM task")
-
-    # Load schema if provided
-    schema_model = None
-    schema_dict = None
-    if schema_file:
-        try:
-            schema_result = load_schema_file(Path(schema_file) if schema_file else None)
-            if schema_result:
-                schema_model, schema_dict = schema_result
-                LOGGER.debug(f"📋 Schema loaded - model: {type(schema_model)}, dict: {type(schema_dict)}")
-                LOGGER.debug(f"📋 Schema dict keys: {list(schema_dict.keys())}")
-        except Exception as e:
-            LOGGER.warning(f"⚠️ Failed to load schema: {e}")
-            LOGGER.debug("📝 Continuing without schema enforcement")
-
-    # Enhance prompt with one-shot example if schema is provided
-    enhanced_chat_history = _enhance_prompt_with_one_shot_example(chat_history, schema_model)
-
-    # Path 1: Try Semantic Kernel with schema enforcement
-    try:
-        LOGGER.debug("🔐 Attempting Semantic Kernel with schema enforcement")
-        result = await _execute_semantic_kernel_with_schema(kernel, enhanced_chat_history, schema_model, schema_dict)
-        LOGGER.debug("✅ Semantic Kernel execution successful")
-        return result
-    except Exception as e:
-        LOGGER.warning(f"⚠️ Semantic Kernel failed: {e}")
-        LOGGER.info("🔄 Falling back to OpenAI SDK")
-
-    # Path 2: Try appropriate SDK based on endpoint type
-    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-
-    if azure_endpoint:
-        # Try Azure SDK for Azure OpenAI endpoints
-        try:
-            LOGGER.debug("🔐 Attempting Azure SDK with schema enforcement")
-            result = await _execute_sdk_with_schema("azure", enhanced_chat_history, schema_model, schema_dict)
-            LOGGER.info("✅ Azure SDK execution successful")
-            return result
-        except Exception as e:
-            LOGGER.warning(f"⚠️ Azure SDK failed: {e}")
-            raise LLMExecutionError(f"Schema enforcement failed with Azure SDK: {e}") from e
-    else:
-        # Try OpenAI SDK for OpenAI endpoints
-        try:
-            LOGGER.info("🔐 Attempting OpenAI SDK with schema enforcement")
-            result = await _execute_sdk_with_schema("openai", enhanced_chat_history, schema_model, schema_dict)
-            LOGGER.info("✅ OpenAI SDK execution successful")
-            return result
-        except Exception as e:
-            LOGGER.warning(f"⚠️ OpenAI SDK failed: {e}")
-            raise LLMExecutionError(f"Schema enforcement failed with OpenAI SDK: {e}") from e
-
-    # If we reach here, no endpoint was detected
-    raise LLMExecutionError("No valid endpoint configuration found")
-
-
-async def _execute_semantic_kernel_with_schema(
-    kernel: Kernel,
-    chat_history: list,
-    schema_model: type | None,
-    schema_dict: dict[str, Any] | None,
-) -> dict[str, Any]:
-    """Execute LLM task using Semantic Kernel with schema enforcement.
-
-    Args:
-        kernel: Semantic Kernel instance
-        chat_history: List of chat messages
-        schema_model: Optional Pydantic model
-        schema_dict: Optional schema dictionary
-
-    Returns:
-        Dictionary containing execution results
-
-    Raises:
-        Exception: If Semantic Kernel execution fails
-    """
-    # Get the chat completion service
-    service: ChatCompletionService | None = kernel.get_service("azure_openai")
-    if not service:
-        # Try alternative service IDs
-        service = kernel.get_service("openai")
-    if not service:
-        raise Exception("No chat completion service found")
-
-    # Create settings with schema enforcement
-    settings = OpenAIChatPromptExecutionSettings(
-        service_id="azure_openai",
+    # Create executor instance with clean architecture
+    executor = LLMExecutor(
+        kernel=kernel,
+        schema_file=schema_file,
+        output_file=output_file,
     )
 
-    # Set response_format for schema enforcement
-    if schema_model and schema_dict:
-        # Use the original schema_dict for Azure OpenAI to preserve additionalProperties: false
-        # Add required name and schema fields for Azure OpenAI
-        schema_with_name = schema_dict.copy()
-        schema_with_name["name"] = schema_model.__name__
-        settings.response_format = {
-            "type": "json_schema",
-            "json_schema": {
-                "schema": schema_with_name,
-                "name": schema_model.__name__,
-            },
-        }
-        LOGGER.info(f"🔒 Using 100% schema enforcement with model: {schema_model.__name__}")
-        LOGGER.debug("   → Token-level constraint enforcement active")
-        LOGGER.debug(f"   → response_format type: {type(settings.response_format)}")
-    else:
-        LOGGER.debug("📝 Using text output mode (no schema)")
-
-    # Convert list to ChatHistory for Semantic Kernel compatibility
-    sk_chat_history = create_chat_history(chat_history)
-
-    # Execute with Semantic Kernel
-    result = await service.get_chat_message_contents(
-        chat_history=sk_chat_history,
-        settings=settings,
-    )
-
-    # Extract content from ChatMessageContent objects
-    if result and len(result) > 0:
-        content = result[0].content
-    else:
-        content = ""
-
-    return _process_structured_response(content, schema_model, schema_dict)
+    # Execute with encapsulated logic
+    return await executor.execute(chat_history)
 
 
 def _convert_chat_history_to_openai_format(chat_history: list) -> list[dict[str, str]]:
@@ -275,81 +401,17 @@ async def _create_openai_client() -> AsyncOpenAI:
     )
 
 
-async def _execute_sdk_with_schema(
-    client_type: str,
-    chat_history: list,
-    schema_model: type | None,
-    schema_dict: dict[str, Any] | None,
-) -> dict[str, Any]:
-    """Execute LLM task using appropriate SDK with schema enforcement.
-
-    Unified execution logic for both Azure and OpenAI SDKs, eliminating code duplication.
-
-    Args:
-        client_type: Either "azure" or "openai"
-        chat_history: List of chat messages
-        schema_model: Optional Pydantic model
-        schema_dict: Optional schema dictionary
-
-    Returns:
-        Dictionary containing execution results
-
-    Raises:
-        ValueError: If client configuration is invalid
-        Exception: If SDK execution fails
-    """
-    # Create appropriate client and get model
-    client: AsyncAzureOpenAI | AsyncOpenAI
-    if client_type == "azure":
-        client = await _create_azure_client()
-        model = os.getenv("AZURE_OPENAI_MODEL")
-        if not model:
-            raise ValueError("AZURE_OPENAI_MODEL is required for Azure SDK")
-    else:  # openai
-        client = await _create_openai_client()
-        model = os.getenv("OPENAI_CHAT_MODEL_ID")
-        if not model:
-            raise ValueError("OPENAI_CHAT_MODEL_ID is required for OpenAI SDK")
-
-    # Common message preparation
-    messages = _convert_chat_history_to_openai_format(chat_history)
-
-    # Common execution logic
-    if schema_model and schema_dict:
-        LOGGER.info(f"🔒 Using {client_type.upper()} SDK with model: {schema_model.__name__}")
-        schema_prepared = _prepare_schema_for_sdk(schema_model, schema_dict)
-        response = await client.beta.chat.completions.parse(
-            model=model,
-            messages=messages,  # type: ignore
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "schema": schema_prepared,
-                    "name": schema_model.__name__,
-                },
-            },  # type: ignore
-        )
-        result = response.choices[0].message.content
-    else:
-        LOGGER.info(f"📝 Using {client_type.upper()} SDK in text mode")
-        response = await client.chat.completions.create(
-            model=model,
-            messages=messages,  # type: ignore
-        )
-        result = response.choices[0].message.content
-
-    return _process_structured_response(result or "", schema_model, schema_dict)
-
-
 async def _execute_text_mode(
     kernel: Kernel,
     chat_history: list,
+    output_file: str | None = None,
 ) -> dict[str, Any]:
     """Execute LLM task using text mode (no schema enforcement).
 
     Args:
         kernel: Semantic Kernel instance
         chat_history: List of chat messages
+        output_file: Optional output file path
 
     Returns:
         Dictionary containing execution results
@@ -385,20 +447,23 @@ async def _execute_text_mode(
     else:
         content = ""
 
-    return _process_text_response(content)
+    output_format = detect_output_format(Path(output_file) if output_file else None)
+    return _process_text_response(content, output_format)
 
 
 def _process_structured_response(
     response: str,
     schema_model: type | None,
     schema_dict: dict[str, Any] | None,
+    output_format: str,
 ) -> dict[str, Any]:
-    """Process structured response from LLM.
+    """Process structured response from LLM using unified formatters.
 
     Args:
         response: Raw response from LLM
         schema_model: Optional Pydantic model
         schema_dict: Optional schema dictionary
+        output_format: Output format ('json', 'yaml', 'text', 'markdown')
 
     Returns:
         Dictionary containing processed results
@@ -412,15 +477,9 @@ def _process_structured_response(
             LOGGER.debug(f"📄 Structured response with {len(parsed_response)} fields")
             LOGGER.debug(f"   Fields: {list(parsed_response.keys())}")
 
-            # Pretty print structured output with Rich
-            CONSOLE.print("\n[bold cyan]🤖 LLM Response (Structured)[/bold cyan]")
-            CONSOLE.print(
-                Panel(
-                    json.dumps(parsed_response, indent=2, ensure_ascii=False),
-                    title="📋 Structured Output",
-                    style="cyan",
-                )
-            )
+            # Use unified formatter for console display
+            formatted_output = format_output_content(parsed_response, output_format, "structured")
+            display_formatted_console(formatted_output)
 
             return {
                 "success": True,
@@ -432,17 +491,18 @@ def _process_structured_response(
         except json.JSONDecodeError as e:
             LOGGER.warning(f"⚠️ Failed to parse structured response as JSON: {e}")
             LOGGER.debug(f"   Raw response: {response[:200]}...")
-            return _process_text_response(response)
+            return _process_text_response(response, output_format)
 
     else:
-        return _process_text_response(response)
+        return _process_text_response(response, output_format)
 
 
-def _process_text_response(response: str) -> dict[str, Any]:
-    """Process text response from LLM.
+def _process_text_response(response: str, output_format: str) -> dict[str, Any]:
+    """Process text response from LLM using unified formatters.
 
     Args:
         response: Raw response from LLM
+        output_format: Output format ('json', 'yaml', 'text', 'markdown')
 
     Returns:
         Dictionary containing processed results
@@ -450,15 +510,9 @@ def _process_text_response(response: str) -> dict[str, Any]:
     LOGGER.info("✅ LLM task completed with text output")
     LOGGER.debug(f"📄 Text response length: {len(response)} characters")
 
-    # Pretty print text output with Rich
-    CONSOLE.print("\n[bold green]🤖 LLM Response (Text)[/bold green]")
-    CONSOLE.print(
-        Panel(
-            response,
-            title="📝 Text Output",
-            style="green",
-        )
-    )
+    # Use unified formatter for console display
+    formatted_output = format_output_content(response, output_format, "text")
+    display_formatted_console(formatted_output)
 
     return {
         "success": True,

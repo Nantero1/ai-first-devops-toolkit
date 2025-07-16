@@ -8,14 +8,13 @@ alwaysApply: false
 ## Directory Structure & Organization
 
 ```
-tests/python/
+tests/
 ├── unit/                    # Unit tests with heavy mocking
 │   └── somedirectory/           # Mirror source code structure
 │       ├── langchain_related/
 │       ├── user_client/
 │       └── ...
-└── integ/                  # Integration tests with minimal mocking
-    └── telegram/           # Telegram integration tests
+└── integration/            # Integration tests with mocking of external dependencies / APIs only
 ```
 
 **File Naming**: Test files prefixed with `test_` and mirror source structure:
@@ -133,6 +132,101 @@ class TestMyComponent:
 6. **Use parametrization** - Test multiple scenarios efficiently
 7. **Keep tests focused** - One assertion per test concept
 8. **Use appropriate markers** - `@pytest.mark.asyncio`, `@pytest.mark.essential`
+
+## 🎯 **CRITICAL: Test BEHAVIOR, Not IMPLEMENTATION**
+
+*The most important testing principle for maintainable, refactoring-safe tests*
+
+### **Why This Matters**
+
+**✅ GOOD - Behavior-Focused Tests:**
+```python
+@pytest.mark.asyncio
+async def test_execute_llm_task_structured_mode(self, mock_kernel):
+    """Test executing LLM task in structured mode (with schema)."""
+    # given
+    kernel = mock_kernel
+    chat_history = [{"role": "user", "content": "Hello"}]
+    schema_file = "mock_schema_file"
+    
+    # when - Testing PUBLIC interface
+    result = await execute_llm_task(kernel, chat_history, schema_file)
+    
+    # then - Verifying BEHAVIOR/OUTCOMES
+    assert result["mode"] == "structured"
+    assert result["schema_enforced"] == True
+    # ✅ Tests WHAT the function does, not HOW
+```
+
+**❌ BAD - Implementation-Focused Tests:**
+```python
+async def test_execute_llm_task_internal_details(self):
+    """DON'T DO THIS - Testing internal implementation."""
+    # ❌ Testing internal function calls
+    with patch("module._internal_helper_function") as mock_helper:
+        # ❌ Testing how schema loading works internally
+        with patch("module._load_schema_internal") as mock_schema:
+            result = await execute_llm_task(...)
+            # ❌ Verifying internal call patterns
+            mock_helper.assert_called_with_specific_params()
+            mock_schema.assert_called_once()
+```
+
+### **Real-World Success Example**
+
+**Phase 2 Refactoring Proof**: During our major architecture refactoring from parameter pollution to class-based design:
+
+**BEFORE (Internal Complexity):**
+```python
+async def execute_llm_task(...):
+    schema_model = None
+    schema_dict = None
+    if schema_file:
+        schema_result = load_schema_file(...)
+        # 50+ lines of complex internal logic
+    enhanced_history = _enhance_prompt_with_one_shot_example(...)
+    result = await _execute_semantic_kernel_with_schema(...)
+```
+
+**AFTER (Clean Class Architecture):**
+```python
+async def execute_llm_task(...):
+    executor = LLMExecutor(kernel=kernel, schema_file=schema_file, output_file=output_file)
+    return await executor.execute(chat_history)
+```
+
+**Test Results**: **209/209 tests passed** with **ZERO test changes** because tests focused on behavior, not implementation!
+
+### **Behavior vs Implementation Guidelines**
+
+| ✅ **Test This (BEHAVIOR)**    | ❌ **Don't Test This (IMPLEMENTATION)** |
+| ----------------------------- | -------------------------------------- |
+| Function return values        | Internal function calls                |
+| Error conditions and messages | How errors are generated internally    |
+| State changes in the system   | Which internal methods are called      |
+| Public API contracts          | Private method implementations         |
+| Input validation rules        | How validation is implemented          |
+| Business logic outcomes       | Code organization patterns             |
+
+### **Benefits of Behavior-Focused Testing**
+
+1. **🔄 Refactoring Safety** - Tests survive major internal changes
+2. **📈 Maintenance** - Tests remain stable during code evolution  
+3. **🎯 Focus** - Tests verify what users/consumers actually care about
+4. **⚡ Speed** - Less brittle tests mean fewer test maintenance cycles
+5. **🧠 Clarity** - Tests document actual requirements, not implementation details
+
+### **Practical Application**
+
+**When writing tests, ask:**
+- ❓ "If I completely rewrote this function's internals, should this test still pass?"
+- ❓ "Does this test verify what a user of this function cares about?"
+- ❓ "Would this test help me catch a bug that affects the end user?"
+
+**If the answer is YES → You're testing behavior ✅**  
+**If the answer is NO → You're testing implementation ❌**
+
+This principle is the foundation of maintainable test suites that survive architectural changes.
 
 ## Adding New Tests
 

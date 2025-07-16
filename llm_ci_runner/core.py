@@ -156,7 +156,6 @@ async def main() -> None:
             chat_history_list,
             args.schema_file,
             args.output_file,
-            args.log_level,
         )
 
         # Extract response from result
