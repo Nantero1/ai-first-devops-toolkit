@@ -38,7 +38,7 @@ jobs:
 
       - name: Install dependencies with locked versions
         run: |
-          uv sync --frozen --group dev
+          uv sync --group dev
 
       - name: Run unit tests with coverage
         id: run_tests

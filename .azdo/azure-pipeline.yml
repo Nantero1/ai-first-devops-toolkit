@@ -14,6 +14,15 @@ pr:
     include:
       - main
 
+# Weekly scheduled build on Tuesday nights
+schedules:
+  - cron: "0 2 * * 2"
+    displayName: Weekly Tuesday night build
+    branches:
+      include:
+        - main
+    always: true
+
 # Add explicit lock behavior to run only the latest pipeline
 lockBehavior: runLatest
 
@@ -50,7 +59,7 @@ extends:
           - template: Jobs/python_tests.yml@Templates
             parameters:
               requirementFiles: ""
-              pythonBinary: "UV_NO_SYNC=0 uv run --group dev --frozen python"
+              pythonBinary: "VIRTUAL_ENV='' UV_NO_SYNC=0 uv run --group dev --upgrade python"
               codeCoverage: false
               container:
                 image: cdos-marketplace-docker/llm-runtime:latest
@@ -82,3 +91,4 @@ extends:
                   target: yq_amd64
                 - path: github-proxy/mikefarah/yq/releases/latest/download/yq_linux_arm64
                   target: yq_arm64
+

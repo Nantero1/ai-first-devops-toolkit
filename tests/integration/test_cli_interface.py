@@ -16,7 +16,7 @@ import pytest
 class TestCLIArgumentParsing:
     """Tests for CLI argument parsing and validation."""
 
-    @pytest.mark.skip(reason="not implemented")
+    @pytest.mark.skip(reason="Fails in Azure DevOps, does it display content?")
     def test_cli_help_displays_usage_information(self):
         """Test that --help displays comprehensive usage information."""
         # given

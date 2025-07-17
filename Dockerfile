@@ -48,7 +48,7 @@ RUN --mount=type=secret,id=ARTIFACTORY_USR \
     export ARTIFACTORY_PWD=$(cat /run/secrets/ARTIFACTORY_PSW) && \
     envsubst < ~/.netrc.tpl > ~/.netrc && \
     python -m pip install uv && \
-    uv sync --locked --no-install-project --compile-bytecode && \
+    uv sync --no-install-project --compile-bytecode --upgrade && \
     rm ~/.netrc
 
 # Copy application code and install the project
@@ -57,7 +57,7 @@ COPY README.md LICENSE NOTICE ./
 
 COPY scripts/optimize_venv.py /tmp/optimize_venv.py
 RUN --mount=type=cache,target=/opt/uv-cache/ \
-    uv sync --locked --compile-bytecode && \
+    uv sync --compile-bytecode --upgrade && \
 # Optimize image size by removing source files for packages with compiled bytecode
 # Keep essential modules and packages that are needed for imports
     python /tmp/optimize_venv.py /app/.venv && \
@@ -134,6 +134,7 @@ ENV TERM=xterm-256color
 ENV FORCE_COLOR=1
 ENV COLORTERM=truecolor
 ENV COLUMNS=120
+ENV TTY_COMPATIBLE=1
 
 # Set default Azure OpenAI configuration for POC
 ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-dev-swecen-001.openai.azure.com/

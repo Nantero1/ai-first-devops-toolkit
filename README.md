@@ -1,8 +1,10 @@
 # Docker Image for LLM-powered CI/CD pipeline steps
 
 [![Generic badge](https://img.shields.io/badge/RHEL-8_Python_3.11-green.svg)](https://teambank.jfrog.io/ui/packages/docker:%2F%2Frhel?name=rhel&type=packages)
-[![Build Status](https://dev.azure.com/teambankag/CDOS/_apis/build/status%2Fbase-images%2Fdocker-image-llm-runtime?repoName=docker-image-llm-runtime&branchName=main)](https://dev.azure.com/teambankag/CDOS/_build/latest?definitionId=3770&repoName=docker-image-llm-runtime&branchName=main)
+[![Build Status](https://dev.azure.com/teambankag/CDOS/_apis/build/status%2Fdocker-images%2Fdocker-image-llm-runtime?repoName=docker-image-llm-runtime&branchName=main)](https://dev.azure.com/teambankag/CDOS/_build/latest?definitionId=3770&repoName=docker-image-llm-runtime&branchName=main)
+[![Generic badge](https://img.shields.io/badge/Managed_by-IT-black)]()
 [![Generic badge](https://img.shields.io/badge/Cloud_allowed-Yes-green)](https://wiki.teambank.de/confluence/x/bR9zHw)
+
 
 ### Available platforms
 ![Platform linux/amd64](https://img.shields.io/badge/linux/amd64-ready-green)
