@@ -22,8 +22,7 @@ resources:
     - repository: Templates
       type: git
       name: CDOS/azure-devops-pipeline
-      ref: refs/tags/v4
-
+      ref: main
   pipelines:
     - pipeline: base-image-miniconda-4.11-rhel8
       source: base-image-miniconda-4.11-rhel8
@@ -66,7 +65,7 @@ extends:
           - template: Jobs/docker.yml@Templates
             parameters:
               imageName: llm-runtime
-              latestTag: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
+              latestTag: true
               dgoss: true
               xrayScan: true
               xrayFailBuild: false
