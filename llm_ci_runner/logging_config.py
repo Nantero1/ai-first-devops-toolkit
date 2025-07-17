@@ -51,12 +51,12 @@ def setup_logging(log_level: str) -> logging.Logger:
         ],
     )
 
+    logging.getLogger("azure.identity").setLevel(logging.WARNING)
     # Suppress HTTP request logs from Azure libraries unless in DEBUG mode
     if log_level.upper() != "DEBUG":
         # Suppress HTTP request logs from Azure client libraries
         logging.getLogger("azure.core.pipeline.policies.http_logging_policy").setLevel(logging.WARNING)
         logging.getLogger("azure.core.pipeline.transport").setLevel(logging.WARNING)
-        logging.getLogger("azure.identity").setLevel(logging.WARNING)
         logging.getLogger("azure.core.pipeline").setLevel(logging.WARNING)
         logging.getLogger("httpx").setLevel(logging.WARNING)
         # Suppress Semantic Kernel HTTP logs
