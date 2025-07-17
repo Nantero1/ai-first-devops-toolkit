@@ -1,6 +1,6 @@
 # AI-First Toolkit: LLM-Powered Automation
 
-[![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner) [![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![Coverage badge](https://raw.githubusercontent.com/Nantero1/ai-first-devops-toolkit/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/Nantero1/ai-first-devops-toolkit/blob/python-coverage-comment-action-data/htmlcov/index.html) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![MyPy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/) [![Ruff](https://img.shields.io/badge/ruff-checked-orange)](https://github.com/astral-sh/ruff) [![Downloads](https://img.shields.io/pypi/dm/llm-ci-runner)](https://www.pepy.tech/projects/llm-ci-runner)
+[![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner) [![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![Coverage badge](https://raw.githubusercontent.com/Nantero1/ai-first-devops-toolkit/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/Nantero1/ai-first-devops-toolkit/blob/python-coverage-comment-action-data/htmlcov/index.html) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql) [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) [![MyPy](https://img.shields.io/badge/mypy-checked-brightgreen)](http://mypy-lang.org/) [![Ruff](https://img.shields.io/badge/ruff-checked-brightgreen)](https://github.com/astral-sh/ruff) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10922/badge)](https://www.bestpractices.dev/projects/10922) [![Downloads](https://img.shields.io/pypi/dm/llm-ci-runner)](https://www.pepy.tech/projects/llm-ci-runner)
 
 > **🚀 The Future of DevOps is AI-First**  
 > This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on the motivation.
@@ -170,12 +170,6 @@ uv sync
 uv run llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
 ```
 
-## Real-World Examples
-
-You can explore the **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)** for a complete collection of self-contained examples organized by category.
-
-For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**. 
-
 ## The AI-First Transformation: Why Unstructured → Structured Matters
 
 LLMs excel at extracting meaning from messy text, logs, documents, and mixed-format data, then emitting **schema-compliant JSON/YAML** that downstream systems can trust. This unlocks:
@@ -185,138 +179,6 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 - **📋 Auditable Compliance**: Formal outputs make it easy to track decisions for regulators and ISO/NIST audits
 - **⚡ Rapid Workflow Automation**: Enable automation across customer service, supply-chain planning, HR case handling, and security triage
 - **🔗 Safe Pipeline Composition**: Structured contracts let AI-first pipelines remain observable and composable while capitalizing on unstructured enterprise data
-
-## 100 AI Automation Use Cases for AI-First DevOps
-
-**DevOps & Engineering** 🔧
-
-1. 🤖 AI-generated PR review – automated pull request analysis with structured review findings
-2. 📝 Release note composer – map commits to semantic-version bump rules and structured changelogs
-3. 🔍 Vulnerability scanner – map code vulnerabilities to OWASP standards with actionable remediation
-4. ☸️ Kubernetes manifest optimizer – produce risk-scored diffs and security hardening recommendations
-5. 📊 Log anomaly triager – convert system logs into OTEL-formatted events for SIEM ingestion  
-6. 💰 Cloud cost explainer – output tagged spend by team in FinOps schema for budget optimization
-7. 🔄 API diff analyzer – produce backward-compatibility scorecards from specification changes
-8. 🛡️ IaC drift detector – turn Terraform plans into CVE-linked security findings
-9. 📋 Dependency license auditor – emit SPDX-compatible reports for compliance tracking
-10. 🎯 SLA breach summarizer – file structured JIRA tickets with SMART action items
-
-**Governance, Risk & Compliance** 🏛️
-
-11. 📊 Regulatory delta analyzer – emit change-impact matrices from new compliance requirements
-12. 🌱 ESG report synthesizer – map CSR prose to GRI indicators and sustainability metrics
-13. 📋 SOX-404 narrative converter – transform controls descriptions into testable audit checklists  
-14. 🏦 Basel III stress-test interpreter – output capital risk buckets from regulatory scenarios
-15. 🕵️ AML SAR formatter – convert investigator notes into Suspicious Activity Report structures
-16. 🔒 Privacy policy parser – generate GDPR data-processing-activity logs from legal text
-17. 🔍 Internal audit evidence linker – export control traceability graphs for compliance tracking
-18. 📊 Carbon emission disclosure normalizer – structure sustainability data into XBRL taxonomy
-19. ⚖️ Regulatory update tracker – generate structured compliance action items from guideline changes
-20. 🛡️ Safety inspection checker – transform narratives into OSHA citation checklists
-
-**Financial Services** 🏦
-
-21. 🏦 Loan application analyzer – transform free-text applications into Basel-III risk-model inputs
-22. 📊 Earnings call sentiment quantifier – output KPI deltas and investor sentiment scores
-23. 💹 Budget variance explainer – produce drill-down pivot JSON for financial analysis
-24. 📈 Portfolio risk dashboard builder – feed VaR models with structured investment analysis
-25. 💳 Fraud alert generator – map investigation notes to CVSS-scored security metrics
-26. 💰 Treasury cash-flow predictor – ingest email forecasts into structured planning models
-27. 📊 Financial forecaster – summarize reports into structured cash-flow and projection objects
-28. 🧾 Invoice processor – convert receipts into double-entry ledger posts with GAAP tags
-29. 📋 Stress test scenario packager – structure regulatory submission data for banking compliance
-30. 🏦 Insurance claim assessor – return structured claim-decision objects with risk scores
-
-**Healthcare & Life Sciences** 🏥
-
-31. 🏥 Patient intake processor – build HL7/FHIR-compliant patient records from free-form intake forms
-32. 🧠 Mental health triage assistant – structure referral notes with priority classifications and care pathways
-33. 📊 Radiology report coder – output SNOMED-coded JSON from diagnostic imaging narratives
-34. 💊 Clinical trial note packager – create FDA eCTD modules from research documentation
-35. 📋 Prescription parser – turn text prescriptions into structured e-Rx objects with dosage validation
-36. ⚡ Vital sign anomaly summarizer – generate alert reports with clinical priority rankings
-37. 🧪 Lab result organizer – output LOINC-coded tables from diagnostic test narratives
-38. 🏥 Medical device log summarizer – generate UDI incident files for regulatory reporting
-39. 📈 Patient feedback sentiment analyzer – feed quality-of-care KPIs from satisfaction surveys
-40. 👩‍⚕️ Clinical observation compiler – convert research notes into structured data for trials
-
-**Legal & Compliance** ⚖️
-
-41. 🏛️ Legal contract parser – extract clauses and compute risk scores from contract documents
-42. 📝 Court opinion digest – summarize judicial opinions into structured precedent and citation graphs
-43. 🏛️ Legal discovery summarizer – extract key issues and risks from large document sets
-44. 💼 Contract review summarizer – extract risk factors and key dates from legal contracts
-45. 🏛️ Policy impact assessor – convert policy proposals into stakeholder impact matrices
-46. 📜 Patent novelty comparator – produce claim-overlap matrices from prior art analysis
-47. 🏛️ Legal bill auditor – transform billing details into itemized expense and compliance reports
-48. 📋 Case strategy brainstormer – summarize likely arguments from litigation documentation
-49. 💼 Legal email analyzer – extract key issues and deadlines from email threads for review
-50. ⚖️ Expert witness report normalizer – create citation-linked outlines from testimony records
-
-**Customer Experience & Sales** 🛒
-
-51. 🎧 Tier-1 support chatbot – convert customer queries into tickets with reproducible troubleshooting steps  
-52. ⭐ Review sentiment miner – produce product-feature tallies from customer feedback analysis
-53. 📉 Churn risk email summarizer – export CRM risk scores from customer communication patterns
-54. 🗺️ Omnichannel conversation unifier – generate customer journey maps from multi-platform interactions
-55. ❓ Dynamic FAQ builder – structure knowledge base content from community forum discussions
-56. 📋 Proposal auto-grader – output RFP compliance matrices with scoring rubrics
-57. 📈 Upsell opportunity extractor – create lead-scoring JSON from customer interaction analysis
-58. 📱 Social media crisis detector – feed escalation playbooks with brand sentiment monitoring
-59. 🌐 Multilingual intent router – tag customer chats to appropriate support queues by language/topic
-60. 🎯 Marketing copy generator – create brand-compliant content with tone and messaging constraints
-
-**HR & People Operations** 👥
-
-61. 📄 CV-to-JD matcher – rank candidates with explainable competency scores and fit analysis
-62. 🎤 Interview transcript summarizer – export structured competency rubrics with evaluation criteria
-63. ✅ Onboarding policy compliance checker – produce new-hire checklist completion tracking
-64. 📊 Performance review sentiment analyzer – create growth-plan JSON with development recommendations
-65. 💰 Payroll inquiry classifier – map employee emails to structured case codes for HR processing
-66. 🏥 Benefits Q&A automation – generate eligibility responses from policy documentation
-67. 🚪 Exit interview insight extractor – feed retention dashboards with structured departure analytics
-68. 📚 Training content gap mapper – align job roles to skill taxonomies for learning programs
-69. 🛡️ Workplace incident processor – convert safety reports into OSHA 301 compliance records
-70. 📊 Diversity metric synthesizer – summarize inclusion survey data into actionable insights
-
-**Supply Chain & Manufacturing** 🏭
-
-71. 📊 Demand forecast summarizer – output SKU-level predictions from market analysis and sales data
-72. 📋 Purchase order processor – convert supplier communications into structured ERP line-items
-73. 🌱 Supplier risk scanner – generate ESG compliance scores from vendor assessment reports
-74. 🔧 Predictive maintenance log analyst – produce work orders from equipment telemetry narratives
-75. 🚛 Logistics delay explainer – return route-change suggestions from transportation disruption reports
-76. ♻️ Circular economy return classifier – create refurbishment tags from product return descriptions
-77. 🌍 Carbon footprint calculator – map transport legs to CO₂e emissions for sustainability reporting
-78. 📦 Safety stock alert generator – output inventory triggers with lead-time assumptions
-79. 📜 Regulatory import/export harmonizer – produce HS-code sheets from trade documentation
-80. 🏭 Production yield analyzer – generate efficiency reports from manufacturing floor logs
-
-**Security & Risk Management** 🔒
-
-81. 🛡️ MITRE ATT&CK mapper – translate IDS alerts into tactic-technique JSON for threat intelligence
-82. 🎣 Phishing email extractor – produce IOC STIX bundles from security incident reports
-83. 🔐 Zero-trust policy generator – convert narrative access requests into structured policy rules
-84. 🚨 SOC alert deduplicator – cluster security tickets by kill-chain stage for efficient triage
-85. 🏴‍☠️ Red team debrief summarizer – export OWASP Top-10 gaps from penetration test reports
-86. 📋 Data breach notifier – craft GDPR-compliant disclosure packets with timeline and impact data
-87. 🧠 Threat intel feed normalizer – convert mixed security PDFs into MISP threat objects
-88. 🔍 Secret leak scanner – output GitHub code-owner mentions from repository security scans
-89. 📊 Vendor risk questionnaire scorer – generate SIG Lite security assessment answers
-90. 🏗️ Security audit tracker – link ISO-27001 controls to evidence artifacts for compliance
-
-**Knowledge & Productivity** 📚
-
-91. 🎙️ Meeting transcript processor – extract action items with owners and deadlines into project tracking JSON
-92. 📚 Research paper summarizer – export citation graphs and key findings for literature review databases
-93. 📋 SOP generator – convert process narratives into step-by-step validation checklists
-94. 🔄 Code diff summarizer – generate reviewer hints and impact analysis from version control changes  
-95. 📊 API changelog analyzer – produce backward-compatibility scorecards for development teams
-96. 🧠 Mind map creator – structure brainstorming sessions into hierarchical knowledge trees
-97. 📖 Knowledge base gap detector – suggest article stubs from frequently asked questions analysis
-98. 🎯 Personal OKR journal parser – output progress dashboards with milestone tracking
-99. 💼 White paper composer – transform technical discussions into structured thought leadership content
-100. 🧩 Universal transformer – convert any unstructured domain knowledge into your custom schema-validated JSON
 
 
 ## Input Formats
@@ -454,7 +316,7 @@ llm-ci-runner \
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
 ```
 
-For complete CI/CD examples, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**.
+For complete CI/CD examples, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**. This repo is also using itself for release note generation, **check it out [here](https://github.com/Nantero1/ai-first-devops-toolkit/blob/c4066d347ae14d37cb674e36007a678f38b36439/.github/workflows/release.yml#L145-L149)**.
 
 ## Authentication
 
@@ -465,6 +327,7 @@ For complete CI/CD examples, see **[examples/uv-usage-example.md](https://github
 - Service Principal (non-Azure CI/CD)
 
 **OpenAI**: Uses API key authentication with optional organization ID.
+
 
 ## Testing
 
@@ -508,6 +371,145 @@ This toolkit is your first step toward [AI-First DevOps](https://technologyworkr
 4. **📈 Continuous Improvement**: Every interaction improves your AI system
 
 **The future belongs to teams that master AI-first principles.** This toolkit gives you the foundation to start that journey today.
+
+## Real-World Examples
+
+You can explore the **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)** for a complete collection of self-contained examples organized by category.
+
+For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**. 
+
+### 100 AI Automation Use Cases for AI-First Automation
+
+**DevOps & Engineering** 🔧
+
+1. 🤖 AI-generated PR review – automated pull request analysis with structured review findings
+2. 📝 Release note composer – map commits to semantic-version bump rules and structured changelogs
+3. 🔍 Vulnerability scanner – map code vulnerabilities to OWASP standards with actionable remediation
+4. ☸️ Kubernetes manifest optimizer – produce risk-scored diffs and security hardening recommendations
+5. 📊 Log anomaly triager – convert system logs into OTEL-formatted events for SIEM ingestion  
+6. 💰 Cloud cost explainer – output tagged spend by team in FinOps schema for budget optimization
+7. 🔄 API diff analyzer – produce backward-compatibility scorecards from specification changes
+8. 🛡️ IaC drift detector – turn Terraform plans into CVE-linked security findings
+9. 📋 Dependency license auditor – emit SPDX-compatible reports for compliance tracking
+10. 🎯 SLA breach summarizer – file structured JIRA tickets with SMART action items
+
+**Governance, Risk & Compliance** 🏛️
+
+11. 📊 Regulatory delta analyzer – emit change-impact matrices from new compliance requirements
+12. 🌱 ESG report synthesizer – map CSR prose to GRI indicators and sustainability metrics
+13. 📋 SOX-404 narrative converter – transform controls descriptions into testable audit checklists  
+14. 🏦 Basel III stress-test interpreter – output capital risk buckets from regulatory scenarios
+15. 🕵️ AML SAR formatter – convert investigator notes into Suspicious Activity Report structures
+16. 🔒 Privacy policy parser – generate GDPR data-processing-activity logs from legal text
+17. 🔍 Internal audit evidence linker – export control traceability graphs for compliance tracking
+18. 📊 Carbon emission disclosure normalizer – structure sustainability data into XBRL taxonomy
+19. ⚖️ Regulatory update tracker – generate structured compliance action items from guideline changes
+20. 🛡️ Safety inspection checker – transform narratives into OSHA citation checklists
+
+**Financial Services** 🏦
+
+21. 🏦 Loan application analyzer – transform free-text applications into Basel-III risk-model inputs
+22. 📊 Earnings call sentiment quantifier – output KPI deltas and investor sentiment scores
+23. 💹 Budget variance explainer – produce drill-down pivot JSON for financial analysis
+24. 📈 Portfolio risk dashboard builder – feed VaR models with structured investment analysis
+25. 💳 Fraud alert generator – map investigation notes to CVSS-scored security metrics
+26. 💰 Treasury cash-flow predictor – ingest email forecasts into structured planning models
+27. 📊 Financial forecaster – summarize reports into structured cash-flow and projection objects
+28. 🧾 Invoice processor – convert receipts into double-entry ledger posts with GAAP tags
+29. 📋 Stress test scenario packager – structure regulatory submission data for banking compliance
+30. 🏦 Insurance claim assessor – return structured claim-decision objects with risk scores
+
+**Healthcare & Life Sciences** 🏥
+
+31. 🏥 Patient intake processor – build HL7/FHIR-compliant patient records from free-form intake forms
+32. 🧠 Mental health triage assistant – structure referral notes with priority classifications and care pathways
+33. 📊 Radiology report coder – output SNOMED-coded JSON from diagnostic imaging narratives
+34. 💊 Clinical trial note packager – create FDA eCTD modules from research documentation
+35. 📋 Prescription parser – turn text prescriptions into structured e-Rx objects with dosage validation
+36. ⚡ Vital sign anomaly summarizer – generate alert reports with clinical priority rankings
+37. 🧪 Lab result organizer – output LOINC-coded tables from diagnostic test narratives
+38. 🏥 Medical device log summarizer – generate UDI incident files for regulatory reporting
+39. 📈 Patient feedback sentiment analyzer – feed quality-of-care KPIs from satisfaction surveys
+40. 👩‍⚕️ Clinical observation compiler – convert research notes into structured data for trials
+
+**Legal & Compliance** ⚖️
+
+41. 🏛️ Legal contract parser – extract clauses and compute risk scores from contract documents
+42. 📝 Court opinion digest – summarize judicial opinions into structured precedent and citation graphs
+43. 🏛️ Legal discovery summarizer – extract key issues and risks from large document sets
+44. 💼 Contract review summarizer – extract risk factors and key dates from legal contracts
+45. 🏛️ Policy impact assessor – convert policy proposals into stakeholder impact matrices
+46. 📜 Patent novelty comparator – produce claim-overlap matrices from prior art analysis
+47. 🏛️ Legal bill auditor – transform billing details into itemized expense and compliance reports
+48. 📋 Case strategy brainstormer – summarize likely arguments from litigation documentation
+49. 💼 Legal email analyzer – extract key issues and deadlines from email threads for review
+50. ⚖️ Expert witness report normalizer – create citation-linked outlines from testimony records
+
+**Customer Experience & Sales** 🛒
+
+51. 🎧 Tier-1 support chatbot – convert customer queries into tickets with reproducible troubleshooting steps  
+52. ⭐ Review sentiment miner – produce product-feature tallies from customer feedback analysis
+53. 📉 Churn risk email summarizer – export CRM risk scores from customer communication patterns
+54. 🗺️ Omnichannel conversation unifier – generate customer journey maps from multi-platform interactions
+55. ❓ Dynamic FAQ builder – structure knowledge base content from community forum discussions
+56. 📋 Proposal auto-grader – output RFP compliance matrices with scoring rubrics
+57. 📈 Upsell opportunity extractor – create lead-scoring JSON from customer interaction analysis
+58. 📱 Social media crisis detector – feed escalation playbooks with brand sentiment monitoring
+59. 🌐 Multilingual intent router – tag customer chats to appropriate support queues by language/topic
+60. 🎯 Marketing copy generator – create brand-compliant content with tone and messaging constraints
+
+**HR & People Operations** 👥
+
+61. 📄 CV-to-JD matcher – rank candidates with explainable competency scores and fit analysis
+62. 🎤 Interview transcript summarizer – export structured competency rubrics with evaluation criteria
+63. ✅ Onboarding policy compliance checker – produce new-hire checklist completion tracking
+64. 📊 Performance review sentiment analyzer – create growth-plan JSON with development recommendations
+65. 💰 Payroll inquiry classifier – map employee emails to structured case codes for HR processing
+66. 🏥 Benefits Q&A automation – generate eligibility responses from policy documentation
+67. 🚪 Exit interview insight extractor – feed retention dashboards with structured departure analytics
+68. 📚 Training content gap mapper – align job roles to skill taxonomies for learning programs
+69. 🛡️ Workplace incident processor – convert safety reports into OSHA 301 compliance records
+70. 📊 Diversity metric synthesizer – summarize inclusion survey data into actionable insights
+
+**Supply Chain & Manufacturing** 🏭
+
+71. 📊 Demand forecast summarizer – output SKU-level predictions from market analysis and sales data
+72. 📋 Purchase order processor – convert supplier communications into structured ERP line-items
+73. 🌱 Supplier risk scanner – generate ESG compliance scores from vendor assessment reports
+74. 🔧 Predictive maintenance log analyst – produce work orders from equipment telemetry narratives
+75. 🚛 Logistics delay explainer – return route-change suggestions from transportation disruption reports
+76. ♻️ Circular economy return classifier – create refurbishment tags from product return descriptions
+77. 🌍 Carbon footprint calculator – map transport legs to CO₂e emissions for sustainability reporting
+78. 📦 Safety stock alert generator – output inventory triggers with lead-time assumptions
+79. 📜 Regulatory import/export harmonizer – produce HS-code sheets from trade documentation
+80. 🏭 Production yield analyzer – generate efficiency reports from manufacturing floor logs
+
+**Security & Risk Management** 🔒
+
+81. 🛡️ MITRE ATT&CK mapper – translate IDS alerts into tactic-technique JSON for threat intelligence
+82. 🎣 Phishing email extractor – produce IOC STIX bundles from security incident reports
+83. 🔐 Zero-trust policy generator – convert narrative access requests into structured policy rules
+84. 🚨 SOC alert deduplicator – cluster security tickets by kill-chain stage for efficient triage
+85. 🏴‍☠️ Red team debrief summarizer – export OWASP Top-10 gaps from penetration test reports
+86. 📋 Data breach notifier – craft GDPR-compliant disclosure packets with timeline and impact data
+87. 🧠 Threat intel feed normalizer – convert mixed security PDFs into MISP threat objects
+88. 🔍 Secret leak scanner – output GitHub code-owner mentions from repository security scans
+89. 📊 Vendor risk questionnaire scorer – generate SIG Lite security assessment answers
+90. 🏗️ Security audit tracker – link ISO-27001 controls to evidence artifacts for compliance
+
+**Knowledge & Productivity** 📚
+
+91. 🎙️ Meeting transcript processor – extract action items with owners and deadlines into project tracking JSON
+92. 📚 Research paper summarizer – export citation graphs and key findings for literature review databases
+93. 📋 SOP generator – convert process narratives into step-by-step validation checklists
+94. 🔄 Code diff summarizer – generate reviewer hints and impact analysis from version control changes  
+95. 📊 API changelog analyzer – produce backward-compatibility scorecards for development teams
+96. 🧠 Mind map creator – structure brainstorming sessions into hierarchical knowledge trees
+97. 📖 Knowledge base gap detector – suggest article stubs from frequently asked questions analysis
+98. 🎯 Personal OKR journal parser – output progress dashboards with milestone tracking
+99. 💼 White paper composer – transform technical discussions into structured thought leadership content
+100. 🧩 Universal transformer – convert any unstructured domain knowledge into your custom schema-validated JSON
+
 
 ## License
 
