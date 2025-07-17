@@ -573,7 +573,7 @@ class TestResponseProcessing:
         invalid_json_response = "This is not valid JSON"
 
         # when
-        result = _process_structured_response(invalid_json_response, mock_schema_model, mock_schema_dict)
+        result = _process_structured_response(invalid_json_response, mock_schema_model, mock_schema_dict, "json")
 
         # then
         assert result["mode"] == "text"
@@ -588,7 +588,7 @@ class TestResponseProcessing:
         response = "Some response"
 
         # when
-        result = _process_structured_response(response, None, None)
+        result = _process_structured_response(response, None, None, "text")
 
         # then
         assert result["mode"] == "text"

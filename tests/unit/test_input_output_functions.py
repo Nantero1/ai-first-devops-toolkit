@@ -448,7 +448,12 @@ class TestWriteOutputFile:
         """Test that JSON serialization errors raise LLMRunnerError."""
         # given
         output_file = temp_dir / "output.json"
-        response = {"test": MagicMock()}  # Non-serializable object
+
+        # Create a non-serializable object (function objects can't be JSON serialized)
+        def non_serializable_function():
+            pass
+
+        response = {"test": non_serializable_function}
 
         # when & then
         with pytest.raises(LLMRunnerError, match="Error writing output file"):
@@ -458,7 +463,12 @@ class TestWriteOutputFile:
         """Test that YAML serialization errors raise LLMRunnerError."""
         # given
         output_file = temp_dir / "output.yaml"
-        response = {"test": MagicMock()}  # Non-serializable object
+
+        # Create a non-serializable object (function objects can't be YAML serialized)
+        def non_serializable_function():
+            pass
+
+        response = {"test": non_serializable_function}
 
         # when & then
         with pytest.raises(LLMRunnerError, match="Error writing output file"):
@@ -642,7 +652,7 @@ class TestYAMLRecursivelyForceLiteral:
         data = {"key": "value", "nested": {"inner": "data"}}
 
         # when
-        from llm_ci_runner.io_operations import yaml_recursively_force_literal
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
 
         result = yaml_recursively_force_literal(data)
 
@@ -655,7 +665,7 @@ class TestYAMLRecursivelyForceLiteral:
         data = ["item1", "item2", ["nested", "list"]]
 
         # when
-        from llm_ci_runner.io_operations import yaml_recursively_force_literal
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
 
         result = yaml_recursively_force_literal(data)
 
@@ -668,7 +678,7 @@ class TestYAMLRecursivelyForceLiteral:
         data = "line1\nline2\nline3"
 
         # when
-        from llm_ci_runner.io_operations import yaml_recursively_force_literal
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
 
         result = yaml_recursively_force_literal(data)
 
@@ -684,7 +694,7 @@ class TestYAMLRecursivelyForceLiteral:
         data = "single line string"
 
         # when
-        from llm_ci_runner.io_operations import yaml_recursively_force_literal
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
 
         result = yaml_recursively_force_literal(data)
 
@@ -701,7 +711,7 @@ class TestYAMLRecursivelyForceLiteral:
         }
 
         # when
-        from llm_ci_runner.io_operations import yaml_recursively_force_literal
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
 
         result = yaml_recursively_force_literal(data)
 

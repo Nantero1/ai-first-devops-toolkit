@@ -5,10 +5,13 @@ This module provides functionality for loading and rendering templates
 using both Handlebars and Jinja2 template engines with YAML variable support.
 """
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
 
+from rich.panel import Panel
+from rich.syntax import Syntax
 from ruamel.yaml import YAML, YAMLError
 from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatHistory, ChatMessageContent
@@ -21,6 +24,7 @@ from semantic_kernel.prompt_template import (
 )
 
 from .exceptions import InputValidationError
+from .logging_config import CONSOLE
 
 LOGGER = logging.getLogger(__name__)
 
@@ -76,15 +80,23 @@ def load_template_vars(template_vars_file: Path) -> dict[str, Any]:
             template_vars = yaml.load(content)
         except YAMLError:
             # Fallback to JSON
-            import json
-
             template_vars = json.loads(content)
 
         if not isinstance(template_vars, dict):
             raise InputValidationError("Template variables must be a dictionary")
 
         LOGGER.info(f"✅ Loaded {len(template_vars)} template variables")
-        LOGGER.debug(f"   Variables: {list(template_vars.keys())}")
+        # Pretty print template variables when DEBUG logging is enabled
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            json_content = json.dumps(template_vars, indent=2, ensure_ascii=False)
+            syntax_highlighted = Syntax(json_content, "json", line_numbers=False)
+            CONSOLE.print(
+                Panel(
+                    syntax_highlighted,
+                    title="📝 Template Variables",
+                    style="cyan",
+                )
+            )
 
         return template_vars
 
