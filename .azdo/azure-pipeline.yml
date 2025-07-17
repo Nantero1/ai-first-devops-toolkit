@@ -22,7 +22,8 @@ resources:
     - repository: Templates
       type: git
       name: CDOS/azure-devops-pipeline
-      ref: feat/python_make_requirement_optional
+      ref: refs/tags/v4
+
   pipelines:
     - pipeline: base-image-miniconda-4.11-rhel8
       source: base-image-miniconda-4.11-rhel8
