@@ -23,14 +23,7 @@ When you use this example, here is what happens step by step:
             "content": "Explain what CI/CD means in software development in one paragraph.",
             "name": "developer"
         }
-    ],
-    "context": {
-        "session_id": "simple-example-001",
-        "metadata": {
-            "task_type": "explanation",
-            "domain": "software_development"
-        }
-    }
+    ]
 }
 ```
 
@@ -50,7 +43,7 @@ llm-ci-runner \
   "success": true,
   "response": "CI/CD stands for Continuous Integration and Continuous Deployment (or Continuous Delivery), which are key practices in modern software development. Continuous Integration involves automatically integrating code changes from multiple developers into a shared repository multiple times a day, with automated testing to identify issues early. Continuous Deployment (or Delivery) ensures that these thoroughly tested code changes are automatically deployed to production or made ready for deployment, enabling faster release cycles, increased reliability, and more efficient software delivery. Together, CI/CD streamline the development process, improve code quality, and accelerate time-to-market.",
   "metadata": {
-    "runner": "llm_ci_runner.py",
+    "runner": "llm-ci-runner",
     "timestamp": "auto-generated"
   }
 }

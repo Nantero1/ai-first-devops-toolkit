@@ -1,0 +1,86 @@
+---
+name: $(Build.Reason)-$(BuildID)
+
+# Prevent multiple parallel runs with batch
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+
+# For pull request validation builds
+pr:
+  branches:
+    include:
+      - main
+
+# Add explicit lock behavior to run only the latest pipeline
+lockBehavior: runLatest
+
+resources:
+  repositories:
+    - repository: Templates
+      type: git
+      name: CDOS/azure-devops-pipeline
+      ref: refs/tags/v4
+
+  pipelines:
+    - pipeline: base-image-miniconda-4.11-rhel8
+      source: base-image-miniconda-4.11-rhel8
+      trigger:
+        branches:
+          include:
+            - main
+
+pool: $(AGENT_POOL)
+
+extends:
+  template: pipeline.yml@Templates
+  parameters:
+    techId: marketplace
+    securityZone: dev
+    variables:
+      - group: vg-base-images
+    teamsChannel: '7272056f.teambank.de@de.teams.ms'
+    notifyOnSuccess: false
+
+    stages:
+      - stage: test
+        displayName: Test & Quality
+        jobs:
+          - template: Jobs/python_tests.yml@Templates
+            parameters:
+              requirementFiles: ""
+              pythonBinary: "VIRTUAL_ENV='' UV_NO_SYNC=0 uv run --group dev --upgrade python"
+              codeCoverage: false
+              container:
+                image: cdos-marketplace-docker/llm-runtime:latest
+                endpoint: "sc-generic-docker"
+
+      - stage: build
+        displayName: Build
+        dependsOn:
+          - test
+        condition: succeeded()
+        jobs:
+          - template: Jobs/docker.yml@Templates
+            parameters:
+              imageName: llm-runtime
+              latestTag: ${{ eq(variables['Build.SourceBranch'], 'refs/heads/main') }}
+              dgoss: true
+              xrayScan: true
+              xrayFailBuild: false
+              buildArch:
+                - linux/amd64
+                - linux/arm64
+              secretArgs:
+                ARTIFACTORY_USR: cdos-write
+                ARTIFACTORY_PSW: $(ARTIFACTORY-DELIVERY-TOKEN)
+              ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
+                publish: false
+              artifacts:
+                - path: github-proxy/mikefarah/yq/releases/latest/download/yq_linux_amd64
+                  target: yq_amd64
+                - path: github-proxy/mikefarah/yq/releases/latest/download/yq_linux_arm64
+                  target: yq_arm64
+

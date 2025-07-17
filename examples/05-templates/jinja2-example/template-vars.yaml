@@ -1,0 +1,64 @@
+expertise:
+  domain: "Python and DevOps"
+  years_experience: 8
+  specializations:
+    - "Python development"
+    - "DevOps automation"
+    - "Security best practices"
+    - "Performance optimization"
+  focus_areas:
+    - "Code quality and readability"
+    - "Security vulnerabilities"
+    - "Performance implications"
+    - "Testing coverage"
+    - "Documentation standards"
+
+project:
+  name: "api-gateway-service"
+  repository: "github.com/company/api-gateway"
+  branch: "feature/rate-limiting"
+  language: "Python"
+  framework: "FastAPI"
+  files_changed:
+    - path: "app/middleware/rate_limiter.py"
+      change_type: "modified"
+    - path: "app/models/request.py"
+      change_type: "modified"
+    - path: "tests/test_rate_limiter.py"
+      change_type: "added"
+
+review_context:
+  priority_areas:
+    - "Rate limiting implementation"
+    - "Error handling"
+    - "Security considerations"
+  related_issues: [123, 456]
+  deployment_env: "production"
+
+code_diff: |
+  --- a/app/middleware/rate_limiter.py
+  +++ b/app/middleware/rate_limiter.py
+  @@ -15,6 +15,8 @@ class RateLimiter:
+      def __init__(self, redis_client: Redis):
+          self.redis = redis_client
+          self.default_limit = 100
+  +        self.default_window = 3600  # 1 hour
+  +        self.max_limit = 1000
+      
+      async def check_rate_limit(self, client_id: str) -> bool:
+          """Check if client has exceeded rate limit."""
+  @@ -25,8 +27,12 @@ class RateLimiter:
+              return False
+          
+          current_count = await self.redis.get(key)
+  -        if current_count and int(current_count) >= self.default_limit:
+  -            return False
+  +        if current_count:
+  +            count = int(current_count)
+  +            if count >= self.default_limit:
+  +                return False
+  +            elif count >= self.max_limit:
+  +                raise ValueError("Rate limit exceeded maximum threshold")
+          
+          # Increment counter
+          await self.redis.incr(key) 

@@ -64,8 +64,8 @@ Update after every interaction with single-line entries:
 - `[Version] Manual Update:` (when user uses "mems" keyword) Planning discussions, requirements, strategic decisions
 
 ### Lessons Learned (.cursor\rules\lessons-learned.mdc)
-Format: `[Timestamp] Category: Issue → Solution → Impact`
-Categories: Component Development, TypeScript, Error Resolution, Performance, Security, Accessibility, Code Organization, Testing
+Format: `Category: Issue → Solution → Impact`
+Categories: Component Development, Error Resolution, Performance, Security, Accessibility, Code Organization, Testing
 
 ### Phase Documentation
 On completion, create `/docs/phases/PHASE-X/[FEATURE-NAME].md` with:

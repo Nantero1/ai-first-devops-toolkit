@@ -4,6 +4,15 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store/
-.env
 result.json
 .mypy_cache/
+/.DS_Store
+/.coverage
+coverage.xml
+htmlcov/
+/test-results.xml
+test-results/
+dist/
+.coverage.*
+test-*.yaml
+/tests/unit/.coverage

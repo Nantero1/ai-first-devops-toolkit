@@ -29,14 +29,7 @@ When you use this example, here is what happens step by step:
                 "the possibilities. The only concern is the learning curve, but we're confident"
                 "we can overcome it.'"
         }
-    ],
-    "context": {
-        "session_id": "sentiment-analysis-001",
-        "metadata": {
-            "task_type": "sentiment_analysis",
-            "domain": "text_analysis"
-        }
-    }
+    ]
 }
 ```
 
@@ -72,7 +65,7 @@ llm-ci-runner \
                "with a minor concern about the learning curve."
   },
   "metadata": {
-    "runner": "llm_ci_runner.py",
+    "runner": "llm-ci-runner",
     "timestamp": "auto-generated"
   }
 }

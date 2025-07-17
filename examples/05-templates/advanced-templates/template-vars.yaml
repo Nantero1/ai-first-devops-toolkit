@@ -1,0 +1,156 @@
+expertise:
+  role: "Senior Software Architect"
+  domain: "Cloud-Native Applications & Microservices"
+  years_experience: 12
+  certifications:
+    - "AWS Solutions Architect Professional"
+    - "Google Cloud Professional Cloud Architect"
+    - "Azure Solutions Architect Expert"
+    - "Kubernetes Administrator (CKA)"
+  specializations:
+    - "Distributed Systems Design"
+    - "Performance Optimization"
+    - "Security Architecture"
+    - "DevOps & CI/CD"
+    - "Database Design"
+  focus_areas:
+    - "Scalability and performance optimization"
+    - "Security best practices and compliance"
+    - "Code quality and maintainability"
+    - "Architecture patterns and anti-patterns"
+    - "Team productivity and development practices"
+  methodology: "Agile/Scrum with continuous integration and deployment"
+
+project:
+  name: "E-Commerce Platform Modernization"
+  industry: "Retail & E-Commerce"
+  scale: "Enterprise (100K+ daily users)"
+  tech_stack:
+    - "React.js (Frontend)"
+    - "Node.js/Express (Backend)"
+    - "PostgreSQL (Primary Database)"
+    - "Redis (Caching)"
+    - "AWS ECS (Container Orchestration)"
+    - "CloudFront (CDN)"
+    - "S3 (File Storage)"
+    - "Lambda (Serverless Functions)"
+  team_size: 25
+  timeline: "6 months"
+  constraints:
+    - "Must maintain 99.9% uptime during migration"
+    - "Zero-downtime deployment requirements"
+    - "PCI DSS compliance for payment processing"
+    - "GDPR compliance for EU customers"
+  requirements:
+    - priority: "High"
+      description: "Migrate from monolithic to microservices architecture"
+    - priority: "High"
+      description: "Implement real-time inventory management"
+    - priority: "Medium"
+      description: "Add AI-powered product recommendations"
+    - priority: "Medium"
+      description: "Implement advanced analytics dashboard"
+    - description: "Improve mobile app performance by 50%"
+
+analysis:
+  type: "comprehensive code review and architecture assessment"
+  criteria:
+    - "Security vulnerabilities and best practices"
+    - "Performance bottlenecks and optimization opportunities"
+    - "Scalability concerns and architectural improvements"
+    - "Code quality, maintainability, and technical debt"
+    - "DevOps practices and deployment strategies"
+    - "Monitoring, logging, and observability"
+  special_instructions: "Focus on actionable recommendations with implementation priorities and estimated effort"
+
+context:
+  code_review:
+    - "Authentication and authorization mechanisms"
+    - "Database query optimization and indexing"
+    - "API design and RESTful principles"
+    - "Error handling and logging patterns"
+    - "Frontend state management and performance"
+  security_audit:
+    - "Input validation and sanitization"
+    - "SQL injection prevention"
+    - "XSS and CSRF protection"
+    - "API rate limiting and throttling"
+    - "Data encryption at rest and in transit"
+    - "Session management and token security"
+  performance_review:
+    - "Database query performance"
+    - "API response times"
+    - "Frontend bundle size and loading times"
+    - "Caching strategy effectiveness"
+    - "CDN utilization and optimization"
+  compliance_check:
+    - "PCI DSS requirements for payment processing"
+    - "GDPR data protection and privacy"
+    - "SOX compliance for financial reporting"
+    - "Industry-specific security standards"
+
+code_changes: |
+  --- a/src/auth/authentication.js
+  +++ b/src/auth/authentication.js
+  @@ -15,8 +15,12 @@ class AuthenticationService {
+       async authenticateUser(username, password) {
+  +        // Input validation
+  +        if (!username || !password) {
+  +            throw new ValidationError('Username and password are required');
+  +        }
+  +        
+  -        const query = `SELECT * FROM users WHERE username = '${username}'`;
+  +        const query = 'SELECT * FROM users WHERE username = ? AND active = true';
+  -        const result = await this.db.execute(query);
+  +        const result = await this.db.execute(query, [username]);
+           
+           if (!result) {
+               return null;
+  @@ -35,6 +39,10 @@ class AuthenticationService {
+       async createSession(userId) {
+  +        if (!userId || userId <= 0) {
+  +            throw new ValidationError('Invalid user ID provided');
+  +        }
+  +        
+           const sessionToken = crypto.randomBytes(32).toString('hex');
+           const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+           
+  +        // Use parameterized query for session creation
+           const query = 'INSERT INTO sessions (user_id, token, expiry) VALUES (?, ?, ?)';
+           await this.db.execute(query, [userId, sessionToken, expiry]);
+
+code_format: "javascript"
+
+architecture_diagram: |
+  ```
+  [Client] → [CloudFront CDN] → [Load Balancer]
+                                    ↓
+  [API Gateway] → [Auth Service] → [User Service] → [PostgreSQL]
+                    ↓                ↓
+  [Product Service] → [Inventory Service] → [Redis Cache]
+                    ↓
+  [Payment Service] → [External Payment Gateway]
+  ```
+
+metrics:
+  - name: "Average Response Time"
+    value: 450
+    unit: "ms"
+  - name: "Database Connection Pool"
+    value: 80
+    unit: "% utilization"
+  - name: "Cache Hit Rate"
+    value: 92
+    unit: "%"
+  - name: "Error Rate"
+    value: 0.15
+    unit: "%"
+  - name: "Uptime"
+    value: 99.85
+    unit: "%"
+
+previous_analysis: |
+  Previous security audit identified 3 high-priority vulnerabilities:
+  1. SQL injection in user authentication (FIXED)
+  2. Missing input validation in payment processing (IN PROGRESS)
+  3. Insecure session management (PENDING) 

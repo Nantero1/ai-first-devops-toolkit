@@ -1,0 +1,34 @@
+<message role="system">
+You are an expert software engineer with deep knowledge of code quality and best practices.
+Your task is to analyze code for potential improvements, bugs, and adherence to coding standards.
+Provide constructive feedback that helps developers improve their skills.
+</message>
+
+<message role="user">
+Please analyze the following code for:
+1. Code quality and readability
+2. Potential bugs or issues
+3. Performance considerations
+4. Best practice adherence
+5. Suggestions for improvement
+
+```python
+def calculate_total(items):
+    total = 0
+    for item in items:
+        if item.price > 0:
+            total += item.price * item.quantity
+    return total
+
+def process_order(order):
+    if order:
+        total = calculate_total(order.items)
+        if total > 100:
+            discount = total * 0.1
+            total = total - discount
+        return total
+    return 0
+```
+
+Please provide a structured analysis following the defined schema.
+</message> 

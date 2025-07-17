@@ -1,0 +1,273 @@
+title: Advanced Review Output Schema
+description: Schema for advanced LLM-driven review output, supporting deep analysis and structured recommendations.
+type: object
+required:
+  - summary
+  - overall_assessment
+  - security_analysis
+  - performance_analysis
+  - architecture_recommendations
+  - implementation_plan
+  - risk_assessment
+properties:
+  summary:
+    type: string
+    description: "Executive summary of the analysis findings"
+    maxLength: 300
+    examples:
+      - "This review highlights key strengths and critical issues in the new payment module."
+  overall_assessment:
+    type: object
+    properties:
+      score:
+        type: integer
+        minimum: 1
+        maximum: 10
+        description: "Overall assessment score (1-10)"
+      grade:
+        type: string
+        enum: ["A", "B", "C", "D", "F"]
+        description: "Letter grade for the assessment"
+      strengths:
+        type: array
+        items:
+          type: string
+        minItems: 2
+        maxItems: 6
+        description: "Key strengths identified"
+      critical_issues:
+        type: array
+        items:
+          type: string
+        description: "Critical issues that must be addressed"
+    required: ["score", "grade", "strengths", "critical_issues"]
+  security_analysis:
+    type: object
+    properties:
+      vulnerabilities:
+        type: array
+        items:
+          type: object
+          properties:
+            severity:
+              type: string
+              enum: ["critical", "high", "medium", "low", "info"]
+            category:
+              type: string
+              enum:
+                [
+                  "authentication",
+                  "authorization",
+                  "data_protection",
+                  "input_validation",
+                  "session_management",
+                  "encryption",
+                  "logging",
+                  "other",
+                ]
+            description:
+              type: string
+              minLength: 20
+            location:
+              type: string
+            remediation:
+              type: string
+              minLength: 20
+            effort:
+              type: string
+              enum: ["low", "medium", "high"]
+          required: ["severity", "category", "description", "remediation"]
+        minItems: 1
+        maxItems: 10
+      compliance_status:
+        type: object
+        properties:
+          pci_dss:
+            type: string
+            enum: ["compliant", "non_compliant", "partial", "not_applicable"]
+          gdpr:
+            type: string
+            enum: ["compliant", "non_compliant", "partial", "not_applicable"]
+          sox:
+            type: string
+            enum: ["compliant", "non_compliant", "partial", "not_applicable"]
+        required: ["pci_dss", "gdpr", "sox"]
+    required: ["vulnerabilities", "compliance_status"]
+  performance_analysis:
+    type: object
+    properties:
+      bottlenecks:
+        type: array
+        items:
+          type: object
+          properties:
+            component:
+              type: string
+            issue:
+              type: string
+            impact:
+              type: string
+              enum: ["high", "medium", "low"]
+            optimization:
+              type: string
+          required: ["component", "issue", "impact", "optimization"]
+      recommendations:
+        type: array
+        items:
+          type: string
+        minItems: 3
+        maxItems: 8
+    required: ["bottlenecks", "recommendations"]
+  architecture_recommendations:
+    type: object
+    properties:
+      patterns:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            benefit:
+              type: string
+            implementation_effort:
+              type: string
+              enum: ["low", "medium", "high"]
+          required: ["name", "description", "benefit", "implementation_effort"]
+      anti_patterns:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            risk:
+              type: string
+            mitigation:
+              type: string
+          required: ["name", "description", "risk", "mitigation"]
+    required: ["patterns", "anti_patterns"]
+  implementation_plan:
+    type: object
+    properties:
+      phases:
+        type: array
+        items:
+          type: object
+          properties:
+            phase:
+              type: string
+              enum: ["immediate", "short_term", "medium_term", "long_term"]
+            duration_weeks:
+              type: integer
+              minimum: 1
+              maximum: 26
+            tasks:
+              type: array
+              items:
+                type: object
+                properties:
+                  task:
+                    type: string
+                  priority:
+                    type: string
+                    enum: ["critical", "high", "medium", "low"]
+                  effort_days:
+                    type: integer
+                    minimum: 1
+                    maximum: 30
+                  dependencies:
+                    type: array
+                    items:
+                      type: string
+                required: ["task", "priority", "effort_days"]
+          required: ["phase", "duration_weeks", "tasks"]
+        minItems: 2
+        maxItems: 4
+      resource_requirements:
+        type: object
+        properties:
+          developers:
+            type: integer
+            minimum: 1
+          devops_engineers:
+            type: integer
+            minimum: 0
+          security_specialists:
+            type: integer
+            minimum: 0
+          qa_engineers:
+            type: integer
+            minimum: 0
+        required: ["developers"]
+    required: ["phases", "resource_requirements"]
+  risk_assessment:
+    type: object
+    properties:
+      risks:
+        type: array
+        items:
+          type: object
+          properties:
+            risk:
+              type: string
+            probability:
+              type: string
+              enum: ["low", "medium", "high", "critical"]
+            impact:
+              type: string
+              enum: ["low", "medium", "high", "critical"]
+            mitigation:
+              type: string
+            contingency:
+              type: string
+          required: ["risk", "probability", "impact", "mitigation"]
+      overall_risk_score:
+        type: number
+        minimum: 1
+        maximum: 10
+    required: ["risks", "overall_risk_score"]
+  technical_debt:
+    type: object
+    properties:
+      total_debt:
+        type: string
+        enum: ["low", "medium", "high", "critical"]
+      categories:
+        type: array
+        items:
+          type: object
+          properties:
+            category:
+              type: string
+            debt_level:
+              type: string
+              enum: ["low", "medium", "high", "critical"]
+            description:
+              type: string
+            impact:
+              type: string
+          required: ["category", "debt_level", "description", "impact"]
+    required: ["total_debt", "categories"]
+  monitoring_recommendations:
+    type: array
+    items:
+      type: object
+      properties:
+        metric:
+          type: string
+        threshold:
+          type: string
+        alert_level:
+          type: string
+          enum: ["info", "warning", "critical"]
+        implementation:
+          type: string
+      required: ["metric", "threshold", "alert_level", "implementation"]
+    minItems: 3
+    maxItems: 10
+additionalProperties: false

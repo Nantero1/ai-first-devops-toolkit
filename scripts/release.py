@@ -4,13 +4,11 @@ Local release script for testing before GitHub Actions release.
 Follows Python packaging best practices.
 """
 
+import re
 import subprocess
 import sys
-import os
-import re
 import tomllib
 from pathlib import Path
-from typing import Optional
 
 
 def run_command(cmd: list[str], check: bool = True, capture_output: bool = True) -> subprocess.CompletedProcess:
@@ -44,7 +42,7 @@ def get_current_version() -> str:
 def update_version(version: str) -> None:
     """Update version in pyproject.toml using Python."""
     try:
-        with open("pyproject.toml", "r") as f:
+        with open("pyproject.toml") as f:
             content = f.read()
 
         # More precise approach: find the [project] section and update version there
@@ -119,7 +117,7 @@ def run_linting() -> None:
     print("\n2. Running linting...")
     run_command(["uv", "run", "ruff", "check", "*.py"])
     run_command(["uv", "run", "ruff", "format", "--check", "*.py"])
-    run_command(["uv", "run", "mypy", "llm_ci_runner.py"])
+    run_command(["uv", "run", "mypy", "llm_ci_runner/"])
 
 
 def check_security() -> None:

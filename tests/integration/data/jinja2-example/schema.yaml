@@ -1,0 +1,82 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+type: object
+properties:
+  summary:
+    type: string
+    description: "Brief summary of the code changes and their impact"
+  code_quality_score:
+    type: integer
+    minimum: 1
+    maximum: 10
+    description: "Overall code quality score from 1-10"
+  security_assessment:
+    type: object
+    properties:
+      vulnerabilities_found:
+        type: array
+        items:
+          type: string
+        description: "List of potential security vulnerabilities"
+      risk_level:
+        type: string
+        enum: ["low", "medium", "high", "critical"]
+        description: "Overall security risk level"
+      recommendations:
+        type: array
+        items:
+          type: string
+        description: "Security improvement recommendations"
+    required: ["vulnerabilities_found", "risk_level", "recommendations"]
+  performance_analysis:
+    type: object
+    properties:
+      impact:
+        type: string
+        enum: ["positive", "neutral", "negative"]
+        description: "Performance impact of the changes"
+      concerns:
+        type: array
+        items:
+          type: string
+        description: "Performance concerns or bottlenecks"
+      optimizations:
+        type: array
+        items:
+          type: string
+        description: "Suggested performance optimizations"
+    required: ["impact", "concerns", "optimizations"]
+  testing_recommendations:
+    type: object
+    properties:
+      test_coverage:
+        type: string
+        enum: ["adequate", "inadequate", "excellent"]
+        description: "Assessment of test coverage"
+      missing_tests:
+        type: array
+        items:
+          type: string
+        description: "Types of tests that should be added"
+      test_scenarios:
+        type: array
+        items:
+          type: string
+        description: "Specific test scenarios to implement"
+    required: ["test_coverage", "missing_tests", "test_scenarios"]
+  suggestions:
+    type: array
+    items:
+      type: string
+    description: "General improvement suggestions"
+  overall_rating:
+    type: string
+    enum: ["approve", "approve_with_suggestions", "request_changes"]
+    description: "Overall review decision"
+required:
+  - summary
+  - code_quality_score
+  - security_assessment
+  - performance_analysis
+  - testing_recommendations
+  - suggestions
+  - overall_rating 

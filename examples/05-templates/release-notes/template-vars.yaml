@@ -1,0 +1,15 @@
+version: "1.2.2"
+previous_version: "v1.2.1"
+manual_instructions: "This release includes documentation improvements and enhanced logging configuration for better production experience."
+commit_history: |
+  a1b2c3d|chore: bump version to 1.2.2 [skip ci]|Maintainer|2025-01-15
+  e4f5g6h|docs: standardize runner script naming across documentation|Maintainer|2025-01-14
+  i7j8k9l|refactor: enhance logging configuration for Azure libraries|Maintainer|2025-01-13
+changed_files: |
+  README.md
+  examples/README.md
+  examples/uv-usage-example.md
+  examples/05-templates/jinja2-example/README.md
+  llm_ci_runner/logging_config.py
+  pyproject.toml
+commit_count: 3 

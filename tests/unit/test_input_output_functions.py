@@ -14,14 +14,15 @@ import pytest
 from llm_ci_runner import (
     InputValidationError,
     LLMRunnerError,
-    load_input_json,
+    load_input_file,
     parse_arguments,
     write_output_file,
 )
+from unittest.mock import MagicMock
 
 
-class TestLoadInputJson:
-    """Tests for load_input_json function."""
+class TestLoadInputFile:
+    """Tests for load_input_file function."""
 
     def test_load_valid_input_file(self, temp_input_file):
         """Test loading a valid input JSON file."""
@@ -29,7 +30,7 @@ class TestLoadInputJson:
         input_file = temp_input_file
 
         # when
-        result = load_input_json(input_file)
+        result = load_input_file(input_file)
 
         # then
         assert isinstance(result, dict)
@@ -46,7 +47,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="Input file not found"):
-            load_input_json(nonexistent_file)
+            load_input_file(nonexistent_file)
 
     def test_load_invalid_json_raises_error(self, temp_dir):
         """Test that invalid JSON raises InputValidationError."""
@@ -57,7 +58,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="Invalid JSON in input file"):
-            load_input_json(invalid_json_file)
+            load_input_file(invalid_json_file)
 
     def test_load_file_without_messages_raises_error(self, temp_dir):
         """Test that file without messages field raises InputValidationError."""
@@ -67,8 +68,8 @@ class TestLoadInputJson:
             json.dump({"context": {"session_id": "test"}}, f)
 
         # when & then
-        with pytest.raises(InputValidationError, match="Input JSON must contain 'messages' field"):
-            load_input_json(no_messages_file)
+        with pytest.raises(InputValidationError, match="Input file must contain 'messages' field"):
+            load_input_file(no_messages_file)
 
     def test_load_file_with_empty_messages_raises_error(self, temp_dir):
         """Test that file with empty messages array raises InputValidationError."""
@@ -79,7 +80,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="'messages' must be a non-empty array"):
-            load_input_json(empty_messages_file)
+            load_input_file(empty_messages_file)
 
     def test_load_file_with_non_array_messages_raises_error(self, temp_dir):
         """Test that file with non-array messages raises InputValidationError."""
@@ -90,7 +91,7 @@ class TestLoadInputJson:
 
         # when & then
         with pytest.raises(InputValidationError, match="'messages' must be a non-empty array"):
-            load_input_json(non_array_messages_file)
+            load_input_file(non_array_messages_file)
 
     def test_load_file_with_context_shows_debug_info(self, temp_input_file, mock_logger):
         """Test that file with context logs debug information."""
@@ -98,7 +99,7 @@ class TestLoadInputJson:
         input_file = temp_input_file
 
         # when
-        result = load_input_json(input_file)
+        result = load_input_file(input_file)
 
         # then
         assert "context" in result
@@ -116,7 +117,149 @@ class TestLoadInputJson:
             patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
             with pytest.raises(InputValidationError, match="Error reading input file"):
-                load_input_json(error_file)
+                load_input_file(error_file)
+
+    def test_load_valid_yaml_file(self, temp_dir):
+        """Test loading a valid YAML input file."""
+        # given
+        yaml_file = temp_dir / "input.yaml"
+        yaml_content = """
+messages:
+  - role: system
+    content: You are a helpful assistant.
+  - role: user
+    content: Hello world
+context:
+  session_id: test-yaml
+"""
+        with open(yaml_file, "w") as f:
+            f.write(yaml_content)
+
+        # when
+        result = load_input_file(yaml_file)
+
+        # then
+        assert isinstance(result, dict)
+        assert "messages" in result
+        assert isinstance(result["messages"], list)
+        assert len(result["messages"]) == 2
+        assert result["messages"][0]["role"] == "system"
+        assert result["messages"][1]["role"] == "user"
+        assert result["context"]["session_id"] == "test-yaml"
+
+    def test_load_invalid_yaml_raises_error(self, temp_dir):
+        """Test that invalid YAML raises InputValidationError."""
+        # given
+        invalid_yaml_file = temp_dir / "invalid.yaml"
+        with open(invalid_yaml_file, "w") as f:
+            f.write("messages:\n  - role: user\n    content: test\n  invalid_key: {\n")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Invalid YAML in input file"):
+            load_input_file(invalid_yaml_file)
+
+    def test_load_file_with_non_dict_data_raises_error(self, temp_dir):
+        """Test that file with non-dict data raises InputValidationError."""
+        # given
+        non_dict_file = temp_dir / "non_dict.json"
+        with open(non_dict_file, "w") as f:
+            json.dump(["not", "a", "dict"], f)
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Input file must contain a dictionary"):
+            load_input_file(non_dict_file)
+
+    def test_load_file_with_invalid_message_structure_raises_error(self, temp_dir):
+        """Test that file with invalid message structure raises InputValidationError."""
+        # given
+        invalid_message_file = temp_dir / "invalid_message.json"
+        with open(invalid_message_file, "w") as f:
+            json.dump({"messages": [{"role": "user"}]}, f)  # Missing content
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Message 0 must have 'content' field"):
+            load_input_file(invalid_message_file)
+
+    def test_load_file_with_invalid_role_raises_error(self, temp_dir):
+        """Test that file with invalid role raises InputValidationError."""
+        # given
+        invalid_role_file = temp_dir / "invalid_role.json"
+        with open(invalid_role_file, "w") as f:
+            json.dump({"messages": [{"role": "invalid", "content": "test"}]}, f)
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Message 0 has invalid role 'invalid'"):
+            load_input_file(invalid_role_file)
+
+    def test_load_file_with_non_dict_message_raises_error(self, temp_dir):
+        """Test that file with non-dict message raises InputValidationError."""
+        # given
+        non_dict_message_file = temp_dir / "non_dict_message.json"
+        with open(non_dict_message_file, "w") as f:
+            json.dump({"messages": ["not a dict"]}, f)
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Message 0 must be a dictionary"):
+            load_input_file(non_dict_message_file)
+
+    def test_load_file_with_missing_role_raises_error(self, temp_dir):
+        """Test that file with missing role raises InputValidationError."""
+        # given
+        missing_role_file = temp_dir / "missing_role.json"
+        with open(missing_role_file, "w") as f:
+            json.dump({"messages": [{"content": "test"}]}, f)
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Message 0 must have 'role' field"):
+            load_input_file(missing_role_file)
+
+    def test_load_file_with_unknown_extension_valid_yaml_succeeds(self, temp_dir):
+        """Test that unknown extension file with valid YAML loads successfully."""
+        # given
+        unknown_ext_file = temp_dir / "unknown.txt"
+        yaml_content = """
+messages:
+  - role: system
+    content: You are a helpful assistant.
+  - role: user
+    content: Hello world
+"""
+        with open(unknown_ext_file, "w") as f:
+            f.write(yaml_content)
+
+        # when
+        result = load_input_file(unknown_ext_file)
+
+        # then
+        assert isinstance(result, dict)
+        assert "messages" in result
+        assert len(result["messages"]) == 2
+
+    def test_load_file_with_generic_exception_raises_input_validation_error(self):
+        """Test that generic exceptions are wrapped in InputValidationError."""
+        # given
+        error_file = Path("error.json")
+
+        # when & then
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", side_effect=Exception("Generic error")),
+        ):
+            with pytest.raises(InputValidationError, match="Failed to load input file"):
+                load_input_file(error_file)
+
+    def test_load_file_with_input_validation_error_re_raises(self):
+        """Test that InputValidationError is re-raised as-is."""
+        # given
+        error_file = Path("error.json")
+
+        # when & then
+        with (
+            patch("pathlib.Path.exists", return_value=True),
+            patch("builtins.open", side_effect=InputValidationError("Original error")),
+        ):
+            with pytest.raises(InputValidationError, match="Original error"):
+                load_input_file(error_file)
 
 
 class TestWriteOutputFile:
@@ -143,7 +286,7 @@ class TestWriteOutputFile:
         assert written_data["success"] is True
         assert written_data["response"] == response
         assert "metadata" in written_data
-        assert written_data["metadata"]["runner"] == "llm_ci_runner.py"
+        assert written_data["metadata"]["runner"] == "llm-ci-runner"
 
     def test_write_text_response(self, temp_output_file):
         """Test writing text response to output file."""
@@ -193,6 +336,139 @@ class TestWriteOutputFile:
         output_file = temp_output_file
         # Create a response that can't be serialized to JSON
         response = {"key": set([1, 2, 3])}  # sets are not JSON serializable
+
+        # when & then
+        with pytest.raises(LLMRunnerError, match="Error writing output file"):
+            write_output_file(output_file, response)
+
+    def test_write_yaml_structured_response(self, temp_dir):
+        """Test writing structured response to YAML output file."""
+        # given
+        output_file = temp_dir / "output.yaml"
+        response = {
+            "sentiment": "neutral",
+            "confidence": 0.95,
+            "summary": "Test response",
+        }
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        import yaml
+
+        with open(output_file) as f:
+            written_data = yaml.safe_load(f)
+
+        assert written_data["success"] is True
+        assert written_data["response"] == response
+        assert "metadata" in written_data
+        assert written_data["metadata"]["runner"] == "llm-ci-runner"
+
+    def test_write_yaml_text_response(self, temp_dir):
+        """Test writing text response to YAML output file."""
+        # given
+        output_file = temp_dir / "output.yml"  # Test .yml extension too
+        response = "This is a simple text response."
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        import yaml
+
+        with open(output_file) as f:
+            written_data = yaml.safe_load(f)
+
+        assert written_data["success"] is True
+        assert written_data["response"] == response
+        assert "metadata" in written_data
+
+    def test_write_markdown_direct_text(self, temp_dir):
+        """Test writing direct text to markdown file."""
+        # given
+        output_file = temp_dir / "output.md"
+        response = "This is a markdown response."
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        with open(output_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert content == "This is a markdown response."
+
+    def test_write_markdown_dict_response(self, temp_dir):
+        """Test writing dict response to markdown file extracts text."""
+        # given
+        output_file = temp_dir / "output.md"
+        response = {"response": "This is a dict response.", "other": "data"}
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        with open(output_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert content == "This is a dict response."
+
+    def test_write_markdown_dict_without_response_key(self, temp_dir):
+        """Test writing dict without response key to markdown file."""
+        # given
+        output_file = temp_dir / "output.md"
+        response = {"data": "test", "value": 123}
+
+        # when
+        write_output_file(output_file, response)
+
+        # then
+        assert output_file.exists()
+        with open(output_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert "test" in content or "123" in content  # Should contain string representation
+
+    def test_write_with_file_permission_error_raises_llm_error(self, temp_dir):
+        """Test that file permission errors raise LLMRunnerError."""
+        # given
+        output_file = temp_dir / "output.json"
+        response = {"test": "data"}
+
+        # when & then
+        with (
+            patch("pathlib.Path.mkdir", side_effect=PermissionError("Permission denied")),
+        ):
+            with pytest.raises(LLMRunnerError, match="Error writing output file"):
+                write_output_file(output_file, response)
+
+    def test_write_with_json_serialization_error_raises_llm_error(self, temp_dir):
+        """Test that JSON serialization errors raise LLMRunnerError."""
+        # given
+        output_file = temp_dir / "output.json"
+
+        # Create a non-serializable object (function objects can't be JSON serialized)
+        def non_serializable_function():
+            pass
+
+        response = {"test": non_serializable_function}
+
+        # when & then
+        with pytest.raises(LLMRunnerError, match="Error writing output file"):
+            write_output_file(output_file, response)
+
+    def test_write_with_yaml_serialization_error_raises_llm_error(self, temp_dir):
+        """Test that YAML serialization errors raise LLMRunnerError."""
+        # given
+        output_file = temp_dir / "output.yaml"
+
+        # Create a non-serializable object (function objects can't be YAML serialized)
+        def non_serializable_function():
+            pass
+
+        response = {"test": non_serializable_function}
 
         # when & then
         with pytest.raises(LLMRunnerError, match="Error writing output file"):
@@ -312,3 +588,137 @@ class TestParseArguments:
         with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
             with pytest.raises(SystemExit):
                 parse_arguments()
+
+    def test_parse_template_arguments(self):
+        """Test parsing template-related arguments."""
+        # given
+        test_args = [
+            "--template-file",
+            "template.yaml",
+            "--template-vars",
+            "vars.json",
+            "--schema-file",
+            "schema.yaml",
+        ]
+
+        # when
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.template_file == Path("template.yaml")
+        assert args.template_vars == Path("vars.json")
+        assert args.input_file is None
+        assert args.schema_file == Path("schema.yaml")
+
+    def test_parse_template_file_without_vars_is_allowed(self):
+        """Test that template-file without template-vars is now allowed (optional)."""
+        # given
+        test_args = ["--template-file", "template.yaml"]  # No template-vars (optional)
+
+        # when
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            args = parse_arguments()
+
+        # then
+        assert args.template_file == Path("template.yaml")
+        assert args.template_vars is None  # Should be None when not provided
+        assert args.input_file is None
+
+    def test_parse_mutually_exclusive_input_methods_raises_error(self):
+        """Test that providing both input-file and template-file raises error."""
+        # given
+        test_args = [
+            "--input-file",
+            "input.json",
+            "--template-file",
+            "template.yaml",
+            "--template-vars",
+            "vars.json",
+        ]
+
+        # when & then
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            with pytest.raises(SystemExit):
+                parse_arguments()
+
+
+class TestYAMLRecursivelyForceLiteral:
+    """Tests for yaml_recursively_force_literal function to improve coverage."""
+
+    def test_yaml_recursively_force_literal_dict(self):
+        """Test yaml_recursively_force_literal with dictionary."""
+        # given
+        data = {"key": "value", "nested": {"inner": "data"}}
+
+        # when
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
+
+        result = yaml_recursively_force_literal(data)
+
+        # then
+        assert result == data
+
+    def test_yaml_recursively_force_literal_list(self):
+        """Test yaml_recursively_force_literal with list."""
+        # given
+        data = ["item1", "item2", ["nested", "list"]]
+
+        # when
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
+
+        result = yaml_recursively_force_literal(data)
+
+        # then
+        assert result == data
+
+    def test_yaml_recursively_force_literal_multiline_string(self):
+        """Test yaml_recursively_force_literal with multiline string."""
+        # given
+        data = "line1\nline2\nline3"
+
+        # when
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
+
+        result = yaml_recursively_force_literal(data)
+
+        # then
+        from ruamel.yaml import scalarstring
+
+        assert isinstance(result, scalarstring.LiteralScalarString)
+        assert str(result) == data
+
+    def test_yaml_recursively_force_literal_single_line_string(self):
+        """Test yaml_recursively_force_literal with single line string."""
+        # given
+        data = "single line string"
+
+        # when
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
+
+        result = yaml_recursively_force_literal(data)
+
+        # then
+        assert result == data  # Should not be converted to LiteralScalarString
+
+    def test_yaml_recursively_force_literal_nested_multiline(self):
+        """Test yaml_recursively_force_literal with nested multiline strings."""
+        # given
+        data = {
+            "description": "line1\nline2",
+            "items": ["item1", "item2\nitem3"],
+            "nested": {"text": "nested\nmultiline"},
+        }
+
+        # when
+        from llm_ci_runner.formatters import yaml_recursively_force_literal
+
+        result = yaml_recursively_force_literal(data)
+
+        # then
+        from ruamel.yaml import scalarstring
+
+        assert isinstance(result["description"], scalarstring.LiteralScalarString)
+        assert isinstance(result["items"][1], scalarstring.LiteralScalarString)
+        assert isinstance(result["nested"]["text"], scalarstring.LiteralScalarString)
+        assert result["items"][0] == "item1"  # Single line should not be converted

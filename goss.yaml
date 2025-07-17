@@ -1,0 +1,168 @@
+package:
+  curl:
+    installed: true
+  jq:
+    installed: true
+  python3.12:
+    installed: true
+  sudo:
+    installed: true
+  util-linux:
+    installed: true
+  git:
+    installed: true
+
+command:
+  # Test yq is installed
+  yq --version:
+    exit-status: 0
+    title: yq is installed
+    timeout: 120000
+    stdout:
+      - "yq"
+
+  # Test useradd is available (shadow-utils)
+  useradd --help:
+    exit-status: 0
+    title: useradd is installed
+    timeout: 120000
+
+  # Test su command is available (util-linux)
+  su --help:
+    exit-status: 0
+    title: su command is available
+    timeout: 120000
+
+  # Test Python version and environment
+  python --version:
+    exit-status: 0
+    title: Python 3.12 is installed
+    stdout:
+      - "Python 3.12"
+
+  # Test Python 3.12 specifically
+  python3.12 --version:
+    exit-status: 0
+    title: Python 3.12 executable is available
+    stdout:
+      - "Python 3.12"
+
+  # Test uv package manager
+  uv --version:
+    exit-status: 0
+    title: uv package manager is installed
+
+  # Test main application
+  uv run python -m llm_ci_runner --help:
+    exit-status: 0
+    title: LLM CI Runner is installed and accessible
+    timeout: 120000
+    stdout:
+      - "LLM CI Runner - AI-powered automation for pipelines"
+
+  # Test main application
+  llm-ci-runner --help:
+    exit-status: 0
+    title: LLM CI Runner is installed and accessible
+    timeout: 120000
+    stdout:
+      - "LLM CI Runner - AI-powered automation for pipelines"
+
+  # Test Python packages are installed
+  uv run python -c "import semantic_kernel; print('semantic-kernel available')":
+    exit-status: 0
+    title: semantic-kernel package is installed
+    timeout: 120000
+    stdout:
+      - "semantic-kernel available"
+
+  # Test virtual environment is active
+  echo $VIRTUAL_ENV:
+    exit-status: 0
+    title: VIRTUAL_ENV is set to /app/.venv
+    stdout:
+      - "/app/.venv"
+
+  # Test environment variables
+  echo $UV_NO_SYNC:
+    exit-status: 0
+    title: UV_NO_SYNC is set to true
+    stdout:
+      - "true"
+
+  # Test PATH includes virtual environment
+  echo $PATH:
+    exit-status: 0
+    title: PATH includes virtual environment
+    stdout:
+      - "/app/.venv/bin"
+
+  echo $AZURE_OPENAI_MODEL:
+    exit-status: 0
+    title: AZURE_OPENAI_MODEL is set to gpt-4.1-nano
+    stdout:
+      - "gpt-4.1-nano"
+
+  # Test AzDevOps_azpcontainer user exists
+  id AzDevOps_azpcontainer:
+    exit-status: 0
+    title: AzDevOps_azpcontainer user exists
+    stdout:
+      - "uid=1001"
+
+  # Test AzDevOps_azpcontainer user is in wheel group
+  groups AzDevOps_azpcontainer:
+    exit-status: 0
+    title: AzDevOps_azpcontainer is in wheel group
+    stdout:
+      - "wheel"
+
+  # Test sudo configuration for AzDevOps_azpcontainer
+  sudo -l -U AzDevOps_azpcontainer:
+    exit-status: 0
+    title: AzDevOps_azpcontainer has sudo privileges
+    stdout:
+      - "ALL"
+      - "NOPASSWD"
+
+  # Test that AzDevOps_azpcontainer can run sudo without password
+  sudo -u AzDevOps_azpcontainer sudo -n whoami:
+    exit-status: 0
+    title: AzDevOps_azpcontainer can run sudo without password
+    stdout:
+      - "root"
+
+file:
+  # Test key files exist
+  /app/llm_ci_runner/:
+    exists: true
+    title: Main application file exists
+
+  /app/pyproject.toml:
+    exists: true
+    title: Project configuration exists
+
+  /app/uv.lock:
+    exists: true
+    title: Lock file exists
+
+  /entrypoint.sh:
+    exists: true
+    title: Entrypoint script exists
+    mode: "0755"
+
+  # Test virtual environment files
+  /app/.venv/bin/python:
+    exists: true
+    title: Python executable in virtual environment exists
+
+  # Test Python 3.12 system installation
+  /usr/bin/python3.12:
+    exists: true
+    title: System Python 3.12 executable exists
+
+  # Test sudoers configuration file
+  /etc/sudoers.d/azdevops:
+    exists: true
+    title: AzDevOps sudoers configuration exists
+    mode: "0440"
