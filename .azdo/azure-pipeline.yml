@@ -14,15 +14,6 @@ pr:
     include:
       - main
 
-# Weekly scheduled build on Tuesday nights
-schedules:
-  - cron: "0 2 * * 2"
-    displayName: Weekly Tuesday night build
-    branches:
-      include:
-        - main
-    always: true
-
 # Add explicit lock behavior to run only the latest pipeline
 lockBehavior: runLatest
 
