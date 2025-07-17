@@ -18,6 +18,8 @@ export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 # expert tip to enforce rich colors and better formatting:
 export FORCE_COLOR=1
 export COLUMNS=120
+export TTY_COMPATIBLE=1
+export TERM=xterm-256color
 ```
 
 **Authentication**: Uses Azure `DefaultAzureCredential` (RBAC) by default. Set `AZURE_OPENAI_API_KEY` if not using RBAC.
