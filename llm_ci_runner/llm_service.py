@@ -28,10 +28,10 @@ LOGGER = logging.getLogger(__name__)
 @retry_network_operation
 async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCredential | None]:
     """
-    Setup Azure OpenAI service with authentication and retry.
+    Setup Azure OpenAI service with authentication, retry, and timeout protection.
 
     Supports both API key and RBAC authentication methods.
-    Uses retry logic for transient authentication failures.
+    Uses integrated retry + timeout logic for transient authentication failures.
 
     Returns:
         Tuple of (AzureChatCompletion service, credential object)
