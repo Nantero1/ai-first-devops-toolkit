@@ -57,7 +57,7 @@ def should_retry_openai_exception(exception: BaseException) -> bool:
         status_code = getattr(exception, "status_code", None)
         if status_code is not None and isinstance(status_code, int):
             return bool(500 <= status_code < 600)
-        return False
+        return False  # pragma: no cover
 
     return False
 
@@ -87,7 +87,7 @@ def should_retry_azure_exception(exception: BaseException) -> bool:
             if status_code is not None and isinstance(status_code, int):
                 return bool(status_code in (408, 429, 500, 502, 503, 504))
             return False
-        return False
+        return False  # pragma: no cover
 
     return False
 

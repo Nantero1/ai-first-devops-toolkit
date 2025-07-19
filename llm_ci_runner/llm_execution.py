@@ -404,56 +404,6 @@ async def _create_openai_client() -> AsyncOpenAI:
     )
 
 
-async def _execute_text_mode(
-    kernel: Kernel,
-    chat_history: list,
-    output_file: str | None = None,
-) -> dict[str, Any]:
-    """Execute LLM task using text mode (no schema enforcement).
-
-    Args:
-        kernel: Semantic Kernel instance
-        chat_history: List of chat messages
-        output_file: Optional output file path
-
-    Returns:
-        Dictionary containing execution results
-
-    Raises:
-        Exception: If text mode execution fails
-    """
-    # Get the chat completion service
-    service: ChatCompletionService | None = kernel.get_service("azure_openai")
-    if not service:
-        # Try alternative service IDs
-        service = kernel.get_service("openai")
-    if not service:
-        raise Exception("No chat completion service found")
-
-    # Create settings for text mode
-    settings = OpenAIChatPromptExecutionSettings(
-        service_id="azure_openai",
-    )
-
-    # Convert list to ChatHistory for Semantic Kernel compatibility
-    sk_chat_history = create_chat_history(chat_history)
-
-    # Execute without schema enforcement
-    result = await service.get_chat_message_contents(
-        chat_history=sk_chat_history,
-        settings=settings,
-    )
-
-    # Extract content from ChatMessageContent objects
-    if result and len(result) > 0:
-        content = result[0].content
-    else:
-        content = ""
-
-    output_format = detect_output_format(Path(output_file) if output_file else None)
-    return _process_text_response(content, output_format)
-
-
 def _process_structured_response(
     response: str,
     schema_model: type | None,
