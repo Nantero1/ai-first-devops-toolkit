@@ -360,242 +360,6 @@ class TestExecuteLlmTask:
                 await execute_llm_task(kernel, chat_history, schema_file)
 
 
-class TestExecuteTextMode:
-    """Tests for _execute_text_mode function."""
-
-    @pytest.mark.asyncio
-    async def test_execute_text_mode_with_azure_service(self, mock_kernel):
-        """Test _execute_text_mode with azure_openai service."""
-        # given
-        from llm_ci_runner.llm_execution import _execute_text_mode
-
-        kernel = mock_kernel
-        chat_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-
-        # Mock azure_openai service
-        mock_azure_service = AsyncMock()
-        mock_azure_service.get_chat_message_contents.return_value = create_text_output_mock()
-        mock_kernel.get_service.return_value = mock_azure_service
-
-        # when
-        result = await _execute_text_mode(kernel, chat_history)
-
-        # then
-        assert result["mode"] == "text"
-        assert "output" in result
-        assert result["schema_enforced"] == False
-        mock_kernel.get_service.assert_called_with("azure_openai")
-
-    @pytest.mark.asyncio
-    async def test_execute_text_mode_fallback_to_openai_service(self, mock_kernel):
-        """Test _execute_text_mode fallback to openai service."""
-        # given
-        from llm_ci_runner.llm_execution import _execute_text_mode
-
-        kernel = mock_kernel
-        chat_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-
-        # Mock openai service (azure_openai not found)
-        mock_openai_service = AsyncMock()
-        mock_openai_service.get_chat_message_contents.return_value = create_text_output_mock()
-
-        def mock_get_service(service_id):
-            if service_id == "azure_openai":
-                return None
-            elif service_id == "openai":
-                return mock_openai_service
-            return None
-
-        mock_kernel.get_service.side_effect = mock_get_service
-
-        # when
-        result = await _execute_text_mode(kernel, chat_history)
-
-        # then
-        assert result["mode"] == "text"
-        assert "output" in result
-        assert result["schema_enforced"] == False
-        mock_kernel.get_service.assert_any_call("azure_openai")
-        mock_kernel.get_service.assert_any_call("openai")
-
-    @pytest.mark.asyncio
-    async def test_execute_text_mode_no_service_raises_error(self, mock_kernel):
-        """Test _execute_text_mode raises error when no service found."""
-        # given
-        from llm_ci_runner.llm_execution import _execute_text_mode
-
-        kernel = mock_kernel
-        chat_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-
-        # Mock no services available
-        mock_kernel.get_service.return_value = None
-
-        # when & then
-        with pytest.raises(Exception, match="No chat completion service found"):
-            await _execute_text_mode(kernel, chat_history)
-
-    @pytest.mark.asyncio
-    async def test_execute_text_mode_empty_result_returns_empty_content(self, mock_kernel):
-        """Test _execute_text_mode with empty result returns empty content."""
-        # given
-        from llm_ci_runner.llm_execution import _execute_text_mode
-
-        kernel = mock_kernel
-        chat_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-
-        # Mock azure_openai service with empty result
-        mock_azure_service = AsyncMock()
-        mock_azure_service.get_chat_message_contents.return_value = []
-        mock_kernel.get_service.return_value = mock_azure_service
-
-        # when
-        result = await _execute_text_mode(kernel, chat_history)
-
-        # then
-        assert result["mode"] == "text"
-        assert result["output"] == ""
-        assert result["schema_enforced"] == False
-
-
-class TestClientCreationValidation:
-    """Tests for client creation validation."""
-
-    @pytest.mark.asyncio
-    async def test_create_azure_client_missing_endpoint_raises_error(self):
-        """Test Azure client creation without endpoint."""
-        # given
-        from llm_ci_runner.llm_execution import _create_azure_client
-
-        with patch.dict("os.environ", {}, clear=True):
-            # when & then
-            with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT is required for Azure SDK"):
-                await _create_azure_client()
-
-    @pytest.mark.asyncio
-    async def test_create_openai_client_missing_key_raises_error(self):
-        """Test OpenAI client creation without API key."""
-        # given
-        from llm_ci_runner.llm_execution import _create_openai_client
-
-        with patch.dict("os.environ", {}, clear=True):
-            # when & then
-            with pytest.raises(ValueError, match="OPENAI_API_KEY is required for OpenAI SDK"):
-                await _create_openai_client()
-
-
-class TestChatHistoryConversion:
-    """Tests for chat history conversion edge cases."""
-
-    def test_convert_chat_history_with_object_attributes(self):
-        """Test chat history conversion with object attributes."""
-        # given
-        from llm_ci_runner.llm_execution import _convert_chat_history_to_openai_format
-
-        mock_msg = Mock()
-        mock_msg.role = "user"
-        mock_msg.content = "Hello"
-        chat_history = [mock_msg]
-
-        # when
-        result = _convert_chat_history_to_openai_format(chat_history)
-
-        # then
-        assert len(result) == 1
-        assert result[0]["role"] == "user"
-        assert result[0]["content"] == "Hello"
-
-    def test_convert_chat_history_empty_messages_logs_warning(self):
-        """Test conversion with empty message list logs warning."""
-        # given
-        from llm_ci_runner.llm_execution import _convert_chat_history_to_openai_format
-
-        chat_history = []
-
-        # when
-        result = _convert_chat_history_to_openai_format(chat_history)
-
-        # then
-        assert result == []
-
-
-class TestSchemaLoadingErrors:
-    """Tests for schema loading error handling."""
-
-    @pytest.mark.asyncio
-    async def test_execute_llm_task_schema_loading_error_continues(self, mock_kernel):
-        """Test schema loading error handling continues execution."""
-        # given
-        kernel = mock_kernel
-        # Create realistic chat history that supports len() and iteration
-        chat_history = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-        schema_file = "invalid_schema.json"
-
-        mock_kernel.get_service.return_value.get_chat_message_contents.return_value = create_text_output_mock()
-
-        with patch("llm_ci_runner.llm_execution.load_schema_file") as mock_load_schema:
-            mock_load_schema.side_effect = Exception("Schema loading failed")
-
-            # when
-            result = await execute_llm_task(kernel, chat_history, schema_file)
-
-            # then
-            assert result["mode"] == "text"
-            assert "output" in result
-            assert result["schema_enforced"] == False
-
-
-class TestResponseProcessing:
-    """Tests for response processing edge cases."""
-
-    def test_process_structured_response_json_error_fallback(self):
-        """Test JSON parsing error fallback to text mode."""
-        # given
-        from llm_ci_runner.llm_execution import _process_structured_response
-
-        mock_schema_model = Mock()
-        mock_schema_model.__name__ = "TestSchema"
-        mock_schema_dict = {"type": "object"}
-        invalid_json_response = "This is not valid JSON"
-
-        # when
-        result = _process_structured_response(invalid_json_response, mock_schema_model, mock_schema_dict, "json")
-
-        # then
-        assert result["mode"] == "text"
-        assert result["output"] == invalid_json_response
-        assert result["schema_enforced"] == False
-
-    def test_process_structured_response_no_schema_returns_text(self):
-        """Test structured response processing without schema returns text mode."""
-        # given
-        from llm_ci_runner.llm_execution import _process_structured_response
-
-        response = "Some response"
-
-        # when
-        result = _process_structured_response(response, None, None, "text")
-
-        # then
-        assert result["mode"] == "text"
-        assert result["output"] == response
-        assert result["schema_enforced"] == False
-
-
 class TestSdkExecutionFallback:
     """Tests for SDK execution fallback scenarios."""
 
@@ -817,3 +581,130 @@ class TestSdkExecutionFallback:
                 match="OPENAI_CHAT_MODEL_ID is required for OpenAI SDK",
             ):
                 await execute_llm_task(kernel, chat_history, schema_file)
+
+
+class TestClientCreationValidation:
+    """Tests for client creation validation."""
+
+    @pytest.mark.asyncio
+    async def test_create_azure_client_missing_endpoint_raises_error(self):
+        """Test Azure client creation without endpoint."""
+        # given
+        from llm_ci_runner.llm_execution import _create_azure_client
+
+        with patch.dict("os.environ", {}, clear=True):
+            # when & then
+            with pytest.raises(ValueError, match="AZURE_OPENAI_ENDPOINT is required for Azure SDK"):
+                await _create_azure_client()
+
+    @pytest.mark.asyncio
+    async def test_create_openai_client_missing_key_raises_error(self):
+        """Test OpenAI client creation without API key."""
+        # given
+        from llm_ci_runner.llm_execution import _create_openai_client
+
+        with patch.dict("os.environ", {}, clear=True):
+            # when & then
+            with pytest.raises(ValueError, match="OPENAI_API_KEY is required for OpenAI SDK"):
+                await _create_openai_client()
+
+
+class TestChatHistoryConversion:
+    """Tests for chat history conversion edge cases."""
+
+    def test_convert_chat_history_with_object_attributes(self):
+        """Test chat history conversion with object attributes."""
+        # given
+        from llm_ci_runner.llm_execution import _convert_chat_history_to_openai_format
+
+        mock_msg = Mock()
+        mock_msg.role = "user"
+        mock_msg.content = "Hello"
+        chat_history = [mock_msg]
+
+        # when
+        result = _convert_chat_history_to_openai_format(chat_history)
+
+        # then
+        assert len(result) == 1
+        assert result[0]["role"] == "user"
+        assert result[0]["content"] == "Hello"
+
+    def test_convert_chat_history_empty_messages_logs_warning(self):
+        """Test conversion with empty message list logs warning."""
+        # given
+        from llm_ci_runner.llm_execution import _convert_chat_history_to_openai_format
+
+        chat_history = []
+
+        # when
+        result = _convert_chat_history_to_openai_format(chat_history)
+
+        # then
+        assert result == []
+
+
+class TestSchemaLoadingErrors:
+    """Tests for schema loading error handling."""
+
+    @pytest.mark.asyncio
+    async def test_execute_llm_task_schema_loading_error_continues(self, mock_kernel):
+        """Test schema loading error handling continues execution."""
+        # given
+        kernel = mock_kernel
+        # Create realistic chat history that supports len() and iteration
+        chat_history = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+        ]
+        schema_file = "invalid_schema.json"
+
+        mock_kernel.get_service.return_value.get_chat_message_contents.return_value = create_text_output_mock()
+
+        with patch("llm_ci_runner.llm_execution.load_schema_file") as mock_load_schema:
+            mock_load_schema.side_effect = Exception("Schema loading failed")
+
+            # when
+            result = await execute_llm_task(kernel, chat_history, schema_file)
+
+            # then
+            assert result["mode"] == "text"
+            assert "output" in result
+            assert result["schema_enforced"] == False
+
+
+class TestResponseProcessing:
+    """Tests for response processing edge cases."""
+
+    def test_process_structured_response_json_error_fallback(self):
+        """Test JSON parsing error fallback to text mode."""
+        # given
+        from llm_ci_runner.llm_execution import _process_structured_response
+
+        mock_schema_model = Mock()
+        mock_schema_model.__name__ = "TestSchema"
+        mock_schema_dict = {"type": "object"}
+        invalid_json_response = "This is not valid JSON"
+
+        # when
+        result = _process_structured_response(invalid_json_response, mock_schema_model, mock_schema_dict, "json")
+
+        # then
+        assert result["mode"] == "text"
+        assert result["output"] == invalid_json_response
+        assert result["schema_enforced"] == False
+
+    def test_process_structured_response_no_schema_returns_text(self):
+        """Test structured response processing without schema returns text mode."""
+        # given
+        from llm_ci_runner.llm_execution import _process_structured_response
+
+        response = "Some response"
+
+        # when
+        result = _process_structured_response(response, None, None, "text")
+
+        # then
+        assert result["mode"] == "text"
+        assert result["output"] == response
+        assert result["schema_enforced"] == False
