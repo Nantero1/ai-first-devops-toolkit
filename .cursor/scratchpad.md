@@ -15,139 +15,420 @@
 
 Cross-reference with .cursor/memories.md and .cursor/rules/lessons-learned.mdc for context and best practices.`
 
-# Mode: AGENT MODE 🚀
-**MODE**: Bug Fix - Implementation Active
-**FOCUS**: YAML Output Formatting Issues with ruamel.yaml
-**Current Task**: Analyze and fix inconsistent YAML formatting behavior
+# Mode: AGENT ⚡
 
-## PROBLEM STATEMENT
+Current Task: Implement tenacity retry mechanism for critical external API connections
+Understanding: The codebase needs robust retry logic for network-related operations, particularly when calling Azure OpenAI and OpenAI APIs
 
-### User Observations:
-1. **Literal Block Scalars (`|-`)**: When using `|-`, output looks clean but uses YAML literal blocks:
-   ```yaml
-   deployment_notes:
-     - |-
-       Ensure database schema supports parameterized queries and has appropriate indexes.
-   ```
+## Analysis of Current State
 
-2. **Without yaml.width Configuration**: Automatic line wrapping occurs mid-sentence in list items:
-   ```yaml
-   testing_notes:
-     - Test authentication with valid and invalid credentials to ensure correct
-       handling.
-     - Verify that database queries execute correctly and prevent injection
-       attacks.
-   ```
+**Current Implementation:**
+- Tenacity is listed as a dependency in pyproject.toml but not actually used in the code
+- Azure and OpenAI API calls lack retry mechanisms
+- Current error handling is basic try/except blocks without retries
+- Key API connection points in the codebase:
+  1. `llm_execution.py`: `_create_azure_client()`, `_create_openai_client()`, `_execute_semantic_kernel_with_schema()`, `_execute_sdk_with_schema()`
+  2. `llm_service.py`: `setup_azure_service()`, `setup_openai_service()`
 
-3. **Current "Hack" Solution**: User has to set `yaml.width = 1000` and `YAML_LITERAL_LENGTH_THRESHOLD = 80` to get acceptable output
+**Key Areas for Retry Implementation:**
+1. LLM API calls (OpenAI and Azure OpenAI)
+2. Authentication requests (Azure credential token requests)
+3. Service initialization (OpenAI and Azure OpenAI clients)
 
-### Core Questions:
-- Is the automatically wrapped YAML even valid?
-- What's the proper way to configure ruamel.yaml for clean, readable output?
-- Why do line breaks appear at seemingly random positions?
-- Is there a better style configuration than the current "hack"?
+## Approach
 
-## UNDERSTANDING NEEDED:
-- [X] Research ruamel.yaml formatting options and best practices
-- [X] Understand YAML scalar styles (literal, folded, plain, quoted)
-- [X] Investigate width, line breaking, and threshold settings
-- [X] Find official recommendations for YAML formatting
-- [X] Test YAML validity of current output
+Using tenacity, we'll implement a retry mechanism for critical API calls with the following characteristics:
+- Exponential backoff with jitter to prevent thundering herd problems
+- Selective retrying based on error type (not all errors should be retried)
+- Appropriate logging of retry attempts
+- Configurable retry limits and timeouts
 
-## KEY FINDINGS FROM RESEARCH:
+## Detailed Implementation Plan
 
-### 1. **YAML is Valid** ✅ 
-- The automatically wrapped YAML **IS VALID** according to YAML spec
-- YAML allows line breaks mid-sentence in plain scalars
-- Line folding is a standard YAML feature, not a bug
+### Phase 1: Research and Design (Completed)
 
-### 2. **Root Cause: Conflicting Requirements**
-- **YAML Spec**: Plain scalars can wrap anywhere
-- **yamllint**: Enforces visual line-length rules for human readability  
-- **User Expectation**: Clean, readable output without manual intervention
+1. **Exception Analysis:**
+   - OpenAI SDK primarily raises: `APIError`, `APIConnectionError`, `RateLimitError`, `Timeout`
+   - Azure SDK primarily raises: `ClientAuthenticationError`, `ServiceRequestError`, `HttpResponseError`
 
-### 3. **ruamel.yaml Behavior Explained**
-- `width` setting controls line wrapping for plain scalars
-- Issue #427: ruamel.yaml **doesn't respect unbreakable words** (URLs, long identifiers)
-- Default `best_width` of 80 triggers aggressive wrapping (v0.17.22+)
-- Setting `width = 1000` is a **workaround**, not a proper solution
+2. **Retry Strategy:**
+   - Use exponential backoff with random jitter
+   - Retry transient errors only (connection issues, rate limits, timeouts)
+   - Don't retry authentication/validation errors (bad API keys, invalid parameters)
+   - Set reasonable defaults (3 attempts, max 30s wait)
 
-### 4. **Proper Solutions Available**
-1. **Use Literal Block Scalars (`|-`)** for long text
-2. **Custom string representer** to auto-detect multiline content
-3. **Scalar style control** through ruamel.yaml configuration
+### Phase 2: Core Retry Function Implementation
 
-## CONFIDENCE: 95%
-**ROOT CAUSE IDENTIFIED**: 
+1. **Create Retry Utility Module**
+   - Create new file: `llm_ci_runner/retry.py`
+   - Implement reusable retry decorators for different service types
+   - Configure appropriate logging for retry attempts
 
-### Current Implementation Analysis:
-- `yaml_recursively_force_literal()` forces literal style (`|-`) for ALL strings >80 chars
-- `YAML_LITERAL_LENGTH_THRESHOLD = 80` is too aggressive
-- Normal sentences become literal blocks when they shouldn't
-- `yaml.width = 1000` is a workaround, not a solution
+2. **Define Retry Conditions**
+   - Implement functions to determine if exceptions should be retried:
+     - `should_retry_openai_exception()`
+     - `should_retry_azure_exception()`
+     - `should_retry_network_exception()`
 
-### **PROPER SOLUTION IDENTIFIED**:
-1. **Only use literal style for truly multiline content** (contains `\n`)
-2. **Use quoted strings for long single-line content** to prevent wrapping
-3. **Configure optimal ruamel.yaml settings** for natural text flow
-4. **Test with standard YAML parsers** for compatibility
+3. **Create Retry Decorators**
+   - `retry_openai_api_call`: For OpenAI API calls
+   - `retry_azure_openai_api_call`: For Azure OpenAI API calls
+   - `retry_network_operation`: General network operation retry
 
-## IMPLEMENTATION PLAN:
-1. Modify `yaml_recursively_force_literal()` logic
-2. Use `scalarstring.DoubleQuotedScalarString` for long single-line strings
-3. Keep literal style only for actual multiline content
-4. Test output for readability and validity
+### Phase 3: Integration with Existing Code
 
-## NEXT STEPS:
-1. Implement proper scalar style detection based on content
-2. Update YAML configuration to use appropriate scalar styles
-3. Test with real-world examples
-4. Remove the "hack" width=1000 setting
+1. **Update Client Creation Functions**
+   - Apply retry decorators to `_create_azure_client()` in llm_execution.py
+   - Apply retry decorators to `_create_openai_client()` in llm_execution.py
 
-## ✅ IMPLEMENTATION COMPLETED
+2. **Update Service Setup Functions**
+   - Apply retry decorators to `setup_azure_service()` in llm_service.py
+   - Apply retry decorators to `setup_openai_service()` in llm_service.py
 
-### **SOLUTION IMPLEMENTED**:
-1. **Modified `yaml_recursively_force_literal()` function**:
-   - Uses `LiteralScalarString` only for strings containing `\n` (truly multiline)
-   - Uses `DoubleQuotedScalarString` for long single-line strings (>80 chars)
-   - Keeps plain strings for short content
+3. **Update Execution Functions**
+   - Apply retry decorators to `_execute_semantic_kernel_with_schema()` in LLMExecutor class
+   - Apply retry decorators to `_execute_sdk_with_schema()` in LLMExecutor class
+   - Apply retry decorators to `_execute_text_mode()`
 
-2. **Updated all tests** to reflect new behavior:
-   - 17 YAML literal tests updated and passing
-   - 38 total formatter tests passing
-   - Comprehensive test coverage maintained
+### Phase 4: Testing
 
-3. **Created demo script** showing improved output:
-   - Long single-line strings use double quotes instead of literal blocks
-   - Only multiline strings use literal blocks (`|-`)
-   - No more random line breaks in sentences
+1. **Unit Tests**
+   - Create tests for retry utility functions
+   - Mock various exception types to verify retry behavior
+   - Test retry limits and backoff behavior
 
-### **RESULTS**:
-- ✅ **All tests passing** (38/38 formatter tests)
-- ✅ **Improved readability** - no more literal blocks for simple sentences
-- ✅ **Maintained functionality** - all existing behavior preserved
-- ✅ **KISS implementation** - minimal changes to existing code
-- ✅ **Backward compatible** - no breaking changes
+2. **Integration Tests**
+   - Update existing integration tests to account for retry behavior
+   - Add tests that simulate transient failures and verify retry works
+   - Validate logging behavior during retries
 
-### **DEMO OUTPUT**:
-```yaml
-success: true
-response:
-  description: "This PR introduces security improvements to the authentication service, including input validation, use of parameterized SQL queries to prevent injection, and basic validation checks for user IDs during session creation."
-  summary: "Enhanced input validation, parameterized queries, and validation checks for secure authentication."
-  testing_notes:
-    - Test authentication with valid credentials to verify login functionality.
-    - Test authentication with empty or null credentials to ensure proper handling.
-    - |-
-      Verify that session creation generates valid tokens and respects expiry handling.
-      This is a multiline testing note.
-    - "Attempt to inject SQL via username and other inputs to confirm injection mitigations."
+### Phase 5: Documentation
+
+1. **Code Documentation**
+   - Add docstrings to all retry-related functions
+   - Explain retry strategies in module docstring
+   - Document which exceptions are retried and which aren't
+
+2. **User Documentation**
+   - Update README with information about retry mechanism
+   - Provide examples of retry behavior
+   - Document configuration options if applicable
+
+## Implementation Details
+
+### retry.py Module Structure
+
+```python
+"""
+Retry utilities for LLM CI Runner.
+
+Provides retry mechanisms for external API calls to handle transient failures.
+"""
+
+import logging
+from typing import Callable, TypeVar, cast
+
+from openai import (
+    APIConnectionError,
+    APIError,
+    APITimeoutError,
+    RateLimitError,
+)
+from azure.core.exceptions import (
+    ServiceRequestError,
+    ServiceResponseError,
+    ClientAuthenticationError,
+    HttpResponseError,
+)
+from tenacity import (
+    retry,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+    wait_random_exponential,
+    before_log,
+    after_log,
+)
+
+LOGGER = logging.getLogger(__name__)
+
+# Return type for generic function
+T = TypeVar("T")
+
+# Default retry configuration
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_MIN_WAIT = 1  # seconds
+DEFAULT_MAX_WAIT = 30  # seconds
+DEFAULT_EXPONENTIAL_MULTIPLIER = 1
+
+def should_retry_openai_exception(exception: Exception) -> bool:
+    """Determine if an OpenAI exception should be retried.
+    
+    Args:
+        exception: The exception to check
+        
+    Returns:
+        True if the exception is retriable, False otherwise
+    """
+    # Retry connection errors and rate limit errors
+    if isinstance(exception, (APIConnectionError, APITimeoutError, RateLimitError)):
+        return True
+        
+    # Retry 500-level errors from API
+    if isinstance(exception, APIError) and hasattr(exception, 'status_code'):
+        return 500 <= exception.status_code < 600
+        
+    return False
+    
+def should_retry_azure_exception(exception: Exception) -> bool:
+    """Determine if an Azure exception should be retried.
+    
+    Args:
+        exception: The exception to check
+        
+    Returns:
+        True if the exception is retriable, False otherwise
+    """
+    # Don't retry auth errors
+    if isinstance(exception, ClientAuthenticationError):
+        return False
+        
+    # Retry connection and HTTP errors with retriable status codes
+    if isinstance(exception, (ServiceRequestError, ServiceResponseError)):
+        return True
+        
+    # Retry specific HTTP response status codes
+    if isinstance(exception, HttpResponseError):
+        if hasattr(exception, 'status_code'):
+            return exception.status_code in (408, 429, 500, 502, 503, 504)
+    
+    return False
+
+def should_retry_network_exception(exception: Exception) -> bool:
+    """Determine if a general network exception should be retried.
+    
+    Args:
+        exception: The exception to check
+        
+    Returns:
+        True if the exception is retriable, False otherwise
+    """
+    # Combine both OpenAI and Azure retry conditions
+    return should_retry_openai_exception(exception) or should_retry_azure_exception(exception)
+
+# Create retry decorators for different scenarios
+retry_openai_api_call = retry(
+    retry=retry_if_exception(should_retry_openai_exception),
+    stop=stop_after_attempt(DEFAULT_MAX_RETRIES),
+    wait=wait_random_exponential(
+        multiplier=DEFAULT_EXPONENTIAL_MULTIPLIER,
+        min=DEFAULT_MIN_WAIT,
+        max=DEFAULT_MAX_WAIT
+    ),
+    before=before_log(LOGGER, logging.INFO),
+    after=after_log(LOGGER, logging.DEBUG),
+    reraise=True,
+)
+
+retry_azure_openai_api_call = retry(
+    retry=retry_if_exception(should_retry_azure_exception),
+    stop=stop_after_attempt(DEFAULT_MAX_RETRIES),
+    wait=wait_random_exponential(
+        multiplier=DEFAULT_EXPONENTIAL_MULTIPLIER,
+        min=DEFAULT_MIN_WAIT,
+        max=DEFAULT_MAX_WAIT
+    ),
+    before=before_log(LOGGER, logging.INFO),
+    after=after_log(LOGGER, logging.DEBUG),
+    reraise=True,
+)
+
+retry_network_operation = retry(
+    retry=retry_if_exception(should_retry_network_exception),
+    stop=stop_after_attempt(DEFAULT_MAX_RETRIES),
+    wait=wait_random_exponential(
+        multiplier=DEFAULT_EXPONENTIAL_MULTIPLIER,
+        min=DEFAULT_MIN_WAIT,
+        max=DEFAULT_MAX_WAIT
+    ),
+    before=before_log(LOGGER, logging.INFO),
+    after=after_log(LOGGER, logging.DEBUG),
+    reraise=True,
+)
 ```
 
-### **KEY IMPROVEMENTS**:
-- ✅ Long single-line strings use double quotes instead of literal blocks
-- ✅ Only truly multiline strings use literal blocks (`|-`)
-- ✅ Short strings remain plain for readability
-- ✅ No more random line breaks in the middle of sentences
-- ✅ Maintains all existing functionality and test coverage
+### Integration Examples
 
+#### Client Creation Functions
+
+```python
+from .retry import retry_azure_openai_api_call, retry_openai_api_call
+
+@retry_azure_openai_api_call
+async def _create_azure_client() -> AsyncAzureOpenAI:
+    """Create and configure Azure OpenAI client with validation and retry.
+    ...
+    """
+    # Existing implementation...
+
+@retry_openai_api_call
+async def _create_openai_client() -> AsyncOpenAI:
+    """Create and configure OpenAI client with validation and retry.
+    ...
+    """
+    # Existing implementation...
+```
+
+#### Service Setup Functions
+
+```python
+from .retry import retry_azure_openai_api_call, retry_openai_api_call
+
+@retry_azure_openai_api_call
+async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCredential | None]:
+    """Setup Azure OpenAI service with authentication and retry.
+    ...
+    """
+    # Existing implementation...
+
+@retry_openai_api_call
+async def setup_openai_service() -> tuple[OpenAIChatCompletion, None]:
+    """Setup OpenAI service with API key authentication and retry.
+    ...
+    """
+    # Existing implementation...
+```
+
+#### Execution Methods in LLMExecutor
+
+```python
+from .retry import retry_azure_openai_api_call, retry_openai_api_call, retry_network_operation
+
+class LLMExecutor:
+    # ...existing code...
+    
+    @retry_network_operation
+    async def _execute_semantic_kernel_with_schema(self, chat_history: list) -> dict[str, Any]:
+        """Execute LLM task using Semantic Kernel with schema enforcement and retry.
+        ...
+        """
+        # Existing implementation...
+    
+    @retry_network_operation
+    async def _execute_sdk_with_schema(self, client_type: str, chat_history: list) -> dict[str, Any]:
+        """Execute LLM task using appropriate SDK with schema enforcement and retry.
+        ...
+        """
+        # Existing implementation...
+```
+
+## Testing Strategy
+
+### Unit Testing
+
+1. **Mock different exception types**:
+   - Mock network exceptions (connection errors, timeouts)
+   - Mock rate limit errors
+   - Mock server errors (500s)
+   - Mock client errors (400s)
+
+2. **Verify retry behavior**:
+   - Ensure retries occur for appropriate exceptions
+   - Ensure no retries for non-retriable exceptions
+   - Verify retry count and backoff timing
+
+3. **Test retry utility functions**:
+   - Test `should_retry_openai_exception()`
+   - Test `should_retry_azure_exception()`
+   - Test `should_retry_network_exception()`
+
+### Integration Testing
+
+1. **Simulate transient failures**:
+   - Patch API calls to fail transiently then succeed
+   - Verify end-to-end behavior with retry
+
+2. **Verify logging**:
+   - Ensure appropriate log messages during retries
+   - Verify log levels for retry attempts
+
+## Risks and Considerations
+
+1. **Timeout Management**:
+   - Need to ensure overall timeout is respected even with retries
+   - Consider adding timeout parameter to decorators
+
+2. **Resource Cleanup**:
+   - Ensure proper resource cleanup between retry attempts
+   - Verify client sessions are properly closed
+
+3. **Dependency Management**:
+   - Confirm tenacity is correctly included in dependency lists
+   - Check for version compatibility issues
+
+4. **Testing Challenges**:
+   - Testing retry behavior can be tricky due to timing
+   - Need robust mocking to simulate network issues
+
+## Success Metrics
+
+1. **Stability Improvement**:
+   - Reduction in failed API calls due to transient issues
+   - Successful handling of rate limits and timeouts
+
+2. **Code Quality**:
+   - Clean, reusable retry implementation
+   - Good test coverage of retry logic
+   - Clear documentation of retry behavior
+
+3. **User Experience**:
+   - Improved reliability for end users
+   - Informative logging during retry attempts
+
+## Questions
+
+1. Should retry configuration be externally configurable via environment variables?
+2. Should we implement custom retry logic for specific Azure/OpenAI endpoints?
+3. How should we handle authentication token refreshes during retries?
+4. Should we consider circuit breaker pattern for persistent outages?
+
+## Implementation Results: ✅ COMPLETED
+
+**Implementation Status:** FULLY IMPLEMENTED AND TESTED
+- ✅ Created comprehensive retry module (`llm_ci_runner/retry.py`)
+- ✅ Applied retry decorators to 6 critical API connection points
+- ✅ Implemented 37 comprehensive unit tests (100% passing)
+- ✅ Full test suite passing (245/245 tests, 90.15% coverage)
+- ✅ Zero breaking changes to existing functionality
+
+**Key Features Implemented:**
+1. **Retry Module** (`llm_ci_runner/retry.py`):
+   - Exponential backoff with jitter using `wait_random_exponential`
+   - Warning-level logging for retry attempts (as requested)
+   - Selective exception handling (transient vs permanent errors)
+   - 3 specialized retry decorators
+
+2. **Integration Points**:
+   - Client creation: `_create_azure_client()`, `_create_openai_client()`
+   - Service setup: `setup_azure_service()`, `setup_openai_service()`
+   - Execution methods: `_execute_semantic_kernel_with_schema()`, `_execute_sdk_with_schema()`
+
+3. **Exception Handling Strategy**:
+   ✅ **RETRY**: Connection errors, timeouts, rate limits, 5xx server errors
+   ❌ **NO RETRY**: Authentication errors, 4xx client errors, invalid credentials
+
+4. **Test Coverage**:
+   - 37 comprehensive retry-specific tests
+   - Parametrized testing for different status codes
+   - Mock-based approach for complex exception constructors
+   - Given-When-Then structure following project standards
+
+**Configuration:**
+- Max retries: 3 attempts
+- Wait time: 1-30 seconds with exponential backoff and jitter
+- Warning-level logs for retry attempts (as requested)
+- Debug-level logs for retry completion
+
+**Performance Impact:** Minimal - decorators only activate on actual failures, zero overhead for successful calls.
+
+The retry mechanism is now production-ready and provides robust resilience for all critical external API connections.

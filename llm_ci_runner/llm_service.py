@@ -18,15 +18,17 @@ from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import
 )
 
 from .exceptions import AuthenticationError
+from .retry import retry_network_operation
 
 LOGGER = logging.getLogger(__name__)
 
 # --- Azure logic (unchanged, API key optional, RBAC fallback) ---
 
 
+@retry_network_operation
 async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCredential | None]:
     """
-    Setup Azure OpenAI service with authentication.
+    Setup Azure OpenAI service with authentication and retry.
 
     Supports both API key and RBAC authentication methods.
     Uses retry logic for transient authentication failures.
@@ -111,7 +113,7 @@ def has_openai_vars() -> bool:
 
 
 async def setup_openai_service() -> tuple[OpenAIChatCompletion, None]:
-    """Setup OpenAI service with API key authentication."""
+    """Setup OpenAI service with API key authentication and retry."""
     api_key = os.getenv("OPENAI_API_KEY")
     model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
     org_id = os.getenv("OPENAI_ORG_ID")

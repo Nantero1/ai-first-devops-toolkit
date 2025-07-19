@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 from .exceptions import LLMExecutionError
 from .formatters import detect_output_format, display_formatted_console, format_output_content
 from .io_operations import create_chat_history, load_schema_file
+from .retry import retry_network_operation
 from .schema import generate_one_shot_example
 
 LOGGER = logging.getLogger(__name__)
@@ -103,8 +104,9 @@ class LLMExecutor:
         """
         return detect_output_format(Path(self.output_file) if self.output_file else None)
 
+    @retry_network_operation
     async def _execute_semantic_kernel_with_schema(self, chat_history: list) -> dict[str, Any]:
-        """Execute LLM task using Semantic Kernel with schema enforcement.
+        """Execute LLM task using Semantic Kernel with schema enforcement and retry.
 
         Args:
             chat_history: List of chat messages
@@ -164,8 +166,9 @@ class LLMExecutor:
 
         return _process_structured_response(content, self.schema_model, self.schema_dict, self.output_format)
 
+    @retry_network_operation
     async def _execute_sdk_with_schema(self, client_type: str, chat_history: list) -> dict[str, Any]:
-        """Execute LLM task using appropriate SDK with schema enforcement.
+        """Execute LLM task using appropriate SDK with schema enforcement and retry.
 
         Unified execution logic for both Azure and OpenAI SDKs.
 
