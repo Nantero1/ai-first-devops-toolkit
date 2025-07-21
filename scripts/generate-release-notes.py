@@ -6,12 +6,11 @@ Extracts commit history between tags and prepares data for LLM analysis.
 
 import subprocess
 import sys
+
 import yaml
-from pathlib import Path
-from typing import Dict, List, Optional
 
 
-def run_git_command(cmd: List[str]) -> str:
+def run_git_command(cmd: list[str]) -> str:
     """Run a git command and return the output."""
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -55,7 +54,7 @@ def get_commit_count(previous_tag: str) -> int:
     return int(count_str) if count_str else 0
 
 
-def create_template_vars(version: str, manual_instructions: Optional[str] = None) -> Dict:
+def create_template_vars(version: str, manual_instructions: str | None = None) -> dict:
     """Create template variables from git history."""
     previous_tag = get_previous_tag()
     commit_history = get_commit_history(previous_tag)
@@ -76,7 +75,7 @@ def create_template_vars(version: str, manual_instructions: Optional[str] = None
     return template_vars
 
 
-def save_template_vars(template_vars: Dict, output_file: str) -> None:
+def save_template_vars(template_vars: dict, output_file: str) -> None:
     """Save template variables to YAML file."""
     with open(output_file, "w") as f:
         yaml.dump(template_vars, f, default_flow_style=False, sort_keys=False)
@@ -104,7 +103,7 @@ def main():
     save_template_vars(template_vars, output_file)
 
     # Print summary
-    print(f"\nSummary:")
+    print("\nSummary:")
     print(f"- Version: {version}")
     print(f"- Previous tag: {template_vars['previous_version']}")
     print(f"- Commits: {template_vars['commit_count']}")
@@ -115,7 +114,7 @@ def main():
     if manual_instructions:
         print(f"- Manual instructions: {len(manual_instructions)} characters")
 
-    print(f"\nTemplate variables ready for LLM analysis.")
+    print("\nTemplate variables ready for LLM analysis.")
 
 
 if __name__ == "__main__":

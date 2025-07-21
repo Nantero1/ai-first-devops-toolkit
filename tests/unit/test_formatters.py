@@ -8,7 +8,7 @@ console display, and file writing with comprehensive coverage.
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from ruamel.yaml import YAML
@@ -250,7 +250,7 @@ class TestWriteFormattedFile:
 
             # then
             assert output_file.exists()
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 content = json.load(f)
 
             assert content["success"] is True
@@ -277,7 +277,7 @@ class TestWriteFormattedFile:
             # then
             assert output_file.exists()
             yaml = YAML(typ="safe", pure=True)
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 content = yaml.load(f)
 
             assert content["success"] is True
@@ -302,7 +302,7 @@ class TestWriteFormattedFile:
 
             # then
             assert output_file.exists()
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 content = f.read()
 
             assert content == "# Markdown content"
@@ -325,7 +325,7 @@ class TestWriteFormattedFile:
 
             # then
             assert output_file.exists()
-            with open(output_file, "r") as f:
+            with open(output_file) as f:
                 content = f.read()
 
             assert content == "# Markdown content"
@@ -425,7 +425,7 @@ class TestYamlRecursivelyForceLiteral:
         result = yaml_recursively_force_literal(input_data)
 
         # then
-        from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
+        from ruamel.yaml.scalarstring import DoubleQuotedScalarString, LiteralScalarString
 
         if expected_is_literal:
             assert isinstance(result, LiteralScalarString), f"Expected literal scalar: {description}"
@@ -515,7 +515,7 @@ class TestYamlRecursivelyForceLiteral:
         result = yaml_recursively_force_literal(input_data)
 
         # then
-        from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
+        from ruamel.yaml.scalarstring import DoubleQuotedScalarString, LiteralScalarString
 
         def check_nested_key(data, key_path):
             keys = key_path.split(".")
@@ -571,7 +571,7 @@ class TestYamlRecursivelyForceLiteral:
         result = yaml_recursively_force_literal(input_data)
 
         # then
-        from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
+        from ruamel.yaml.scalarstring import DoubleQuotedScalarString, LiteralScalarString
 
         assert isinstance(result, list), f"Result should be list: {description}"
         assert len(result) == len(input_data), f"List length should be preserved: {description}"
@@ -587,7 +587,7 @@ class TestYamlRecursivelyForceLiteral:
     def test_complex_nested_structure(self):
         """Test complex nested structure with all data types."""
         # given
-        from ruamel.yaml.scalarstring import LiteralScalarString, DoubleQuotedScalarString
+        from ruamel.yaml.scalarstring import DoubleQuotedScalarString, LiteralScalarString
 
         complex_data = {
             "metadata": {
@@ -628,8 +628,9 @@ class TestYamlRecursivelyForceLiteral:
     def test_yaml_output_formatting_integration(self):
         """Integration test showing actual YAML output formatting."""
         # given
-        from ruamel.yaml import YAML
         from io import StringIO
+
+        from ruamel.yaml import YAML
 
         test_data = {
             "short": "Brief text",

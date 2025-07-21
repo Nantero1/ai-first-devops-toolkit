@@ -183,7 +183,7 @@ class TestGenericExampleEvaluation:
                     )
 
                 # Check numeric range constraints
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     if "minimum" in field_schema:
                         assert value >= int(field_schema["minimum"] * 1.2), (
                             f"Value below minimum in {example_name}.{field_name}: {value}"

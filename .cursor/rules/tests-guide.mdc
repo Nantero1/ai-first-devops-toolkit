@@ -21,6 +21,92 @@ tests/
 - Source: `somedirectory/langchain_related/tools/planer.py`
 - Test: `tests/unit/somedirectory/langchain_related/tools/test_planer.py`
 
+## 🚨 **CRITICAL: AVOID OVER-TESTING**
+
+*Preventing excessive test code and maintaining focus on behavior*
+
+### **The Over-Testing Problem**
+
+**WARNING SIGNS:**
+- Test code exceeds business code by 2:1 ratio
+- Testing every possible internal error scenario
+- Multiple tests for the same behavior
+- Testing implementation details instead of user outcomes
+- Complex test setup for simple functions
+
+### **Test-to-Code Ratio Guidelines**
+
+**✅ HEALTHY RATIOS:**
+```
+Simple Functions (< 50 lines):    1:1 to 1.5:1 test-to-code ratio
+Complex Business Logic:           1.5:1 to 2:1 test-to-code ratio
+Critical System Components:       2:1 to 2.5:1 test-to-code ratio
+```
+
+**❌ UNHEALTHY RATIOS:**
+```
+> 3:1 ratio = Over-testing likely
+> 5:1 ratio = Definitely over-testing
+```
+
+### **Simple Function Testing Strategy**
+
+**For a simple function like `display_image()`:**
+
+**✅ GOOD - Behavior-Focused (5-6 tests max):**
+```python
+class TestDisplayImage:
+    """Tests for display_image function - behavior focused."""
+
+    def test_successfully_displays_image(self):
+        """Test that image is displayed when called."""
+        # Test the core behavior
+
+    def test_clears_screen_when_requested(self):
+        """Test clear_first=True behavior."""
+        # Test parameter behavior
+
+    def test_skips_clearing_when_not_requested(self):
+        """Test clear_first=False behavior."""
+        # Test parameter behavior
+
+    def test_handles_errors_gracefully(self):
+        """Test error handling behavior."""
+        # Test error scenarios
+
+    @pytest.mark.parametrize("image_name", [...])
+    def test_works_with_different_images(self):
+        """Test with various inputs."""
+        # Test input variations
+```
+
+**❌ BAD - Implementation-Focused (10+ tests):**
+```python
+# DON'T DO THIS - Over-testing implementation details
+def test_display_image_handles_clear_error_during_error_recovery(self):
+    """Testing internal error recovery mechanisms."""
+
+def test_display_image_calls_correct_internal_methods_in_order(self):
+    """Testing internal method call patterns."""
+
+def test_display_image_prints_exact_messages_in_sequence(self):
+    """Testing internal print statement details."""
+```
+
+### **When to Stop Testing**
+
+**STOP adding tests when:**
+- You're testing the same behavior in different ways
+- You're testing internal implementation details
+- Your test setup is more complex than the function being tested
+- You have more test code than business logic code for simple functions
+- Tests are breaking when you refactor internals (not behavior)
+
+**ASK YOURSELF:**
+- "Does this test verify something the user cares about?"
+- "Would this test catch a real bug that affects end users?"
+- "Am I testing behavior or implementation?"
+
 ## Running Tests
 
 ### Direct UV Execution
@@ -132,6 +218,8 @@ class TestMyComponent:
 6. **Use parametrization** - Test multiple scenarios efficiently
 7. **Keep tests focused** - One assertion per test concept
 8. **Use appropriate markers** - `@pytest.mark.asyncio`, `@pytest.mark.essential`
+9. **🚨 AVOID OVER-TESTING** - Don't test implementation details or internal mechanics
+10. **Monitor test-to-code ratios** - Keep ratios reasonable for function complexity
 
 ## 🎯 **CRITICAL: Test BEHAVIOR, Not IMPLEMENTATION**
 
@@ -236,6 +324,7 @@ This principle is the foundation of maintainable test suites that survive archit
 4. **Use Given-When-Then pattern** for all tests
 5. **Add fixtures** in local `conftest.py` if needed
 6. **Run tests locally** before committing: `./run_tests.sh unit/path/to/test.py`
+7. **Check test-to-code ratio** - Avoid over-testing simple functions
 
 ## 🛠️ **SYSTEMATIC TEST FAILURE RESOLUTION FOR CURSOR**
 

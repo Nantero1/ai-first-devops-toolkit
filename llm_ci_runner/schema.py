@@ -165,7 +165,7 @@ def _generate_field_example(field_info: FieldInfo) -> Any:
                 enum_values = list(annotation)
                 if enum_values:
                     return enum_values[0].value
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError):  # pragma: no cover
             pass
 
         # Handle Pydantic models (nested objects) - add proper type checking
@@ -173,7 +173,7 @@ def _generate_field_example(field_info: FieldInfo) -> Any:
             if isinstance(annotation, type) and hasattr(annotation, "model_fields"):
                 # This is likely a Pydantic model - recursively generate example
                 return generate_one_shot_example(annotation)
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError):  # pragma: no cover
             pass
 
     # Handle typing constructs
@@ -200,7 +200,7 @@ def _generate_field_example(field_info: FieldInfo) -> Any:
                 if arg is not type(None):
                     return _generate_type_example(arg)
 
-    except Exception:
+    except Exception:  # pragma: no cover
         pass
 
     # Fallback for unknown types
@@ -241,7 +241,7 @@ def _generate_type_example(type_annotation: Any) -> Any:
         try:
             if isinstance(type_annotation, type) and hasattr(type_annotation, "model_fields"):
                 return generate_one_shot_example(type_annotation)
-        except (TypeError, AttributeError):
+        except (TypeError, AttributeError):  # pragma: no cover
             pass
 
     return "example"

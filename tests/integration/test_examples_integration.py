@@ -8,19 +8,11 @@ Given-When-Then pattern.
 
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from llm_ci_runner import main
-from tests.mock_factory import (
-    create_hbs_template_mock,
-    create_jinja2_template_mock,
-    create_minimal_response_mock,
-    create_pr_review_mock,
-    create_structured_output_mock,
-    create_text_output_mock,
-)
 
 
 class TestSimpleExampleIntegration:

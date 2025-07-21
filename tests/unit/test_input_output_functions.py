@@ -18,7 +18,6 @@ from llm_ci_runner import (
     parse_arguments,
     write_output_file,
 )
-from unittest.mock import MagicMock
 
 
 class TestLoadInputFile:
@@ -397,7 +396,7 @@ class TestWriteOutputFile:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r", encoding="utf-8") as f:
+        with open(output_file, encoding="utf-8") as f:
             content = f.read()
         assert content == "This is a markdown response."
 
@@ -412,7 +411,7 @@ class TestWriteOutputFile:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r", encoding="utf-8") as f:
+        with open(output_file, encoding="utf-8") as f:
             content = f.read()
         assert content == "This is a dict response."
 
@@ -427,7 +426,7 @@ class TestWriteOutputFile:
 
         # then
         assert output_file.exists()
-        with open(output_file, "r", encoding="utf-8") as f:
+        with open(output_file, encoding="utf-8") as f:
             content = f.read()
         assert "test" in content or "123" in content  # Should contain string representation
 
