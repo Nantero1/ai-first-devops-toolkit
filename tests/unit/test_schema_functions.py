@@ -6,18 +6,18 @@ with heavy mocking following the Given-When-Then pattern.
 """
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import Field
 from semantic_kernel.kernel_pydantic import KernelBaseModel
 
 from llm_ci_runner import (
     InputValidationError,
     SchemaValidationError,
     create_dynamic_model_from_schema,
-    load_schema_file,
     generate_one_shot_example,
+    load_schema_file,
 )
 
 
@@ -390,15 +390,14 @@ class TestGenerateOneShotExample:
     def test_generate_example_with_optional_fields(self):
         """Test generating example distinguishing required vs optional fields."""
         # given
-        from typing import Optional
 
         class TestModel(KernelBaseModel):
             # Required field (no default, no Optional)
             required_field: str
             # Optional field with default
-            optional_with_default: Optional[str] = "default_value"
+            optional_with_default: str | None = "default_value"
             # Optional field without default (using Optional type)
-            optional_no_default: Optional[str] = None
+            optional_no_default: str | None = None
 
         # when
         result = generate_one_shot_example(TestModel)
@@ -411,9 +410,7 @@ class TestGenerateOneShotExample:
     def test_generate_example_with_union_and_complex_types(self):
         """Test generating example with Union types and complex typing constructs."""
         # given
-        from typing import Union, Dict, List
         from enum import Enum
-        import typing
 
         class Priority(str, Enum):
             HIGH = "high"
@@ -425,11 +422,11 @@ class TestGenerateOneShotExample:
 
         class TestModel(KernelBaseModel):
             # Union type (should use first non-None type)
-            union_field: Union[str, int]
+            union_field: str | int
             # Dict type
-            dict_field: Dict[str, str]
+            dict_field: dict[str, str]
             # List with complex type
-            list_field: List[str]
+            list_field: list[str]
             # Enum field (should use first enum value)
             enum_field: Priority
             # Nested Pydantic model (should recurse)
@@ -454,7 +451,6 @@ class TestGenerateOneShotExample:
     def test_generate_example_with_pydantic_undefined_defaults(self):
         """Test handling of PydanticUndefined and Ellipsis default values."""
         # given
-        from pydantic_core import PydanticUndefined
         from pydantic import Field
 
         class TestModel(KernelBaseModel):
@@ -527,9 +523,10 @@ class TestGenerateOneShotExample:
     def test_generate_field_example_with_optional_and_metadata_edge_cases(self):
         """Test _generate_field_example handles different annotation types correctly."""
         # given
-        from llm_ci_runner.schema import _generate_field_example
+
         from pydantic import Field
-        from typing import Optional
+
+        from llm_ci_runner.schema import _generate_field_example
 
         class TestModel(KernelBaseModel):
             # Plain str field - should get (required)/(optional) labels
@@ -537,7 +534,7 @@ class TestGenerateOneShotExample:
             plain_str_optional: str = Field(default="default", description="An optional string field")
 
             # Optional[str] field - has different annotation, won't get (required)/(optional)
-            optional_str_field: Optional[str] = Field(default=None, description="An optional field")
+            optional_str_field: str | None = Field(default=None, description="An optional field")
 
             # Test with title field (should use title over description)
             titled_field: str = Field(title="CustomTitle", description="This should be ignored")
@@ -571,8 +568,9 @@ class TestGenerateOneShotExample:
     def test_generate_type_example_with_typing_constructs_edge_cases(self):
         """Test _generate_type_example handles complex typing constructs and edge cases."""
         # given
+        from typing import Union
+
         from llm_ci_runner.schema import _generate_type_example
-        from typing import Dict, List, Union
 
         # when/then - test various typing constructs to trigger different code paths
 

@@ -15,139 +15,347 @@
 
 Cross-reference with .cursor/memories.md and .cursor/rules/lessons-learned.mdc for context and best practices.`
 
-# Mode: AGENT MODE 🚀
-**MODE**: Bug Fix - Implementation Active
-**FOCUS**: YAML Output Formatting Issues with ruamel.yaml
-**Current Task**: Analyze and fix inconsistent YAML formatting behavior
+# Mode: PLAN 🎯
 
-## PROBLEM STATEMENT
+Current Task: Add timeout resilience to existing retry mechanism (2-minute default, integrated with retry module)
+Understanding: The codebase already has comprehensive retry logic. Now we need to add timeout protection with close coupling to retry functionality, potentially integrating directly into retry.py module.
 
-### User Observations:
-1. **Literal Block Scalars (`|-`)**: When using `|-`, output looks clean but uses YAML literal blocks:
-   ```yaml
-   deployment_notes:
-     - |-
-       Ensure database schema supports parameterized queries and has appropriate indexes.
-   ```
+## Current State Analysis
 
-2. **Without yaml.width Configuration**: Automatic line wrapping occurs mid-sentence in list items:
-   ```yaml
-   testing_notes:
-     - Test authentication with valid and invalid credentials to ensure correct
-       handling.
-     - Verify that database queries execute correctly and prevent injection
-       attacks.
-   ```
+**Existing Implementation (Completed):**
+✅ Tenacity retry mechanism fully implemented in `llm_ci_runner/retry.py`
+✅ 6 critical API points protected with retry decorators
+✅ 245/245 tests passing, 90.15% coverage  
+✅ Selective exception handling (retry transient, skip permanent errors)
 
-3. **Current "Hack" Solution**: User has to set `yaml.width = 1000` and `YAML_LITERAL_LENGTH_THRESHOLD = 80` to get acceptable output
+**Gap Identified: Timeout Protection**
+❌ No explicit timeout controls on API calls (2-minute default needed)
+❌ Risk of indefinite hangs during network operations
+❌ No integrated timeout + retry solution
 
-### Core Questions:
-- Is the automatically wrapped YAML even valid?
-- What's the proper way to configure ruamel.yaml for clean, readable output?
-- Why do line breaks appear at seemingly random positions?
-- Is there a better style configuration than the current "hack"?
+## Architecture Decision: Integrated vs Separate
 
-## UNDERSTANDING NEEDED:
-- [X] Research ruamel.yaml formatting options and best practices
-- [X] Understand YAML scalar styles (literal, folded, plain, quoted)
-- [X] Investigate width, line breaking, and threshold settings
-- [X] Find official recommendations for YAML formatting
-- [X] Test YAML validity of current output
+**Current Functions with Retry Decorators (HIGH PRIORITY):**
+1. `setup_azure_service()` - @retry_network_operation ✅
+2. `setup_openai_service()` - ❌ **Missing retry decorator**
+3. `_execute_semantic_kernel_with_schema()` - @retry_network_operation ✅  
+4. `_execute_sdk_with_schema()` - @retry_network_operation ✅
 
-## KEY FINDINGS FROM RESEARCH:
+**Functions WITHOUT Retry Decorators (but need timeout):**
+5. `_create_azure_client()` - ❌ No retry, needs both timeout + retry
+6. `_create_openai_client()` - ❌ No retry, needs both timeout + retry
 
-### 1. **YAML is Valid** ✅ 
-- The automatically wrapped YAML **IS VALID** according to YAML spec
-- YAML allows line breaks mid-sentence in plain scalars
-- Line folding is a standard YAML feature, not a bug
+**Analysis**: Only 3/6 critical functions currently have retry protection!
 
-### 2. **Root Cause: Conflicting Requirements**
-- **YAML Spec**: Plain scalars can wrap anywhere
-- **yamllint**: Enforces visual line-length rules for human readability  
-- **User Expectation**: Clean, readable output without manual intervention
+**Architecture Evaluation: Integrated Approach**
 
-### 3. **ruamel.yaml Behavior Explained**
-- `width` setting controls line wrapping for plain scalars
-- Issue #427: ruamel.yaml **doesn't respect unbreakable words** (URLs, long identifiers)
-- Default `best_width` of 80 triggers aggressive wrapping (v0.17.22+)
-- Setting `width = 1000` is a **workaround**, not a proper solution
+**✅ PROS of Integrating into retry.py:**
+- **Single Responsibility**: One module handles all resilience (retry + timeout)
+- **Atomic Operations**: Timeout and retry are applied together, no separate decorators
+- **Cleaner API**: One decorator per function instead of stacking decorators
+- **Unified Configuration**: Timeout + retry settings in one place
+- **Better Testing**: Test timeout + retry interaction as unit
+- **DRY Principle**: No duplicate error handling logic
 
-### 4. **Proper Solutions Available**
-1. **Use Literal Block Scalars (`|-`)** for long text
-2. **Custom string representer** to auto-detect multiline content
-3. **Scalar style control** through ruamel.yaml configuration
+**❌ CONS of Separate Modules:**
+- **Decorator Stacking**: `@timeout @retry` creates complex nested behavior
+- **Split Responsibility**: Two modules for related functionality
+- **Integration Complexity**: Ensuring timeout errors are properly retriable
+- **Configuration Spread**: Timeout config separate from retry config
 
-## CONFIDENCE: 95%
-**ROOT CAUSE IDENTIFIED**: 
+**DECISION: Integrate timeout functionality into retry.py module** ✅
 
-### Current Implementation Analysis:
-- `yaml_recursively_force_literal()` forces literal style (`|-`) for ALL strings >80 chars
-- `YAML_LITERAL_LENGTH_THRESHOLD = 80` is too aggressive
-- Normal sentences become literal blocks when they shouldn't
-- `yaml.width = 1000` is a workaround, not a solution
+## Refined Implementation Plan
 
-### **PROPER SOLUTION IDENTIFIED**:
-1. **Only use literal style for truly multiline content** (contains `\n`)
-2. **Use quoted strings for long single-line content** to prevent wrapping
-3. **Configure optimal ruamel.yaml settings** for natural text flow
-4. **Test with standard YAML parsers** for compatibility
+### Phase 1: Enhanced Retry Module Design
 
-## IMPLEMENTATION PLAN:
-1. Modify `yaml_recursively_force_literal()` logic
-2. Use `scalarstring.DoubleQuotedScalarString` for long single-line strings
-3. Keep literal style only for actual multiline content
-4. Test output for readability and validity
+**Update `llm_ci_runner/retry.py` with timeout integration:**
 
-## NEXT STEPS:
-1. Implement proper scalar style detection based on content
-2. Update YAML configuration to use appropriate scalar styles
-3. Test with real-world examples
-4. Remove the "hack" width=1000 setting
+```python
+# New timeout configuration constants
+DEFAULT_LLM_API_TIMEOUT = 120      # 2 minutes for LLM API calls
+DEFAULT_CLIENT_TIMEOUT = 30        # 30 seconds for client creation  
+DEFAULT_SERVICE_TIMEOUT = 45       # 45 seconds for service setup
+DEFAULT_AUTH_TIMEOUT = 15          # 15 seconds for authentication
 
-## ✅ IMPLEMENTATION COMPLETED
-
-### **SOLUTION IMPLEMENTED**:
-1. **Modified `yaml_recursively_force_literal()` function**:
-   - Uses `LiteralScalarString` only for strings containing `\n` (truly multiline)
-   - Uses `DoubleQuotedScalarString` for long single-line strings (>80 chars)
-   - Keeps plain strings for short content
-
-2. **Updated all tests** to reflect new behavior:
-   - 17 YAML literal tests updated and passing
-   - 38 total formatter tests passing
-   - Comprehensive test coverage maintained
-
-3. **Created demo script** showing improved output:
-   - Long single-line strings use double quotes instead of literal blocks
-   - Only multiline strings use literal blocks (`|-`)
-   - No more random line breaks in sentences
-
-### **RESULTS**:
-- ✅ **All tests passing** (38/38 formatter tests)
-- ✅ **Improved readability** - no more literal blocks for simple sentences
-- ✅ **Maintained functionality** - all existing behavior preserved
-- ✅ **KISS implementation** - minimal changes to existing code
-- ✅ **Backward compatible** - no breaking changes
-
-### **DEMO OUTPUT**:
-```yaml
-success: true
-response:
-  description: "This PR introduces security improvements to the authentication service, including input validation, use of parameterized SQL queries to prevent injection, and basic validation checks for user IDs during session creation."
-  summary: "Enhanced input validation, parameterized queries, and validation checks for secure authentication."
-  testing_notes:
-    - Test authentication with valid credentials to verify login functionality.
-    - Test authentication with empty or null credentials to ensure proper handling.
-    - |-
-      Verify that session creation generates valid tokens and respects expiry handling.
-      This is a multiline testing note.
-    - "Attempt to inject SQL via username and other inputs to confirm injection mitigations."
+# Enhanced retry decorators with integrated timeout
+@retry_with_timeout_openai_api_call(timeout=DEFAULT_LLM_API_TIMEOUT)
+@retry_with_timeout_azure_api_call(timeout=DEFAULT_LLM_API_TIMEOUT)  
+@retry_with_timeout_network_operation(timeout=DEFAULT_LLM_API_TIMEOUT)
 ```
 
-### **KEY IMPROVEMENTS**:
-- ✅ Long single-line strings use double quotes instead of literal blocks
-- ✅ Only truly multiline strings use literal blocks (`|-`)
-- ✅ Short strings remain plain for readability
-- ✅ No more random line breaks in the middle of sentences
-- ✅ Maintains all existing functionality and test coverage
+**New Combined Decorators:**
+1. `retry_with_timeout_openai_api_call` - OpenAI API calls with timeout
+2. `retry_with_timeout_azure_api_call` - Azure API calls with timeout
+3. `retry_with_timeout_network_operation` - General network ops with timeout
+4. `retry_with_timeout_client_creation` - Client creation with timeout
+5. `retry_with_timeout_service_setup` - Service setup with timeout
 
+### Phase 2: Unified Decorator Implementation
+
+**Pattern: Timeout + Retry in Single Decorator**
+
+```python
+def create_retry_with_timeout_decorator(
+    timeout_seconds: int,
+    retry_condition_func: Callable,
+    max_retries: int = DEFAULT_MAX_RETRIES,
+    min_wait: int = DEFAULT_MIN_WAIT,
+    max_wait: int = DEFAULT_MAX_WAIT,
+):
+    """Create unified retry + timeout decorator."""
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Apply timeout wrapper
+            async def timeout_wrapper():
+                return await asyncio.wait_for(
+                    func(*args, **kwargs), 
+                    timeout=timeout_seconds
+                )
+            
+            # Apply retry to timeout wrapper
+            retry_decorator = retry(
+                retry=retry_if_exception(enhanced_retry_condition),
+                stop=stop_after_attempt(max_retries),
+                wait=wait_random_exponential(
+                    multiplier=DEFAULT_EXPONENTIAL_MULTIPLIER,
+                    min=min_wait,
+                    max=max_wait,
+                ),
+                after=after_log(LOGGER, logging.WARNING),
+                reraise=True,
+            )
+            
+            return await retry_decorator(timeout_wrapper)()
+        return wrapper
+    return decorator
+
+def enhanced_retry_condition(exception: BaseException) -> bool:
+    """Enhanced retry condition including timeout errors."""
+    # Add timeout errors as retriable
+    if isinstance(exception, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    
+    # Existing retry logic
+    return retry_condition_func(exception)
+```
+
+### Phase 3: High-Priority Function Updates
+
+**1. LLM Execution Functions (Highest Priority - 120s timeout):**
+```python
+# In llm_execution.py - Update LLMExecutor methods
+@retry_with_timeout_network_operation(timeout=120)  # 2 minutes
+async def _execute_semantic_kernel_with_schema(self, chat_history: list):
+
+@retry_with_timeout_network_operation(timeout=120)  # 2 minutes  
+async def _execute_sdk_with_schema(self, client_type: str, chat_history: list):
+```
+
+**2. Client Creation Functions (High Priority - 30s timeout):**
+```python
+# In llm_execution.py - Update client creation
+@retry_with_timeout_client_creation(timeout=30)
+async def _create_azure_client() -> AsyncAzureOpenAI:
+
+@retry_with_timeout_client_creation(timeout=30)
+async def _create_openai_client() -> AsyncOpenAI:
+```
+
+**3. Service Setup Functions (High Priority - 45s timeout):**
+```python
+# In llm_service.py - Update service setup
+@retry_with_timeout_service_setup(timeout=45)
+async def setup_azure_service():
+
+@retry_with_timeout_service_setup(timeout=45)  # Add missing retry
+async def setup_openai_service():
+```
+
+### Phase 4: Environment Variable Configuration
+
+**Add timeout configuration support:**
+```python
+# In retry.py - Environment variable support
+DEFAULT_LLM_API_TIMEOUT = int(os.getenv("LLM_API_TIMEOUT", "120"))
+DEFAULT_CLIENT_TIMEOUT = int(os.getenv("CLIENT_TIMEOUT", "30"))  
+DEFAULT_SERVICE_TIMEOUT = int(os.getenv("SERVICE_SETUP_TIMEOUT", "45"))
+DEFAULT_AUTH_TIMEOUT = int(os.getenv("AUTH_TIMEOUT", "15"))
+
+# Validation with fallback
+def get_timeout_from_env(env_var: str, default: int) -> int:
+    """Get timeout from environment with validation and fallback."""
+    try:
+        value = os.getenv(env_var)
+        if value is not None:
+            parsed = int(value)
+            if parsed > 0:
+                return parsed
+            else:
+                LOGGER.warning(f"Invalid {env_var} value (must be positive): {parsed}, using default: {default}")
+        return default
+    except (ValueError, TypeError) as e:
+        LOGGER.warning(f"Invalid {env_var} value: {value}, using default: {default}s - {e}")
+        return default
+```
+
+### Phase 5: Enhanced Error Handling
+
+**Timeout-specific error messages:**
+```python
+def create_timeout_aware_wrapper(func, timeout_seconds: int):
+    """Create wrapper with timeout-specific error messages."""
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await asyncio.wait_for(func(*args, **kwargs), timeout=timeout_seconds)
+        except asyncio.TimeoutError as e:
+            operation_name = func.__name__.replace('_', ' ').title()
+            raise TimeoutError(
+                f"{operation_name} timed out after {timeout_seconds}s. "
+                f"Consider increasing timeout via environment variables."
+            ) from e
+    return wrapper
+```
+
+## Implementation Priority (High Priority Functions)
+
+**PHASE 1 - Critical LLM Operations (120s timeout):**
+1. `_execute_semantic_kernel_with_schema()` - Core LLM inference
+2. `_execute_sdk_with_schema()` - Fallback LLM inference
+
+**PHASE 2 - Client/Service Setup (30-45s timeout):**  
+3. `_create_azure_client()` - Azure client creation
+4. `_create_openai_client()` - OpenAI client creation
+5. `setup_azure_service()` - Azure service setup
+6. `setup_openai_service()` - OpenAI service setup (add missing retry)
+
+**PHASE 3 - Testing & Validation:**
+7. Comprehensive timeout + retry interaction tests
+8. Environment variable configuration tests
+9. Error message validation tests
+
+## Testing Strategy
+
+**Enhanced Unit Tests (Building on 37 existing retry tests):**
+
+```python
+class TestTimeoutWithRetry:
+    """Tests for integrated timeout + retry functionality."""
+    
+    @pytest.mark.asyncio
+    async def test_timeout_then_retry_success(self):
+        """Test timeout on first attempt, success on retry."""
+        # given
+        call_count = 0
+        async def slow_then_fast_operation():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                await asyncio.sleep(2)  # Will timeout with 1s limit
+            return "success"
+        
+        decorated = retry_with_timeout_network_operation(timeout=1)(slow_then_fast_operation)
+        
+        # when
+        result = await decorated()
+        
+        # then
+        assert result == "success"
+        assert call_count == 2  # First timeout, second success
+    
+    @pytest.mark.asyncio
+    async def test_timeout_configuration_from_env(self):
+        """Test timeout configuration from environment variables."""
+        # given
+        with patch.dict("os.environ", {"LLM_API_TIMEOUT": "5"}):
+            # when
+            timeout_value = get_timeout_from_env("LLM_API_TIMEOUT", 120)
+            
+            # then
+            assert timeout_value == 5
+```
+
+## Risk Analysis
+
+**Technical Risks:**
+
+1. **Total Execution Time**: timeout × retry_attempts = potential 6-minute total
+   - **Mitigation**: Conservative 2-minute default with 3 retries = reasonable 6-minute max
+   
+2. **Decorator Complexity**: Nested async decorators can be complex
+   - **Mitigation**: Use established tenacity patterns, comprehensive testing
+
+3. **Backward Compatibility**: Changes to existing retry decorators
+   - **Mitigation**: Keep existing decorator names, just enhance functionality
+
+**Implementation Risks:**
+
+1. **Testing Complexity**: Timeout + retry testing requires careful timing
+   - **Mitigation**: Use fast timeouts in tests, proper async mocking
+
+2. **Error Message Clarity**: Users need clear timeout vs other error types
+   - **Mitigation**: Specific timeout error messages with suggestions
+
+## Success Criteria
+
+**Functional Requirements:**
+✅ All high-priority API functions protected with 2-minute timeout
+✅ Integrated timeout + retry decorators (single decorator per function)
+✅ Environment variable configuration for all timeout values
+✅ Clear timeout error messages with suggestions
+✅ Zero breaking changes to existing functionality
+
+**Technical Requirements:**
+✅ <10% performance overhead (timeout checking minimal)
+✅ All existing 245 tests continue to pass
+✅ New timeout tests achieve >90% coverage
+✅ Clean integration in single retry.py module
+
+## Questions for Implementation
+
+1. **Environment Variables**: Should timeout env vars be documented in CLI help?
+
+2. **Error Logging**: Should timeout events be logged at WARNING level like retries?
+
+3. **Fallback Values**: Should invalid timeout env vars use defaults or raise errors?
+
+4. **Decorator Naming**: Keep existing names (`@retry_network_operation`) or rename (`@retry_with_timeout_network_operation`)?
+
+## Confidence Assessment
+
+**Current Confidence: 98%** 🎯 **READY FOR AGENT MODE**
+
+**Knowns:**
+✅ Integrated approach is architecturally superior (single responsibility)
+✅ High-priority functions precisely identified (6 functions, only 3 have retry currently)
+✅ 2-minute default timeout is reasonable for LLM operations
+✅ Gap analysis complete: 3 functions need timeout+retry integration
+✅ Existing retry test patterns can be extended for timeout testing
+✅ Environment variable configuration pattern established
+✅ Error handling patterns established in existing retry.py
+
+**Critical Discovery: Incomplete Retry Coverage**
+❌ `_create_azure_client()` and `_create_openai_client()` have NO retry protection  
+❌ `setup_openai_service()` missing retry decorator
+✅ Only 3/6 critical functions currently protected
+
+**Unknowns (2%):**
+❓ Minor: Decorator naming preferences (enhance existing vs create new)
+
+**Key Technical Insights:**
+1. **Architecture Decision**: Integrated approach eliminates decorator stacking complexity
+2. **Priority Correction**: 6 functions need timeout protection, 3 need retry+timeout
+3. **Conservative Defaults**: 2-minute timeout for LLM calls, 30s for client creation
+4. **Zero Risk Integration**: Enhancing existing decorators maintains compatibility
+5. **Bonus Discovery**: Will fix incomplete retry coverage while adding timeouts
+
+**Implementation Strategy Validated:**
+- ✅ Enhance existing retry.py with timeout functionality
+- ✅ Add missing retry decorators to 3 unprotected functions  
+- ✅ Create unified timeout + retry decorators for all 6 functions
+- ✅ Apply operation-specific timeouts (120s LLM, 30s client, 45s service)
+- ✅ Follow established retry testing patterns
+
+**Ready for Agent Mode Implementation** - will deliver both timeout resilience AND complete retry coverage.

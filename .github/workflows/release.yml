@@ -308,7 +308,10 @@ jobs:
       - name: Write release notes to file
         if: ${{ needs.generate-release-notes.outputs.release_notes != '' }}
         shell: bash
-        run: echo "${{ needs.generate-release-notes.outputs.release_notes }}" > release-notes.txt
+        run: |
+          cat > release-notes.txt << 'EOF'
+          ${{ needs.generate-release-notes.outputs.release_notes }}
+          EOF
 
       - name: Create GitHub Release with generated notes (also creates Git tag)
         if: ${{ needs.generate-release-notes.outputs.release_notes != '' }}

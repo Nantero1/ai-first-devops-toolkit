@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 from .exceptions import LLMExecutionError
 from .formatters import detect_output_format, display_formatted_console, format_output_content
 from .io_operations import create_chat_history, load_schema_file
+from .retry import retry_network_operation
 from .schema import generate_one_shot_example
 
 LOGGER = logging.getLogger(__name__)
@@ -103,8 +104,9 @@ class LLMExecutor:
         """
         return detect_output_format(Path(self.output_file) if self.output_file else None)
 
+    @retry_network_operation
     async def _execute_semantic_kernel_with_schema(self, chat_history: list) -> dict[str, Any]:
-        """Execute LLM task using Semantic Kernel with schema enforcement.
+        """Execute LLM task using Semantic Kernel with schema enforcement and retry.
 
         Args:
             chat_history: List of chat messages
@@ -164,8 +166,9 @@ class LLMExecutor:
 
         return _process_structured_response(content, self.schema_model, self.schema_dict, self.output_format)
 
+    @retry_network_operation
     async def _execute_sdk_with_schema(self, client_type: str, chat_history: list) -> dict[str, Any]:
-        """Execute LLM task using appropriate SDK with schema enforcement.
+        """Execute LLM task using appropriate SDK with schema enforcement and retry.
 
         Unified execution logic for both Azure and OpenAI SDKs.
 
@@ -399,56 +402,6 @@ async def _create_openai_client() -> AsyncOpenAI:
         organization=openai_org if openai_org else None,
         base_url=openai_base_url if openai_base_url else None,
     )
-
-
-async def _execute_text_mode(
-    kernel: Kernel,
-    chat_history: list,
-    output_file: str | None = None,
-) -> dict[str, Any]:
-    """Execute LLM task using text mode (no schema enforcement).
-
-    Args:
-        kernel: Semantic Kernel instance
-        chat_history: List of chat messages
-        output_file: Optional output file path
-
-    Returns:
-        Dictionary containing execution results
-
-    Raises:
-        Exception: If text mode execution fails
-    """
-    # Get the chat completion service
-    service: ChatCompletionService | None = kernel.get_service("azure_openai")
-    if not service:
-        # Try alternative service IDs
-        service = kernel.get_service("openai")
-    if not service:
-        raise Exception("No chat completion service found")
-
-    # Create settings for text mode
-    settings = OpenAIChatPromptExecutionSettings(
-        service_id="azure_openai",
-    )
-
-    # Convert list to ChatHistory for Semantic Kernel compatibility
-    sk_chat_history = create_chat_history(chat_history)
-
-    # Execute without schema enforcement
-    result = await service.get_chat_message_contents(
-        chat_history=sk_chat_history,
-        settings=settings,
-    )
-
-    # Extract content from ChatMessageContent objects
-    if result and len(result) > 0:
-        content = result[0].content
-    else:
-        content = ""
-
-    output_format = detect_output_format(Path(output_file) if output_file else None)
-    return _process_text_response(content, output_format)
 
 
 def _process_structured_response(
