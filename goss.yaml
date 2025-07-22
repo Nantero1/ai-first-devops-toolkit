@@ -76,6 +76,20 @@ command:
     stdout:
       - "semantic-kernel available"
 
+  # Test JIRA package Python lib is installed
+  uv run python -c "from jira import JIRA; print('jira python package available')":
+    exit-status: 0
+    title: jira python package available
+    timeout: 120000
+    stdout:
+      - "jira python package available"
+
+  # Can AzDevOps_azpcontainer can install Python packages
+  sudo -u AzDevOps_azpcontainer env HOME=/home/AzDevOps_azpcontainer /usr/local/bin/uv pip install flask:
+      exit-status: 0
+      title: AzDevOps_azpcontainer can run pip install
+      timeout: 120000
+
   # Test virtual environment is active
   echo $VIRTUAL_ENV:
     exit-status: 0

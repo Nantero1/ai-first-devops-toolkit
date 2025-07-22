@@ -38,7 +38,9 @@ RUN alternatives --set python3 /usr/bin/python3.12 && \
 
 # Copy dependency files and install Python packages
 WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY llm_ci_runner/ ./llm_ci_runner/
+COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
+COPY scripts/optimize_venv.py /tmp/optimize_venv.py
 
 # Setup .netrc for private repository access during build
 RUN --mount=type=secret,id=ARTIFACTORY_USR \
@@ -48,19 +50,18 @@ RUN --mount=type=secret,id=ARTIFACTORY_USR \
     export ARTIFACTORY_PWD=$(cat /run/secrets/ARTIFACTORY_PSW) && \
     envsubst < ~/.netrc.tpl > ~/.netrc && \
     python -m pip install uv && \
-    uv sync --no-install-project --compile-bytecode --upgrade && \
-    rm ~/.netrc
-
-# Copy application code and install the project
-COPY llm_ci_runner/ ./llm_ci_runner/
-COPY README.md LICENSE NOTICE ./
-
-COPY scripts/optimize_venv.py /tmp/optimize_venv.py
-RUN --mount=type=cache,target=/opt/uv-cache/ \
-    uv sync --compile-bytecode --upgrade && \
+# Install the project dependencies:
+    uv sync --upgrade && \
+# Add custom python packages you want to have inside the docker image here:
+    uv pip install jira && \
+    rm ~/.netrc && \
+# give the AzDevOps_azpcontainer user access to the venv to be able to install packages within the pipeline
+    chmod -R g+w .venv/ && \
+    find .venv/ -type d -exec chmod g+s {} \; && \
 # Optimize image size by removing source files for packages with compiled bytecode
-# Keep essential modules and packages that are needed for imports
-    python /tmp/optimize_venv.py /app/.venv && \
+# Keep essential modules and packages that are needed for imports \
+    python -m compileall /app/.venv && \
+    python /tmp/optimize_venv.py /app/ && \
     rm /tmp/optimize_venv.py
 
 # ============================
@@ -104,11 +105,9 @@ RUN alternatives --set python3 /usr/bin/python3.12 && \
 # Create AzDevOps_azpcontainer user with UID 1001 and configure sudo privileges
 RUN useradd -m -u 1001 AzDevOps_azpcontainer 2>/dev/null || true && \
     usermod -aG wheel AzDevOps_azpcontainer && \
+    usermod -aG root AzDevOps_azpcontainer && \
     echo "AzDevOps_azpcontainer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/azdevops && \
     chmod 0440 /etc/sudoers.d/azdevops
-
-# Configure environment paths
-ENV PATH="/root/.local/bin:$PATH"
 
 # Copy the Python virtual environment and application from builder
 COPY --from=builder /app /app
@@ -122,7 +121,7 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 
 # Set up Python virtual environment
 ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:/root/.local/bin:$PATH"
 ENV PYTHONPATH="/app"
 
 # Performance optimizations for runtime
@@ -133,8 +132,7 @@ ENV UV_LINK_MODE=copy
 ENV TERM=xterm-256color
 ENV FORCE_COLOR=1
 ENV COLORTERM=truecolor
-ENV COLUMNS=120
-ENV TTY_COMPATIBLE=1
+ENV COLUMNS=140
 
 # Set default Azure OpenAI configuration for POC
 ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-dev-swecen-001.openai.azure.com/
