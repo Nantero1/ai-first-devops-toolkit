@@ -40,7 +40,6 @@ RUN alternatives --set python3 /usr/bin/python3.12 && \
 WORKDIR /app
 COPY llm_ci_runner/ ./llm_ci_runner/
 COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
-COPY scripts/optimize_venv.py /tmp/optimize_venv.py
 
 # Setup .netrc for private repository access during build
 RUN --mount=type=secret,id=ARTIFACTORY_USR \
@@ -58,11 +57,7 @@ RUN --mount=type=secret,id=ARTIFACTORY_USR \
 # give the AzDevOps_azpcontainer user access to the venv to be able to install packages within the pipeline
     chmod -R g+w .venv/ && \
     find .venv/ -type d -exec chmod g+s {} \; && \
-# Optimize image size by removing source files for packages with compiled bytecode
-# Keep essential modules and packages that are needed for imports \
-    python -m compileall /app/.venv && \
-    python /tmp/optimize_venv.py /app/ && \
-    rm /tmp/optimize_venv.py
+    python -m compileall /app/.venv > /dev/null
 
 # ============================
 # STAGE 2: Runtime Environment  
@@ -103,11 +98,13 @@ RUN alternatives --set python3 /usr/bin/python3.12 && \
     alternatives --set python /usr/bin/python3.12
 
 # Create AzDevOps_azpcontainer user with UID 1001 and configure sudo privileges
-RUN useradd -m -u 1001 AzDevOps_azpcontainer 2>/dev/null || true && \
+# Enhanced configuration for Azure DevOps compatibility
+RUN useradd -m -u 1001 -s /bin/bash AzDevOps_azpcontainer 2>/dev/null || true && \
     usermod -aG wheel AzDevOps_azpcontainer && \
     usermod -aG root AzDevOps_azpcontainer && \
     echo "AzDevOps_azpcontainer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/azdevops && \
-    chmod 0440 /etc/sudoers.d/azdevops
+    chmod 0440 /etc/sudoers.d/azdevops && \
+    chown -R AzDevOps_azpcontainer:AzDevOps_azpcontainer /home/AzDevOps_azpcontainer
 
 # Copy the Python virtual environment and application from builder
 COPY --from=builder /app /app
@@ -145,4 +142,4 @@ RUN chmod +x /entrypoint.sh
 
 # Set entrypoint and default command
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uv", "run", "python", "-m", "llm_ci_runner", "--help"] 
+CMD ["uv", "run", "python", "-m", "llm_ci_runner", "--help"]

@@ -11,6 +11,8 @@ package:
     installed: true
   git:
     installed: true
+  bash:
+    installed: true
 
 command:
   # Test yq is installed
@@ -145,6 +147,30 @@ command:
     title: AzDevOps_azpcontainer can run sudo without password
     stdout:
       - "root"
+
+  # Bash shell tests for Azure DevOps
+  bash --version:
+    exit-status: 0
+    title: Bash shell is available
+    timeout: 120000
+    stdout:
+      - "GNU bash"
+
+  # Test that bash is the default shell
+  /bin/sh --version:
+    exit-status: 0
+    title: /bin/sh points to bash for Azure DevOps compatibility
+    timeout: 120000
+    stdout:
+      - "GNU bash"
+
+  # Test AzDevOps user shell is bash
+  sudo -u AzDevOps_azpcontainer echo $SHELL:
+    exit-status: 0
+    title: AzDevOps user has bash as default shell
+    timeout: 120000
+    stdout:
+      - "/bin/bash"
 
 file:
   # Test key files exist
