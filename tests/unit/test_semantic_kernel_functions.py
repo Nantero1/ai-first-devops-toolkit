@@ -676,9 +676,10 @@ class TestSchemaLoadingErrors:
 class TestResponseProcessing:
     """Tests for response processing edge cases."""
 
-    def test_process_structured_response_json_error_fallback(self):
-        """Test JSON parsing error fallback to text mode."""
+    def test_process_structured_response_json_error_raises_schema_validation_error(self):
+        """Test JSON parsing error with schema enforcement raises SchemaValidationError."""
         # given
+        from llm_ci_runner.exceptions import SchemaValidationError
         from llm_ci_runner.llm_execution import _process_structured_response
 
         mock_schema_model = Mock()
@@ -686,13 +687,13 @@ class TestResponseProcessing:
         mock_schema_dict = {"type": "object"}
         invalid_json_response = "This is not valid JSON"
 
-        # when
-        result = _process_structured_response(invalid_json_response, mock_schema_model, mock_schema_dict, "json")
+        # when & then
+        with pytest.raises(SchemaValidationError) as exc_info:
+            _process_structured_response(invalid_json_response, mock_schema_model, mock_schema_dict, "json")
 
-        # then
-        assert result["mode"] == "text"
-        assert result["output"] == invalid_json_response
-        assert result["schema_enforced"] == False
+        # Verify the error message contains useful information
+        assert "Schema enforcement failed" in str(exc_info.value)
+        assert "Invalid JSON response" in str(exc_info.value)
 
     def test_process_structured_response_no_schema_returns_text(self):
         """Test structured response processing without schema returns text mode."""

@@ -138,7 +138,8 @@ def should_retry_network_exception(exception: BaseException) -> bool:
     """Determine if a general network exception should be retried.
 
     Combines both OpenAI and Azure retry conditions for unified network error handling.
-    Includes timeout errors as retriable since they are transient failures.
+    Includes timeout errors and JSON parsing failures as retriable since they are transient
+    failures that can be resolved with a new LLM invocation.
 
     Args:
         exception: The exception to check
@@ -148,6 +149,12 @@ def should_retry_network_exception(exception: BaseException) -> bool:
     """
     # Retry timeout errors (transient failures)
     if isinstance(exception, asyncio.TimeoutError | TimeoutError):
+        return True
+
+    # Retry schema validation errors (LLM can produce better JSON on retry)
+    from .exceptions import SchemaValidationError
+
+    if isinstance(exception, SchemaValidationError):
         return True
 
     return should_retry_openai_exception(exception) or should_retry_azure_exception(exception)

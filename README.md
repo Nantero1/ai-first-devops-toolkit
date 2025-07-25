@@ -153,7 +153,214 @@ For more examples see the [examples directory](https://github.com/Nantero1/ai-fi
 - 🔄 **Dynamic Content**: Variables and conditional rendering
 - 🚀 **CI/CD Ready**: Perfect for parameterized pipeline workflows
 
-### 4. Development Setup (Optional)
+### 4. Python Library Usage
+
+**NEW**: Use LLM CI Runner as a Python library with enhanced programmatic capabilities, including direct string-based template support:
+
+#### Basic Library Usage
+
+```python
+import asyncio
+from llm_ci_runner import run_llm_task
+
+async def main():
+    # File-based input (traditional approach)
+    response = await run_llm_task(
+        input_file="examples/01-basic/simple-chat/input.json",
+        output_file="response.json"
+    )
+    
+    # Template file with variables file
+    response = await run_llm_task(
+        template_file="examples/05-templates/pr-review-template/template.hbs",
+        template_vars_file="examples/05-templates/pr-review-template/template-vars.yaml",
+        schema_file="examples/05-templates/pr-review-template/schema.yaml",
+        output_file="analysis.json"
+    )
+    
+    print(f"Response: {response}")
+
+# Run the async function
+asyncio.run(main())
+```
+
+#### ✨ NEW: String-Based Templates
+
+**Enhanced programmatic usage with direct template content and Python dict variables:**
+
+```python
+import asyncio
+from llm_ci_runner import run_llm_task
+
+async def analyze_customer_feedback():
+    # Handlebars template with Python dict variables
+    response = await run_llm_task(
+        template_content="""
+<message role="system">You are a customer feedback analysis expert.</message>
+<message role="user">
+Analyze this customer feedback for sentiment and key issues:
+
+Customer: {{customer_name}}
+Date: {{feedback_date}}
+Rating: {{rating}}/5
+Comments: {{comments}}
+
+Provide structured analysis with actionable insights.
+</message>
+        """,
+        template_format="handlebars",
+        template_vars={
+            "customer_name": "John Smith",
+            "feedback_date": "2024-01-15",
+            "rating": 2,
+            "comments": "The product delivery was delayed and customer service was unresponsive."
+        },
+        schema_file="feedback_schema.json",
+        output_file="customer_analysis.json"
+    )
+    return response
+
+# Jinja2 template for dynamic content
+async def generate_code_review():
+    files_to_review = [
+        {"name": "auth.py", "changes": 45, "critical": True},
+        {"name": "utils.py", "changes": 12, "critical": False}
+    ]
+    
+    response = await run_llm_task(
+        template_content="""
+<message role="system">You are a senior code reviewer.</message>
+<message role="user">
+Review these changed files for security and quality issues:
+
+{% for file in files %}
+File: {{ file.name }}
+Lines changed: {{ file.changes }}
+{% if file.critical %}🔴 Critical file - requires thorough review{% endif %}
+
+{% endfor %}
+
+Focus on security vulnerabilities, code quality, and best practices.
+</message>
+        """,
+        template_format="jinja2",
+        template_vars={"files": files_to_review},
+        schema_file="code_review_schema.json"
+    )
+    return response
+
+# Semantic Kernel YAML template with embedded schema
+async def sentiment_analysis():
+    response = await run_llm_task(
+        template_content="""
+name: sentiment_analyzer
+description: Analyze sentiment with structured output
+template: |
+  Analyze the sentiment of this text: "{{$input_text}}"
+  
+  Consider context, tone, and emotional indicators.
+input_variables:
+  - name: input_text
+    description: Text to analyze for sentiment
+execution_settings:
+  azure_openai:
+    temperature: 0.1
+    max_tokens: 200
+    response_format:
+      type: json_schema
+      json_schema:
+        name: sentiment_analysis
+        schema:
+          type: object
+          properties:
+            sentiment:
+              type: string
+              enum: ["positive", "negative", "neutral"]
+            confidence:
+              type: number
+              minimum: 0
+              maximum: 1
+            key_emotions:
+              type: array
+              items:
+                type: string
+            reasoning:
+              type: string
+          required: ["sentiment", "confidence", "reasoning"]
+          additionalProperties: false
+        """,
+        template_format="semantic-kernel",
+        template_vars={
+            "input_text": "I absolutely love this new feature! It's exactly what I needed."
+        }
+    )
+    return response
+
+# Run examples
+asyncio.run(analyze_customer_feedback())
+asyncio.run(generate_code_review())
+asyncio.run(sentiment_analysis())
+```
+
+#### Advanced Library Features
+
+```python
+# Error handling and validation
+try:
+    response = await run_llm_task(
+        template_content="Hello {{name}}!",
+        template_format="handlebars",
+        template_vars={"name": "World"},
+        output_file="greeting.json"
+    )
+except Exception as e:
+    print(f"Error: {e}")
+
+# Multiple template formats in one application
+async def multi_format_processing():
+    # Process different content with appropriate templates
+    tasks = [
+        # Marketing content with Handlebars
+        run_llm_task(
+            template_content="Generate marketing copy for {{product}} targeting {{audience}}",
+            template_format="handlebars",
+            template_vars={"product": "AI Tool", "audience": "developers"}
+        ),
+        
+        # Dynamic reports with Jinja2  
+        run_llm_task(
+            template_content="{% for metric in metrics %}{{ metric.name }}: {{ metric.value }}{% endfor %}",
+            template_format="jinja2", 
+            template_vars={"metrics": [{"name": "Users", "value": 1000}]}
+        ),
+        
+        # Structured analysis with SK YAML
+        run_llm_task(
+            template_content="""
+name: data_processor
+template: "Process: {{$data}}"
+input_variables:
+  - name: data
+            """,
+            template_format="semantic-kernel",
+            template_vars={"data": "sample input"}
+        )
+    ]
+    
+    results = await asyncio.gather(*tasks)
+    return results
+```
+
+**Benefits of Library Usage:**
+- 🐍 **Native Python Integration**: Use directly in your Python applications  
+- 📝 **String Templates**: No need to create template files - define templates inline
+- 🔧 **Dict Variables**: Pass Python dictionaries instead of YAML files
+- ⚡ **Async/Await Support**: Non-blocking execution for better performance
+- 🎯 **Type Safety**: Full IDE support with type hints and autocompletion
+- 🔄 **Batch Processing**: Process multiple templates concurrently
+- 📦 **Zero Dependencies**: Same robust functionality as CLI in library form
+
+### 5. Development Setup (Optional)
 
 For contributors or advanced users who want to modify the source:
 

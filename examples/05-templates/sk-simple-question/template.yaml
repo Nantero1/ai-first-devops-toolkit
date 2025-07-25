@@ -1,0 +1,23 @@
+name: SimpleQuestion
+description: Simple semantic kernel template for asking questions
+template_format: semantic-kernel
+template: |
+  You are a helpful {{$role}} assistant. 
+  Please answer this question: {{$question}}
+  
+  Provide a clear and concise response.
+
+input_variables:
+  - name: role
+    description: The role of the assistant (e.g., technical, customer service)
+    default: "technical"
+    is_required: false
+  - name: question  
+    description: The question to be answered
+    is_required: true
+
+execution_settings:
+  azure_openai:
+    temperature: 0.7
+    max_tokens: 500
+    top_p: 1.0

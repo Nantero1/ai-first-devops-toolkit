@@ -19,7 +19,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSetti
 if TYPE_CHECKING:
     from semantic_kernel.services.chat_completion_service import ChatCompletionService  # type: ignore[import-not-found]
 
-from .exceptions import LLMExecutionError
+from .exceptions import LLMExecutionError, SchemaValidationError
 from .formatters import detect_output_format, display_formatted_console, format_output_content
 from .io_operations import create_chat_history, load_schema_file
 from .retry import retry_network_operation
@@ -442,9 +442,10 @@ def _process_structured_response(
             }
 
         except json.JSONDecodeError as e:
-            LOGGER.warning(f"⚠️ Failed to parse structured response as JSON: {e}")
+            # Schema enforcement is active - parsing failure should trigger retry
+            LOGGER.error(f"❌ Schema enforced but JSON parsing failed: {e}")
             LOGGER.debug(f"   Raw response: {response[:200]}...")
-            return _process_text_response(response, output_format)
+            raise SchemaValidationError(f"Schema enforcement failed: Invalid JSON response - {e}") from e
 
     else:
         return _process_text_response(response, output_format)

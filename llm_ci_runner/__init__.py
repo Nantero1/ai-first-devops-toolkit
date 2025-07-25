@@ -9,16 +9,55 @@ Main Features:
 - 📝 Intelligent documentation generation
 - 🔍 Security analysis with guaranteed schema compliance
 - 🎯 Quality gates through AI-driven validation
-- 📄 Template-driven workflows with Handlebars and Jinja2
+- 📄 Template-driven workflows with Handlebars, Jinja2, and Semantic Kernel YAML
 - 🔐 Enterprise security with Azure RBAC support
 - 📦 CI/CD friendly with JSON/YAML input/output
+- 📚 Library-first design for programmatic use
 
-Usage:
-    # Traditional input file mode
+CLI Usage:
+    # Input file mode
     llm-ci-runner --input-file input.json --schema-file schema.json --output-file result.json
 
     # Template-based mode
     llm-ci-runner --template-file template.hbs --template-vars vars.yaml --schema-file schema.yaml
+
+    # Semantic Kernel YAML templates
+    llm-ci-runner --template-file template.yaml --template-vars vars.yaml --output-file result.json
+
+Library Usage:
+    from llm_ci_runner import run_llm_task
+
+    # Simple input file processing
+    response = await run_llm_task(input_file="input.json")
+
+    # File-based template processing
+    response = await run_llm_task(
+        template_file="template.yaml",
+        template_vars_file="vars.yaml",
+        output_file="result.json"
+    )
+
+    # String-based template processing (NEW)
+    response = await run_llm_task(
+        template_content="Hello {{name}}! Analyze: {{data}}",
+        template_format="handlebars",
+        template_vars={"name": "World", "data": user_input},
+        output_file="result.json"
+    )
+
+    # SK YAML template with embedded schema (NEW)
+    response = await run_llm_task(
+        template_content='''
+template: "Analyze sentiment: {{text}}"
+input_variables:
+  - name: text
+execution_settings:
+  azure_openai:
+    temperature: 0.1
+        ''',
+        template_format="semantic-kernel",
+        template_vars={"text": user_message}
+    )
 
 Environment Variables:
     AZURE_OPENAI_ENDPOINT: Azure OpenAI endpoint URL
@@ -46,7 +85,18 @@ from semantic_kernel.prompt_template import (
     PromptTemplateConfig,
 )
 
-from .core import cli_main, main
+from .core import (
+    cli_main,
+    execute_llm_with_chat_history,
+    load_template_from_string,
+    main,
+    process_handlebars_jinja_template,
+    process_handlebars_jinja_template_with_vars,
+    process_input_file,
+    process_sk_yaml_template,
+    process_sk_yaml_template_with_vars,
+    run_llm_task,
+)
 from .exceptions import (
     AuthenticationError,
     InputValidationError,
@@ -94,6 +144,15 @@ __all__ = [
     # Main entry points
     "cli_main",
     "main",
+    # Library functions for programmatic use
+    "run_llm_task",
+    "process_input_file",
+    "process_sk_yaml_template",
+    "process_sk_yaml_template_with_vars",
+    "process_handlebars_jinja_template",
+    "process_handlebars_jinja_template_with_vars",
+    "execute_llm_with_chat_history",
+    "load_template_from_string",
     # Functions for testing compatibility
     "create_chat_history",
     "execute_llm_task",
@@ -147,6 +206,6 @@ __all__ = [
 ]
 
 # Package metadata
-__version__ = "1.2.0"
+__version__ = "1.4.0"
 __author__ = "Benjamin Linnik"
 __url__ = "https://github.com/Nantero1/ai-first-devops-toolkit"

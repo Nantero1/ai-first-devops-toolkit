@@ -227,6 +227,28 @@ class TestGetTemplateFormat:
         # then
         assert result == "jinja2"
 
+    def test_detect_semantic_kernel_yaml_extension(self):
+        """Test detecting Semantic Kernel format from .yaml extension."""
+        # given
+        template_file = Path("template.yaml")
+
+        # when
+        result = get_template_format(template_file)
+
+        # then
+        assert result == "semantic-kernel"
+
+    def test_detect_semantic_kernel_yml_extension(self):
+        """Test detecting Semantic Kernel format from .yml extension."""
+        # given
+        template_file = Path("template.yml")
+
+        # when
+        result = get_template_format(template_file)
+
+        # then
+        assert result == "semantic-kernel"
+
     def test_detect_jinja2_format_case_insensitive(self):
         """Test detecting Jinja2 format with uppercase extension."""
         # given
@@ -237,6 +259,17 @@ class TestGetTemplateFormat:
 
         # then
         assert result == "jinja2"
+
+    def test_detect_semantic_kernel_format_case_insensitive(self):
+        """Test detecting SK format with uppercase YAML extension."""
+        # given
+        template_file = Path("template.YAML")
+
+        # when
+        result = get_template_format(template_file)
+
+        # then
+        assert result == "semantic-kernel"
 
     def test_unsupported_extension_raises_error(self):
         """Test that unsupported extension raises InputValidationError."""
@@ -353,6 +386,71 @@ Hello {{ name }}, how are you today?
                 load_jinja2_template(template_file)
 
 
+class TestLoadSemanticKernelYamlTemplate:
+    """Tests for load_semantic_kernel_yaml_template function."""
+
+    @patch("llm_ci_runner.templates.KernelFunctionFromPrompt.from_yaml")
+    def test_load_valid_sk_yaml_template(self, mock_from_yaml, temp_dir):
+        """Test loading a valid SK YAML template."""
+        # given
+        template_file = temp_dir / "template.yaml"
+        yaml_content = """name: TestTemplate
+template: |
+  You are a helpful assistant. Answer: {{$question}}
+template_format: semantic-kernel
+input_variables:
+  - name: question
+    description: The question to answer
+    is_required: true
+execution_settings:
+  azure_openai:
+    model_id: gpt-4
+    temperature: 0.7"""
+
+        with open(template_file, "w") as f:
+            f.write(yaml_content)
+
+        mock_function = MagicMock()
+        mock_function.name = "TestTemplate"
+        mock_from_yaml.return_value = mock_function
+
+        # when
+        from llm_ci_runner.templates import load_semantic_kernel_yaml_template
+
+        result = load_semantic_kernel_yaml_template(template_file)
+
+        # then
+        assert result == mock_function
+        mock_from_yaml.assert_called_once_with(yaml_content)
+
+    @patch("llm_ci_runner.templates.KernelFunctionFromPrompt.from_yaml")
+    def test_load_sk_yaml_template_with_invalid_content_raises_error(self, mock_from_yaml, temp_dir):
+        """Test that invalid SK YAML content raises InputValidationError."""
+        # given
+        template_file = temp_dir / "invalid_template.yaml"
+        with open(template_file, "w") as f:
+            f.write("invalid: yaml: content:")
+
+        mock_from_yaml.side_effect = Exception("Invalid YAML structure")
+
+        # when & then
+        from llm_ci_runner.templates import load_semantic_kernel_yaml_template
+
+        with pytest.raises(InputValidationError, match="Failed to load SK YAML template"):
+            load_semantic_kernel_yaml_template(template_file)
+
+    def test_load_nonexistent_sk_yaml_template_raises_error(self):
+        """Test that loading nonexistent SK YAML template raises InputValidationError."""
+        # given
+        nonexistent_file = Path("nonexistent_template.yaml")
+
+        # when & then
+        from llm_ci_runner.templates import load_semantic_kernel_yaml_template
+
+        with pytest.raises(InputValidationError, match="Failed to load SK YAML template"):
+            load_semantic_kernel_yaml_template(nonexistent_file)
+
+
 class TestLoadTemplate:
     """Tests for unified load_template function."""
 
@@ -404,6 +502,30 @@ You are an AI agent.
         # then
         mock_load_jinja2.assert_called_once_with(template_file)
         mock_load_handlebars.assert_not_called()
+        assert result == mock_template
+
+    def test_load_sk_yaml_template_through_unified_function(self, temp_dir):
+        """Test loading SK YAML template through unified load_template function."""
+        # given
+        template_file = temp_dir / "template.yaml"
+        with open(template_file, "w") as f:
+            f.write("name: Test\ntemplate: Hello {{$name}}")
+
+        # when
+        with (
+            patch("llm_ci_runner.templates.load_handlebars_template") as mock_load_handlebars,
+            patch("llm_ci_runner.templates.load_jinja2_template") as mock_load_jinja2,
+            patch("llm_ci_runner.templates.load_semantic_kernel_yaml_template") as mock_load_sk,
+        ):
+            mock_template = MagicMock()
+            mock_load_sk.return_value = mock_template
+
+            result = load_template(template_file)
+
+        # then
+        mock_load_sk.assert_called_once_with(template_file)
+        mock_load_handlebars.assert_not_called()
+        mock_load_jinja2.assert_not_called()
         assert result == mock_template
 
     def test_load_template_unsupported_format_raises_error(self):

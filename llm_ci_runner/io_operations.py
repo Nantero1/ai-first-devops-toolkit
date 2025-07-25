@@ -105,6 +105,13 @@ Environment Variables:
     if args.template_file and args.input_file:
         parser.error("Cannot use both --template-file and --input-file")
 
+    # Validate SK YAML template arguments
+    if args.template_file and args.template_file.suffix.lower() in [".yaml", ".yml"]:
+        # SK YAML templates embed schema but allow external variables
+        if args.schema_file:
+            parser.error("SK YAML templates embed schema. Remove --schema-file argument.")
+        # Note: --template-vars is allowed for practicality with long values
+
     # Template variables are optional when using template files
     # File existence will be checked when the template is actually loaded
 

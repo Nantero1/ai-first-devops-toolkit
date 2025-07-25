@@ -102,7 +102,9 @@ examples/
 └── 05-templates/
     ├── jinja2-example/              # ✅ Auto-tested (Jinja2 template)
     ├── static-example/               # ✅ Auto-tested (Handlebars template)
-    └── pr-review-template/           # ✅ Auto-tested (Handlebars template)
+    ├── pr-review-template/           # ✅ Auto-tested (Handlebars template)
+    ├── sk-simple-question/          # ✅ Auto-tested (Semantic Kernel YAML)
+    └── sk-structured-analysis/       # ✅ Auto-tested (Semantic Kernel YAML)
 ```
 
 **Discovery Priority:**
@@ -112,6 +114,7 @@ examples/
 **Template Support:**
 - **Handlebars**: `.hbs` files with `{{ variable }}` syntax
 - **Jinja2**: `.jinja` and `.j2` files with `{{ variable }}` and `{% control %}` syntax
+- **Semantic Kernel**: `.yaml` and `.yml` files with SK YAML template format
 - **Schema Validation**: Requires `schema.yaml` or `schema.json` for template examples
 - **Template Variables**: Optional `template-vars.yaml` or `template-vars.json` files
 

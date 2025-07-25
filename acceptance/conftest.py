@@ -138,8 +138,8 @@ def llm_ci_runner():
         input_path = Path(input_file)
 
         # Determine mode based on file extension
-        if input_path.suffix.lower() in [".hbs", ".jinja", ".j2"]:
-            # Template mode: --template-file template.hbs/jinja/j2 [--template-vars vars.yaml] --schema-file schema.yaml
+        if input_path.suffix.lower() in [".hbs", ".jinja", ".j2", ".yaml", ".yml"]:
+            # Template mode: --template-file template.hbs/jinja/j2/yaml/yml [--template-vars vars.yaml] --schema-file schema.yaml
             cmd = [
                 "llm-ci-runner",
                 "--template-file",
@@ -159,9 +159,12 @@ def llm_ci_runner():
             elif template_vars_json.exists():
                 cmd.extend(["--template-vars", str(template_vars_json)])
 
-            # Schema file is required for template mode
+            # Schema file is required for template mode (except SK YAML templates which have embedded schemas)
             if schema_file:
-                cmd.extend(["--schema-file", schema_file])
+                # Don't add external schema for SK YAML templates - they have embedded schemas
+                is_sk_template = input_path.suffix.lower() in [".yaml", ".yml"] and input_path.name.startswith("template.")
+                if not is_sk_template:
+                    cmd.extend(["--schema-file", schema_file])
         else:
             # Input file mode: --input-file input.json [--schema-file schema.json]
             cmd = [
@@ -486,15 +489,54 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
 
         # Determine example type and context
         input_path = Path(input_file)
-        is_template = input_path.suffix.lower() in [".hbs", ".jinja", ".j2"]
+        is_template = input_path.suffix.lower() in [".hbs", ".jinja", ".j2", ".yaml", ".yml"]
 
         # Load input context
         if is_template:
             # For templates, read the template content
             with open(input_file) as f:
                 input_content = f.read()
-            input_context = f"Template-based example: {example_name}. Template content: {input_content[:300]}..."
-            evaluation_query = f"Template-based generation using: {input_content[:200]}..."
+            
+            # For SK YAML templates, also include the template variables for better context
+            if input_path.suffix.lower() in [".yaml", ".yml"] and input_path.name.startswith("template."):
+                # Parse SK YAML template to extract the actual prompt
+                try:
+                    import yaml
+                    template_data = yaml.safe_load(input_content)
+                    template_prompt = template_data.get("template", "").strip()
+                    
+                    # Look for template-vars file
+                    template_vars_yaml = input_path.parent / "template-vars.yaml"
+                    template_vars_json = input_path.parent / "template-vars.json"
+                    
+                    vars_context = ""
+                    template_vars = {}
+                    if template_vars_yaml.exists():
+                        with open(template_vars_yaml) as f:
+                            vars_content = f.read()
+                            template_vars = yaml.safe_load(vars_content)
+                        vars_context = f" Template variables: {vars_content[:200]}..."
+                    elif template_vars_json.exists():
+                        with open(template_vars_json) as f:
+                            vars_content = f.read()
+                            template_vars = json.loads(vars_content)
+                        vars_context = f" Template variables: {vars_content[:200]}..."
+                    
+                    # Render template with variables for evaluation query (simplified rendering)
+                    evaluation_query = template_prompt
+                    for var_name, var_value in template_vars.items():
+                        evaluation_query = evaluation_query.replace(f"{{{{{var_name}}}}}", str(var_value)[:100])
+                        evaluation_query = evaluation_query.replace(f"{{{{${var_name}}}}}", str(var_value)[:100])
+                    
+                    input_context = f"Semantic Kernel YAML template: {example_name}. Template prompt: '{template_prompt}'{vars_context}"
+                    
+                except Exception:
+                    # Fallback to original behavior if parsing fails
+                    input_context = f"Semantic Kernel YAML template: {example_name}. Template: {input_content[:200]}..."
+                    evaluation_query = f"SK template-based analysis using template and variables"
+            else:
+                input_context = f"Template-based example: {example_name}. Template content: {input_content[:300]}..."
+                evaluation_query = f"Template-based generation using: {input_content[:200]}..."
         else:
             # For JSON examples, load the messages
             try:
@@ -523,6 +565,23 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
                     schema_context = f"Expected schema: {yaml.dump(schema_data, default_flow_style=False)}"
                 except Exception as e:
                     schema_context = f"Schema file exists but could not be parsed: {e}"
+        elif is_template and input_path.suffix.lower() in [".yaml", ".yml"] and input_path.name.startswith("template."):
+            # For SK YAML templates, check for embedded schema
+            try:
+                import yaml
+                with open(input_file) as f:
+                    template_content = f.read()
+                template_data = yaml.safe_load(template_content)
+                
+                # Look for embedded schema in execution_settings
+                if "execution_settings" in template_data:
+                    for service, settings in template_data["execution_settings"].items():
+                        if "response_format" in settings and settings["response_format"].get("type") == "json_schema":
+                            embedded_schema = settings["response_format"]["json_schema"]["schema"]
+                            schema_context = f"Embedded JSON schema: {json.dumps(embedded_schema, indent=2)}"
+                            break
+            except Exception:
+                pass  # No embedded schema found, continue without schema context
 
         # Format output for evaluation
         if isinstance(output_result, dict):
@@ -713,6 +772,17 @@ Use objective criteria and provide specific reasoning for your assessment.""",
         - Should demonstrate understanding of software architecture
         - Should include realistic timelines and milestones
         - Should consider quality gates and risk assessment
+            """)
+
+        elif "structured-analysis" in name_lower:
+            criteria_parts.append("""
+        - Should provide structured analysis output in the specified JSON format
+        - Should analyze the provided text content accurately
+        - Should include sentiment analysis with appropriate confidence scores
+        - Should identify key themes from the input text
+        - Should provide a clear summary of the analyzed content
+        - Should include accurate metadata like word count
+        - Should follow the embedded JSON schema requirements exactly
             """)
 
         # Generic quality standards

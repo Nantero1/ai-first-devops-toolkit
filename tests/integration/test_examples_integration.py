@@ -8,7 +8,7 @@ Given-When-Then pattern.
 
 import json
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -764,3 +764,300 @@ class TestSimpleExampleIntegrationOpenAI:
         assert "metadata" in result
         # Note: The Semantic Kernel service is not called because it falls back to OpenAI SDK
         # This is the expected behavior for OpenAI integration tests
+
+
+class TestSemanticKernelIntegration:
+    """Integration tests for Semantic Kernel YAML template functionality."""
+
+    @pytest.mark.asyncio
+    async def test_sk_simple_question_template(self, temp_integration_workspace, sk_mock_kernel_invoke):
+        """Test Semantic Kernel simple question template with realistic response."""
+        # given
+        template_file = Path("tests/integration/data/sk-simple-question/template.yaml")
+        template_vars_file = Path("tests/integration/data/sk-simple-question/template-vars.yaml")
+        output_file = temp_integration_workspace / "output" / "sk_simple_output.json"
+
+        # when - Mock only kernel.invoke at the exact integration point, let all SK code run naturally
+        # This follows integration test guidelines: mock external dependencies, test behavior end-to-end
+        with patch("semantic_kernel.kernel.Kernel.invoke", sk_mock_kernel_invoke):
+            test_args = [
+                "llm-ci-runner",
+                "--template-file",
+                str(template_file),
+                "--template-vars",
+                str(template_vars_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "INFO",
+            ]
+
+            with patch("sys.argv", test_args):
+                await main()
+
+        # then - Test end-to-end behavior: SK template should produce expected output
+        assert output_file.exists()
+        with open(output_file) as f:
+            result = json.load(f)
+
+        # Verify behavior: successful execution with expected response structure
+        assert result["success"] is True
+        assert isinstance(result["response"], str)
+        assert "Continuous Integration" in result["response"]
+        assert "Continuous Deployment" in result["response"]
+        assert "metadata" in result
+
+        # Verify the SK kernel.invoke was called (integration test validates end-to-end behavior)
+        sk_mock_kernel_invoke.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_sk_structured_analysis_template(self, temp_integration_workspace, integration_mock_azure_service):
+        """Test Semantic Kernel structured analysis template with JSON schema output."""
+        # given
+        template_file = Path("tests/integration/data/sk-structured-analysis/template.yaml")
+        template_vars_file = Path("tests/integration/data/sk-structured-analysis/template-vars.yaml")
+        output_file = temp_integration_workspace / "output" / "sk_structured_output.json"
+
+        # Mock realistic structured JSON response that matches the schema
+        realistic_structured_response = {
+            "sentiment": "neutral",
+            "confidence": 0.75,
+            "key_themes": [
+                "CI/CD pipeline implementation",
+                "Deployment frequency improvement",
+                "Test coverage concerns",
+                "Team reactions to changes",
+            ],
+            "summary": "The text discusses a successful CI/CD pipeline implementation that improved deployment frequency but raised concerns about testing and monitoring, with mixed team reactions.",
+            "word_count": 65,
+        }
+
+        from tests.mock_factory import create_mock_chat_message_content
+
+        mock_response = create_mock_chat_message_content(content=json.dumps(realistic_structured_response))
+        integration_mock_azure_service.get_chat_message_contents.return_value = [mock_response]
+        integration_mock_azure_service.service_id = "azure_openai"
+
+        # when - Mock only the LLM service, let SK template processing run naturally
+        with patch("llm_ci_runner.core.setup_llm_service", return_value=(integration_mock_azure_service, None)):
+            test_args = [
+                "llm-ci-runner",
+                "--template-file",
+                str(template_file),
+                "--template-vars",
+                str(template_vars_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "DEBUG",
+            ]
+
+            with patch("sys.argv", test_args):
+                await main()
+
+        # then
+        assert output_file.exists()
+        with open(output_file) as f:
+            result = json.load(f)
+
+        # Verify behavior: successful structured output execution
+        assert result["success"] is True
+        assert isinstance(result["response"], dict)
+
+        # Verify structured response contains expected schema fields
+        response_data = result["response"]
+        assert response_data["sentiment"] == "neutral"
+        assert "key_themes" in response_data
+        assert len(response_data["key_themes"]) >= 1
+        assert response_data["confidence"] == 0.75
+        assert "summary" in response_data
+        assert "word_count" in response_data
+
+        # Verify integration metadata
+        assert "metadata" in result
+
+        # Verify the LLM service was called
+        integration_mock_azure_service.get_chat_message_contents.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_sk_template_error_handling(self, temp_integration_workspace):
+        """Test Semantic Kernel template error handling behavior."""
+        # given
+        template_file = Path("tests/integration/data/sk-simple-question/template.yaml")
+        template_vars_file = Path("tests/integration/data/sk-simple-question/template-vars.yaml")
+        output_file = temp_integration_workspace / "output" / "sk_error_output.json"
+
+        # when - simulate kernel.invoke failure (external dependency error)
+        # Following integration test guidelines: mock only external dependencies
+        error_mock = AsyncMock(side_effect=Exception("Simulated LLM service failure"))
+        with patch("semantic_kernel.kernel.Kernel.invoke", error_mock):
+            test_args = [
+                "llm-ci-runner",
+                "--template-file",
+                str(template_file),
+                "--template-vars",
+                str(template_vars_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "DEBUG",
+            ]
+
+            with patch("sys.argv", test_args):
+                # then - verify error handling causes SystemExit (CLI behavior)
+                with pytest.raises(SystemExit) as exc_info:
+                    await main()
+
+                # Verify it exits with error code 1 (proper error handling)
+                assert exc_info.value.code == 1
+
+        # Verify the external call was attempted (behavior-focused assertion)
+        error_mock.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_sk_template_file_validation(self, temp_integration_workspace):
+        """Test Semantic Kernel template file validation behavior."""
+        # given
+        nonexistent_template = Path("tests/integration/data/nonexistent-template.yaml")
+        template_vars_file = Path("tests/integration/data/sk-simple-question/template-vars.yaml")
+        output_file = temp_integration_workspace / "output" / "sk_validation_output.json"
+
+        # when - attempt to use nonexistent template file
+        test_args = [
+            "llm-ci-runner",
+            "--template-file",
+            str(nonexistent_template),
+            "--template-vars",
+            str(template_vars_file),
+            "--output-file",
+            str(output_file),
+            "--log-level",
+            "DEBUG",
+        ]
+
+        with patch("sys.argv", test_args):
+            # then - verify file validation error causes SystemExit (CLI behavior)
+            with pytest.raises(SystemExit) as exc_info:
+                await main()
+
+            # Verify it exits with error code 1
+            assert exc_info.value.code == 1
+
+    @pytest.mark.asyncio
+    async def test_sk_template_vars_validation(self, temp_integration_workspace):
+        """Test Semantic Kernel template variable validation behavior."""
+        # given
+        template_file = Path("tests/integration/data/sk-simple-question/template.yaml")
+        nonexistent_vars = Path("tests/integration/data/nonexistent-vars.yaml")
+        output_file = temp_integration_workspace / "output" / "sk_vars_validation_output.json"
+
+        # when - attempt to use nonexistent template vars file
+        test_args = [
+            "llm-ci-runner",
+            "--template-file",
+            str(template_file),
+            "--template-vars",
+            str(nonexistent_vars),
+            "--output-file",
+            str(output_file),
+            "--log-level",
+            "DEBUG",
+        ]
+
+        with patch("sys.argv", test_args):
+            # then - verify template vars validation error causes SystemExit (CLI behavior)
+            with pytest.raises(SystemExit) as exc_info:
+                await main()
+
+            # Verify it exits with error code 1
+            assert exc_info.value.code == 1
+
+    @pytest.mark.asyncio
+    async def test_sk_template_integration_with_real_file_operations(
+        self, temp_integration_workspace, sk_mock_kernel_invoke
+    ):
+        """Test end-to-end Semantic Kernel integration with real file I/O operations."""
+        # given - create temporary template files in workspace
+        workspace_template_dir = temp_integration_workspace / "templates"
+        workspace_template_dir.mkdir()
+
+        template_file = workspace_template_dir / "test_template.yaml"
+        template_vars_file = workspace_template_dir / "test_vars.yaml"
+        output_file = temp_integration_workspace / "output" / "integration_output.json"
+
+        # Create actual template files for real file operations
+        template_content = """name: IntegrationTest
+description: Integration test template
+template_format: semantic-kernel
+template: |
+  You are a {{$role}} assistant.
+  Answer: {{$question}}
+
+input_variables:
+  - name: role
+    description: Assistant role
+    default: "helpful"
+    is_required: false
+  - name: question
+    description: Question to answer
+    is_required: true
+
+execution_settings:
+  azure_openai:
+    temperature: 0.5
+    max_tokens: 300"""
+
+        vars_content = """role: test assistant
+question: What is integration testing?"""
+
+        with open(template_file, "w") as f:
+            f.write(template_content)
+
+        with open(template_vars_file, "w") as f:
+            f.write(vars_content)
+
+        # when - Test end-to-end behavior with real file I/O and SK template processing
+        # Mock only the external LLM call, let all file operations and SK processing run naturally
+        with patch("semantic_kernel.kernel.Kernel.invoke", sk_mock_kernel_invoke):
+            test_args = [
+                "llm-ci-runner",
+                "--template-file",
+                str(template_file),
+                "--template-vars",
+                str(template_vars_file),
+                "--output-file",
+                str(output_file),
+                "--log-level",
+                "INFO",
+            ]
+
+            with patch("sys.argv", test_args):
+                await main()
+
+        # then - verify end-to-end integration behavior
+        assert output_file.exists()
+        with open(output_file) as f:
+            result = json.load(f)
+
+        # Verify successful end-to-end execution
+        assert result["success"] is True
+        assert isinstance(result["response"], str)
+        assert "metadata" in result
+
+        # Verify the external dependency was called (behavior-focused testing)
+        sk_mock_kernel_invoke.assert_called_once()
+
+        # Verify file operations worked by checking the template was processed
+        # (The fact that we got a successful response means files were read and processed correctly)
+
+        # Verify template files were created and are readable
+        assert template_file.exists()
+        assert template_vars_file.exists()
+
+        with open(template_file) as f:
+            saved_template = f.read()
+        assert "IntegrationTest" in saved_template
+
+        with open(template_vars_file) as f:
+            saved_vars = f.read()
+        assert "test assistant" in saved_vars

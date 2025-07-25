@@ -118,10 +118,23 @@ class TestGenericExampleEvaluation:
         assert "metadata" in result, "Response should contain metadata field"
         console.print(f"  ✅ {example_name} execution successful", style="green")
 
-        # then - Phase 2: Schema compliance (if schema exists)
+        # then - Phase 2: Schema compliance (if schema exists or SK template with embedded schema)
         if schema_file:
             self._validate_schema_compliance(result, schema_file, example_name)
             console.print(f"  ✅ {example_name} schema compliance verified", style="green")
+        elif "_yaml" in example_name and "sk-" in example_name:
+            # Check if SK template has embedded JSON schema for structured output
+            has_embedded_schema = self._sk_template_has_embedded_schema(input_file)
+            response_data = result.get("response", {})
+            
+            if has_embedded_schema:
+                # SK template with embedded schema should produce structured output
+                assert isinstance(response_data, dict), f"SK template {example_name} with embedded schema should produce structured output"
+                console.print(f"  ✅ {example_name} SK structured output verified", style="green")
+            else:
+                # SK template without embedded schema produces text output
+                assert isinstance(response_data, str), f"SK template {example_name} without embedded schema should produce text output"
+                console.print(f"  ✅ {example_name} SK text output verified", style="green")
 
         # then - Phase 3: LLM-as-judge quality assessment (if not smoke test)
         if not smoke_test_mode:
@@ -238,6 +251,29 @@ class TestGenericExampleEvaluation:
             min_score=min_score,
             rich_output=rich_test_output,
         )
+
+    def _sk_template_has_embedded_schema(self, template_file: Path) -> bool:
+        """Check if SK YAML template has embedded JSON schema for structured output."""
+        try:
+            import yaml
+            
+            with open(template_file) as f:
+                template_content = f.read()
+            template_data = yaml.safe_load(template_content)
+            
+            # Look for embedded schema in execution_settings
+            if "execution_settings" in template_data:
+                for service, settings in template_data["execution_settings"].items():
+                    if (
+                        "response_format" in settings 
+                        and settings["response_format"].get("type") == "json_schema"
+                        and "json_schema" in settings["response_format"]
+                    ):
+                        return True
+            return False
+        except Exception:
+            # If we can't parse the template, assume no embedded schema
+            return False
 
     def _get_generic_minimum_score(self, example_name: str) -> int:
         """Get minimum score requirement based on example complexity."""
@@ -402,8 +438,8 @@ def pytest_generate_tests(metafunc):
             examples.append((input_file, schema, f"{example_name}_json"))
 
         # Second pass: Find template-based examples (fallback when no input.json)
-        # Support multiple template formats: .hbs (Handlebars), .jinja/.j2 (Jinja2)
-        template_extensions = [".hbs", ".jinja", ".j2"]
+        # Support multiple template formats: .hbs (Handlebars), .jinja/.j2 (Jinja2), .yaml/.yml (Semantic Kernel)
+        template_extensions = [".hbs", ".jinja", ".j2", ".yaml", ".yml"]
 
         for template_file in examples_dir.rglob("template.*"):
             # Check if it's a supported template extension
@@ -421,7 +457,10 @@ def pytest_generate_tests(metafunc):
             schema_json = folder / "schema.json"
             schema_file = schema_yaml if schema_yaml.exists() else (schema_json if schema_json.exists() else None)
 
-            if schema_file:  # Only include if schema exists
+            # Include if external schema exists OR if it's a SK YAML template (has embedded schema)
+            is_sk_template = template_file.suffix.lower() in [".yaml", ".yml"] and template_file.name.startswith("template.")
+            
+            if schema_file or is_sk_template:
                 example_name = str(folder.relative_to(examples_dir)).replace("/", "_").replace("\\", "_")
                 template_type = template_file.suffix.lower().replace(".", "")
                 examples.append((template_file, schema_file, f"{example_name}_{template_type}"))

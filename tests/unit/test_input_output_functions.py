@@ -590,10 +590,10 @@ class TestParseArguments:
 
     def test_parse_template_arguments(self):
         """Test parsing template-related arguments."""
-        # given
+        # given - use handlebars template which allows external schema
         test_args = [
             "--template-file",
-            "template.yaml",
+            "template.hbs",
             "--template-vars",
             "vars.json",
             "--schema-file",
@@ -605,7 +605,7 @@ class TestParseArguments:
             args = parse_arguments()
 
         # then
-        assert args.template_file == Path("template.yaml")
+        assert args.template_file == Path("template.hbs")
         assert args.template_vars == Path("vars.json")
         assert args.input_file is None
         assert args.schema_file == Path("schema.yaml")
@@ -623,6 +623,21 @@ class TestParseArguments:
         assert args.template_file == Path("template.yaml")
         assert args.template_vars is None  # Should be None when not provided
         assert args.input_file is None
+
+    def test_parse_sk_yaml_template_with_schema_file_raises_error(self):
+        """Test that SK YAML templates cannot use external schema files."""
+        # given - SK YAML template with schema file (should fail)
+        test_args = [
+            "--template-file",
+            "template.yaml",
+            "--schema-file",
+            "schema.yaml",
+        ]
+
+        # when & then
+        with patch("sys.argv", ["llm_ci_runner.py"] + test_args):
+            with pytest.raises(SystemExit):
+                parse_arguments()
 
     def test_parse_mutually_exclusive_input_methods_raises_error(self):
         """Test that providing both input-file and template-file raises error."""
