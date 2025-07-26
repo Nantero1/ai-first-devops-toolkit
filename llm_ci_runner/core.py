@@ -188,13 +188,13 @@ async def process_sk_yaml_template(
 
     # SK handles EVERYTHING: template rendering, chat history, schema validation, LLM execution
     LOGGER.info("🚀 Executing SK YAML template")
-    
+
     # Debug: Pre-invoke service validation
     LOGGER.debug(f"🔍 Template execution settings: {getattr(template, 'prompt_execution_settings', 'NO_SETTINGS')}")
     LOGGER.debug(f"🔍 Available kernel services: {kernel.services}")
     LOGGER.debug(f"🔍 Template name: {getattr(template, 'name', 'NO_NAME')}")
     LOGGER.debug(f"🔍 SK Arguments: {dict(sk_arguments)}")
-    
+
     try:
         result = await kernel.invoke(template, sk_arguments)
         LOGGER.debug("✅ SK template execution successful")
@@ -202,8 +202,10 @@ async def process_sk_yaml_template(
         LOGGER.error(f"🚨 SK invoke failed: {e}")
         LOGGER.error(f"🚨 Error type: {type(e).__name__}")
         LOGGER.error(f"🚨 Template: {getattr(template, 'name', 'UNKNOWN')}")
-        LOGGER.error(f"🚨 Available services: {[s.service_id for s in kernel.services.values() if hasattr(s, 'service_id')]}")
-        if hasattr(template, 'prompt_execution_settings'):
+        LOGGER.error(
+            f"🚨 Available services: {[s.service_id for s in kernel.services.values() if hasattr(s, 'service_id')]}"
+        )
+        if hasattr(template, "prompt_execution_settings"):
             LOGGER.error(f"🚨 Template execution settings: {template.prompt_execution_settings}")
         raise
 
@@ -296,26 +298,26 @@ def _convert_chat_history_to_list(chat_history: Any) -> list[dict[str, str]]:
 
 def _create_kernel_with_service(service: Any) -> Kernel:
     """Create and configure Semantic Kernel with service.
-    
+
     Adds comprehensive debugging for service registration to help diagnose
     KernelServiceNotFoundError issues with SK service selection.
     """
     kernel = Kernel()
-    
+
     # Add service with debug logging
     kernel.add_service(service)
-    
+
     # Debug: Verify service registration
     services = kernel.services
     LOGGER.debug(f"🔍 Registered services: {services}")
     LOGGER.debug(f"🔍 Service type: {type(service)}")
     LOGGER.debug(f"🔍 Service ID: {getattr(service, 'service_id', 'NO_ID')}")
     LOGGER.debug(f"🔍 Service attributes: {[attr for attr in dir(service) if not attr.startswith('_')]}")
-    
+
     # Additional SK service validation
-    if hasattr(service, 'ai_model_id'):
+    if hasattr(service, "ai_model_id"):
         LOGGER.debug(f"🔍 AI Model ID: {service.ai_model_id}")
-    
+
     return kernel
 
 
@@ -326,52 +328,49 @@ def _write_output_if_specified(output_file: str | None, content: str | dict[str,
         write_output_file(Path(output_file), content)
 
 
-async def load_template_from_string(
-    template_content: str, 
-    template_format: str
-) -> Any:
+async def load_template_from_string(template_content: str, template_format: str) -> Any:
     """
     Load template from string content with specified format.
-    
+
     PURPOSE: Creates template objects from string content rather than files,
     enabling direct Python integration without requiring temporary file creation.
-    
+
     Args:
         template_content: Template content as string
         template_format: Template format ("handlebars", "jinja2", "semantic-kernel")
-        
+
     Returns:
         Template object (HandlebarsPromptTemplate, Jinja2PromptTemplate, or KernelFunctionFromPrompt)
-        
+
     Raises:
         InputValidationError: If template loading fails
     """
     LOGGER.debug(f"🔧 Loading template from string - format: {template_format}")
-    
+
     if template_format == "handlebars":
         from semantic_kernel.prompt_template import HandlebarsPromptTemplate, PromptTemplateConfig
-        
+
         config = PromptTemplateConfig(
             template=template_content,
             template_format="handlebars",
         )
         return HandlebarsPromptTemplate(prompt_template_config=config)
-        
+
     elif template_format == "jinja2":
         from semantic_kernel.prompt_template import Jinja2PromptTemplate, PromptTemplateConfig
-        
+
         config = PromptTemplateConfig(
             template=template_content,
             template_format="jinja2",
         )
         return Jinja2PromptTemplate(prompt_template_config=config)
-        
+
     elif template_format == "semantic-kernel":
         from semantic_kernel.functions.kernel_function_from_prompt import KernelFunctionFromPrompt
-        
+
         # Use SK's YAML parser to create function from string
         return KernelFunctionFromPrompt.from_yaml(template_content)
-        
+
     else:
         raise InputValidationError(f"Unsupported template format: {template_format}")
 
@@ -384,7 +383,7 @@ async def process_sk_yaml_template_with_vars(
 ) -> str | dict[str, Any]:
     """
     Process SK YAML template with dict-based template variables.
-    
+
     Enhanced version of process_sk_yaml_template that accepts template variables
     as a Python dict rather than requiring a file.
     """
@@ -403,7 +402,7 @@ async def process_sk_yaml_template_with_vars(
 
     # Execute template
     LOGGER.info("🚀 Executing SK YAML template")
-    
+
     try:
         result = await kernel.invoke(template, sk_arguments)
         LOGGER.debug("✅ SK template execution successful")
@@ -454,7 +453,7 @@ async def process_handlebars_jinja_template_with_vars(
 ) -> list[dict[str, str]]:
     """
     Process Handlebars or Jinja2 template with dict-based template variables.
-    
+
     Enhanced version of process_handlebars_jinja_template that accepts template variables
     as a Python dict rather than requiring a file.
     """
@@ -520,7 +519,7 @@ async def execute_llm_with_chat_history(
     chat_history: list[dict[str, str]],
     schema_file: str | None = None,
     output_file: str | None = None,
-) -> str:
+) -> str | dict[str, Any]:
     """
     Execute LLM task with chat history.
 
@@ -535,7 +534,7 @@ async def execute_llm_with_chat_history(
         output_file: Optional output file path
 
     Returns:
-        String response from LLM execution
+        String response from LLM execution or structured dict if schema validation was used
 
     Raises:
         LLMRunnerError: If LLM execution fails
@@ -586,7 +585,7 @@ async def run_llm_task(
 
     Main library function that provides programmatic access to LLM CI Runner
     functionality. Handles service setup, input processing, and execution
-    coordination without CLI dependencies. Supports both file-based and 
+    coordination without CLI dependencies. Supports both file-based and
     direct string-based template input for enhanced Python integration.
 
     Args:
@@ -618,7 +617,7 @@ async def run_llm_task(
         ...     template_vars_file="vars.yaml",
         ...     output_file="result.json"
         ... )
-        
+
         >>> # String-based template processing
         >>> response = await run_llm_task(
         ...     template_content="Hello {{name}}!",
@@ -626,7 +625,7 @@ async def run_llm_task(
         ...     template_vars={"name": "World"},
         ...     output_file="result.txt"
         ... )
-        
+
         >>> # SK YAML template with embedded schema
         >>> response = await run_llm_task(
         ...     template_content=\"\"\"
@@ -648,7 +647,9 @@ async def run_llm_task(
     # Check mutually exclusive template inputs
     template_inputs = [input_file, template_file, template_content]
     if sum(1 for x in template_inputs if x is not None) > 1:
-        raise InputValidationError("Cannot specify multiple template inputs: input_file, template_file, and template_content are mutually exclusive")
+        raise InputValidationError(
+            "Cannot specify multiple template inputs: input_file, template_file, and template_content are mutually exclusive"
+        )
 
     # Check template_format requirement for string templates
     if template_content and not template_format:
@@ -660,7 +661,9 @@ async def run_llm_task(
 
     # Validate template_format values
     if template_format and template_format not in ["handlebars", "jinja2", "semantic-kernel"]:
-        raise InputValidationError(f"Invalid template_format: {template_format}. Must be one of: handlebars, jinja2, semantic-kernel")
+        raise InputValidationError(
+            f"Invalid template_format: {template_format}. Must be one of: handlebars, jinja2, semantic-kernel"
+        )
 
     # Setup logging
     setup_logging(log_level)
@@ -707,6 +710,10 @@ async def run_llm_task(
         elif template_content:
             # String-based template mode
             LOGGER.info("📄 Processing template content")
+
+            # Validate template_format is provided
+            if template_format is None:
+                raise ValueError("template_format must be specified when using template_content")
 
             # Load template from string content
             template = await load_template_from_string(template_content, template_format)
@@ -773,7 +780,7 @@ async def main() -> None:
         CONSOLE.print(
             Panel.fit(
                 f"[bold green]✅ Success![/bold green]\n"
-                f"Response length: {len(response)} characters\n"
+                f"Response length: {len(str(response))} characters\n"
                 f"Output written to: [bold]{args.output_file or 'console'}[/bold]",
                 border_style="green",
             )

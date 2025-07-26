@@ -155,9 +155,7 @@ class TestRunLlmTaskStringTemplates:
         mock_setup_service.assert_called_once()
         mock_load_template.assert_called_once_with(template_content, template_format)
         mock_process_template.assert_called_once_with(mock_template, template_vars)
-        mock_execute_llm.assert_called_once_with(
-            mock_service, mock_chat_history, None, None
-        )
+        mock_execute_llm.assert_called_once_with(mock_service, mock_chat_history, None, None)
         mock_credential.close.assert_called_once()
 
     @pytest.mark.asyncio
@@ -217,9 +215,7 @@ execution_settings:
         # Verify SK workflow steps
         mock_setup_service.assert_called_once()
         mock_load_template.assert_called_once_with(template_content, template_format)
-        mock_process_sk_template.assert_called_once_with(
-            mock_template, mock_service, template_vars, None
-        )
+        mock_process_sk_template.assert_called_once_with(mock_template, mock_service, template_vars, None)
         mock_credential.close.assert_called_once()
 
 
@@ -326,9 +322,7 @@ class TestProcessTemplateWithVars:
         mock_convert_chat_history.return_value = expected_result
 
         # when
-        result = await process_handlebars_jinja_template_with_vars(
-            mock_template, template_vars
-        )
+        result = await process_handlebars_jinja_template_with_vars(mock_template, template_vars)
 
         # then
         assert result == expected_result
@@ -371,9 +365,7 @@ class TestProcessTemplateWithVars:
         mock_requires_json.return_value = True
 
         # when
-        result = await process_sk_yaml_template_with_vars(
-            mock_template, mock_service, template_vars
-        )
+        result = await process_sk_yaml_template_with_vars(mock_template, mock_service, template_vars)
 
         # then
         assert result == {"result": "success"}
@@ -390,12 +382,11 @@ class TestProcessTemplateWithVars:
         template_vars = None
 
         # Mock the render_template function to capture vars argument
-        with patch("llm_ci_runner.core.render_template") as mock_render, patch(
-            "llm_ci_runner.core.parse_rendered_template_to_chat_history"
-        ) as mock_parse, patch(
-            "llm_ci_runner.core._convert_chat_history_to_list"
-        ) as mock_convert:
-
+        with (
+            patch("llm_ci_runner.core.render_template") as mock_render,
+            patch("llm_ci_runner.core.parse_rendered_template_to_chat_history") as mock_parse,
+            patch("llm_ci_runner.core._convert_chat_history_to_list") as mock_convert,
+        ):
             mock_render.return_value = "rendered content"
             mock_parse.return_value = Mock()
             mock_convert.return_value = []
@@ -407,4 +398,4 @@ class TestProcessTemplateWithVars:
             # Verify render_template was called with empty dict
             mock_render.assert_called_once()
             args, kwargs = mock_render.call_args
-            assert args[1] == {}  # Second argument should be empty dict 
+            assert args[1] == {}  # Second argument should be empty dict

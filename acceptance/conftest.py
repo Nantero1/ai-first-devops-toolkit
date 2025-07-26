@@ -162,7 +162,9 @@ def llm_ci_runner():
             # Schema file is required for template mode (except SK YAML templates which have embedded schemas)
             if schema_file:
                 # Don't add external schema for SK YAML templates - they have embedded schemas
-                is_sk_template = input_path.suffix.lower() in [".yaml", ".yml"] and input_path.name.startswith("template.")
+                is_sk_template = input_path.suffix.lower() in [".yaml", ".yml"] and input_path.name.startswith(
+                    "template."
+                )
                 if not is_sk_template:
                     cmd.extend(["--schema-file", schema_file])
         else:
@@ -496,19 +498,20 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
             # For templates, read the template content
             with open(input_file) as f:
                 input_content = f.read()
-            
+
             # For SK YAML templates, also include the template variables for better context
             if input_path.suffix.lower() in [".yaml", ".yml"] and input_path.name.startswith("template."):
                 # Parse SK YAML template to extract the actual prompt
                 try:
                     import yaml
+
                     template_data = yaml.safe_load(input_content)
                     template_prompt = template_data.get("template", "").strip()
-                    
+
                     # Look for template-vars file
                     template_vars_yaml = input_path.parent / "template-vars.yaml"
                     template_vars_json = input_path.parent / "template-vars.json"
-                    
+
                     vars_context = ""
                     template_vars = {}
                     if template_vars_yaml.exists():
@@ -521,15 +524,15 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
                             vars_content = f.read()
                             template_vars = json.loads(vars_content)
                         vars_context = f" Template variables: {vars_content[:200]}..."
-                    
+
                     # Render template with variables for evaluation query (simplified rendering)
                     evaluation_query = template_prompt
                     for var_name, var_value in template_vars.items():
                         evaluation_query = evaluation_query.replace(f"{{{{{var_name}}}}}", str(var_value)[:100])
                         evaluation_query = evaluation_query.replace(f"{{{{${var_name}}}}}", str(var_value)[:100])
-                    
+
                     input_context = f"Semantic Kernel YAML template: {example_name}. Template prompt: '{template_prompt}'{vars_context}"
-                    
+
                 except Exception:
                     # Fallback to original behavior if parsing fails
                     input_context = f"Semantic Kernel YAML template: {example_name}. Template: {input_content[:200]}..."
@@ -569,10 +572,11 @@ def generic_llm_judge(llm_ci_runner, temp_files, judgment_schema_path):
             # For SK YAML templates, check for embedded schema
             try:
                 import yaml
+
                 with open(input_file) as f:
                     template_content = f.read()
                 template_data = yaml.safe_load(template_content)
-                
+
                 # Look for embedded schema in execution_settings
                 if "execution_settings" in template_data:
                     for service, settings in template_data["execution_settings"].items():

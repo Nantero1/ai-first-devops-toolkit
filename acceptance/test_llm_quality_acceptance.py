@@ -126,14 +126,18 @@ class TestGenericExampleEvaluation:
             # Check if SK template has embedded JSON schema for structured output
             has_embedded_schema = self._sk_template_has_embedded_schema(input_file)
             response_data = result.get("response", {})
-            
+
             if has_embedded_schema:
                 # SK template with embedded schema should produce structured output
-                assert isinstance(response_data, dict), f"SK template {example_name} with embedded schema should produce structured output"
+                assert isinstance(response_data, dict), (
+                    f"SK template {example_name} with embedded schema should produce structured output"
+                )
                 console.print(f"  ✅ {example_name} SK structured output verified", style="green")
             else:
                 # SK template without embedded schema produces text output
-                assert isinstance(response_data, str), f"SK template {example_name} without embedded schema should produce text output"
+                assert isinstance(response_data, str), (
+                    f"SK template {example_name} without embedded schema should produce text output"
+                )
                 console.print(f"  ✅ {example_name} SK text output verified", style="green")
 
         # then - Phase 3: LLM-as-judge quality assessment (if not smoke test)
@@ -256,16 +260,16 @@ class TestGenericExampleEvaluation:
         """Check if SK YAML template has embedded JSON schema for structured output."""
         try:
             import yaml
-            
+
             with open(template_file) as f:
                 template_content = f.read()
             template_data = yaml.safe_load(template_content)
-            
+
             # Look for embedded schema in execution_settings
             if "execution_settings" in template_data:
                 for service, settings in template_data["execution_settings"].items():
                     if (
-                        "response_format" in settings 
+                        "response_format" in settings
                         and settings["response_format"].get("type") == "json_schema"
                         and "json_schema" in settings["response_format"]
                     ):
@@ -458,8 +462,10 @@ def pytest_generate_tests(metafunc):
             schema_file = schema_yaml if schema_yaml.exists() else (schema_json if schema_json.exists() else None)
 
             # Include if external schema exists OR if it's a SK YAML template (has embedded schema)
-            is_sk_template = template_file.suffix.lower() in [".yaml", ".yml"] and template_file.name.startswith("template.")
-            
+            is_sk_template = template_file.suffix.lower() in [".yaml", ".yml"] and template_file.name.startswith(
+                "template."
+            )
+
             if schema_file or is_sk_template:
                 example_name = str(folder.relative_to(examples_dir)).replace("/", "_").replace("\\", "_")
                 template_type = template_file.suffix.lower().replace(".", "")

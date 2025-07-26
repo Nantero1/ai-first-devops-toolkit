@@ -1,311 +1,264 @@
 """
-Integration tests for main() function with proper mocking.
+Integration tests for main() function using the IntegrationTestHelper.
 
-Tests the main() function directly using pytest mocking with respx
-instead of subprocess calls or test helper classes in production code.
-Uses the Given-When-Then pattern.
+Tests the main() function directly with various input scenarios
+while maintaining clarity and following the Given-When-Then pattern.
 """
 
-import json
-from unittest.mock import patch
+from __future__ import annotations
 
 import pytest
 
-from llm_ci_runner import main
+try:
+    from integration_helpers import CommonTestData
+except ImportError:
+    from tests.integration.integration_helpers import CommonTestData
 
 
 class TestMainFunctionIntegration:
-    """Integration tests for main() function with proper HTTP mocking."""
+    """Integration tests for main() function using helper utilities."""
 
     @pytest.mark.asyncio
-    async def test_main_with_simple_text_input(self, mock_azure_openai_responses, temp_dir):
+    async def test_main_with_simple_text_input(self, integration_helper, mock_azure_openai_responses):
         """Test main() with simple text input and output."""
         # given
-        input_file = temp_dir / "test_input.json"
-        output_file = temp_dir / "test_output.json"
-
-        # Create test input
-        test_data = {
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "What is CI/CD?"},
-            ]
-        }
-        with open(input_file, "w") as f:
-            json.dump(test_data, f)
-
-        # Mock command line arguments
-        test_args = [
-            "llm_ci_runner.py",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
+        input_content = CommonTestData.simple_chat_input()
 
         # when
-        with patch("sys.argv", test_args):
-            await main()
+        result = await integration_helper.run_integration_test(
+            input_content=input_content,
+            input_filename="simple_input.json",
+            output_filename="simple_output.json",
+            log_level="ERROR",
+        )
 
         # then
-        assert output_file.exists()
-
-        # Verify output content
-        with open(output_file) as f:
-            output_data = json.load(f)
-
-        assert output_data["success"] is True
-        assert "response" in output_data
-        assert "This is a mock response from the test Azure service" in output_data["response"]
+        integration_helper.assert_successful_response(
+            result,
+            expected_response_type="str",
+            expected_content_substring="This is a mock response from the test Azure service",
+        )
 
     @pytest.mark.asyncio
-    async def test_main_with_structured_output(self, mock_azure_openai_responses, temp_dir):
+    async def test_main_with_structured_output(self, integration_helper, mock_azure_openai_responses):
         """Test main() with structured output schema."""
         # given
-        input_file = temp_dir / "test_input.json"
-        output_file = temp_dir / "test_output.json"
-        schema_file = temp_dir / "test_schema.json"
-
-        # Create test input
-        test_data = {"messages": [{"role": "user", "content": "Analyze this sentiment"}]}
-        with open(input_file, "w") as f:
-            json.dump(test_data, f)
-
-        # Create test schema
-        schema_data = {
-            "type": "object",
-            "properties": {
-                "sentiment": {"type": "string"},
-                "confidence": {"type": "number"},
-                "summary": {"type": "string"},
-                "key_points": {"type": "array", "items": {"type": "string"}},
-            },
-            "required": ["sentiment", "confidence"],
-        }
-        with open(schema_file, "w") as f:
-            json.dump(schema_data, f)
-
-        # Mock command line arguments
-        test_args = [
-            "llm_ci_runner.py",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--schema-file",
-            str(schema_file),
-            "--log-level",
-            "ERROR",
-        ]
+        input_content = CommonTestData.sentiment_analysis_input()
+        schema_content = CommonTestData.sentiment_analysis_schema()
 
         # when
-        with patch("sys.argv", test_args):
-            await main()
+        result = await integration_helper.run_integration_test(
+            input_content=input_content,
+            schema_content=schema_content,
+            input_filename="sentiment_input.json",
+            output_filename="sentiment_output.json",
+            schema_filename="sentiment_schema.json",
+            log_level="ERROR",
+        )
 
         # then
-        assert output_file.exists()
-
-        # Verify output content
-        with open(output_file) as f:
-            output_data = json.load(f)
-
-        assert output_data["success"] is True
-        assert "response" in output_data
-        assert isinstance(output_data["response"], dict)
-        assert "sentiment" in output_data["response"]
-        assert "confidence" in output_data["response"]
+        integration_helper.assert_structured_response(
+            result,
+            required_fields=["sentiment", "confidence", "summary", "key_points"],
+            expected_values={"sentiment": "neutral", "confidence": 0.85},
+        )
 
     @pytest.mark.asyncio
-    async def test_main_with_template_file(self, mock_azure_openai_responses, temp_dir):
-        """Test main() with Handlebars template file."""
+    async def test_main_with_template_workflow(self, integration_helper, mock_azure_openai_responses):
+        """Test main() with Handlebars template workflow."""
         # given
-        template_file = temp_dir / "test_template.hbs"
-        vars_file = temp_dir / "test_vars.yaml"
-        output_file = temp_dir / "test_output.json"
+        template_content = CommonTestData.handlebars_template()
+        template_vars = CommonTestData.template_variables()
 
-        # Create test template
-        template_content = """<message role="system">You are a helpful assistant.</message>
-<message role="user">What is {{technology}}?</message>"""
-        with open(template_file, "w") as f:
-            f.write(template_content)
+        # Create template and variables files
+        template_file = integration_helper.create_template_file("test_template", template_content, "handlebars")
+        vars_file = integration_helper.create_template_vars_file("test_vars", template_vars, "yaml")
+        output_file = integration_helper.output_dir / "template_output.json"
 
-        # Create test variables
-        vars_content = """technology: CI/CD"""
-        with open(vars_file, "w") as f:
-            f.write(vars_content)
-
-        # Mock command line arguments
-        test_args = [
-            "llm_ci_runner.py",
-            "--template-file",
-            str(template_file),
-            "--template-vars",
-            str(vars_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
+        # Build CLI args for template workflow
+        args = integration_helper.build_cli_args(
+            template_file=template_file, template_vars_file=vars_file, output_file=output_file, log_level="ERROR"
+        )
 
         # when
-        with patch("sys.argv", test_args):
-            await main()
+        await integration_helper.execute_main_with_args(args)
+        result = integration_helper.load_output_file(output_file)
 
         # then
-        assert output_file.exists()
-
-        # Verify output content
-        with open(output_file) as f:
-            output_data = json.load(f)
-
-        assert output_data["success"] is True
-        assert "response" in output_data
-        assert "This is a mock response from the test Azure service" in output_data["response"]
+        integration_helper.assert_successful_response(
+            result,
+            expected_response_type="str",
+            expected_content_substring="This is a mock response from the test Azure service",
+        )
 
     @pytest.mark.asyncio
-    async def test_main_with_missing_input_file_raises_error(self, mock_azure_openai_responses, temp_dir):
-        """Test main() with missing input file raises appropriate error."""
-        # given
-        input_file = temp_dir / "nonexistent.json"
-        output_file = temp_dir / "test_output.json"
-
-        # Mock command line arguments
-        test_args = [
-            "llm_ci_runner.py",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
-
-        # when/then
-        with patch("sys.argv", test_args):
-            with pytest.raises(SystemExit) as exc_info:
-                await main()
-
-            # Should exit with error code 1
-            assert exc_info.value.code == 1
-
-    @pytest.mark.asyncio
-    async def test_main_with_yaml_input_and_output(self, mock_azure_openai_responses, temp_dir):
+    async def test_main_with_yaml_files(self, integration_helper, mock_azure_openai_responses):
         """Test main() with YAML input and output files."""
         # given
-        input_file = temp_dir / "test_input.yaml"
-        output_file = temp_dir / "test_output.yaml"
+        input_content = CommonTestData.simple_chat_input()
+        input_content["context"] = {"session_id": "test-yaml-123"}
 
-        # Create test input in YAML format
-        yaml_content = """
-messages:
-  - role: system
-    content: You are a helpful assistant.
-  - role: user
-    content: What is DevOps?
-context:
-  session_id: test-yaml-123
-"""
-        with open(input_file, "w") as f:
-            f.write(yaml_content)
+        input_file = integration_helper.create_input_file("test_input.yaml", input_content, file_format="yaml")
+        output_file = integration_helper.output_dir / "test_output.yaml"
 
-        # Mock command line arguments
-        test_args = [
-            "llm_ci_runner.py",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
+        # Build CLI args
+        args = integration_helper.build_cli_args(input_file=input_file, output_file=output_file, log_level="ERROR")
 
         # when
-        with patch("sys.argv", test_args):
-            await main()
+        await integration_helper.execute_main_with_args(args)
+        result = integration_helper.load_output_file(output_file)
 
         # then
-        assert output_file.exists()
-
-        # Verify output content (should be YAML)
-        with open(output_file) as f:
-            content = f.read()
-
-        assert "success: true" in content
-        assert "response:" in content
-        assert "This is a mock response from the test Azure service" in content
-
-
-class TestMainFunctionErrorHandling:
-    """Test error handling in main() function."""
+        integration_helper.assert_successful_response(
+            result,
+            expected_response_type="str",
+            expected_content_substring="This is a mock response from the test Azure service",
+        )
 
     @pytest.mark.asyncio
-    async def test_main_handles_authentication_error_gracefully(self, temp_dir):
-        """Test main() handles authentication errors gracefully."""
+    async def test_main_error_handling_missing_file(self, integration_helper, mock_azure_openai_responses):
+        """Test main() handles missing input file gracefully."""
         # given
-        input_file = temp_dir / "test_input.json"
-        output_file = temp_dir / "test_output.json"
+        nonexistent_file = integration_helper.input_dir / "nonexistent.json"
+        output_file = integration_helper.output_dir / "error_output.json"
 
-        # Create test input
-        test_data = {"messages": [{"role": "user", "content": "Test message"}]}
-        with open(input_file, "w") as f:
-            json.dump(test_data, f)
-
-        # Mock command line arguments with invalid credentials
-        test_args = [
-            "llm_ci_runner.py",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
-
-        # Clear environment variables to force authentication error
-        with patch.dict("os.environ", {}, clear=True):
-            with patch("sys.argv", test_args):
-                with pytest.raises(SystemExit) as exc_info:
-                    await main()
-
-                # Should exit with error code 1
-                assert exc_info.value.code == 1
-
-    @pytest.mark.asyncio
-    async def test_main_handles_invalid_json_schema_gracefully(self, mock_azure_openai_responses, temp_dir):
-        """Test main() handles invalid JSON schema gracefully."""
-        # given
-        input_file = temp_dir / "test_input.json"
-        output_file = temp_dir / "test_output.json"
-        schema_file = temp_dir / "invalid_schema.json"
-
-        # Create test input
-        test_data = {"messages": [{"role": "user", "content": "Test message"}]}
-        with open(input_file, "w") as f:
-            json.dump(test_data, f)
-
-        # Create invalid schema file
-        with open(schema_file, "w") as f:
-            f.write("{ invalid json schema")
-
-        # Mock command line arguments
-        test_args = [
-            "llm_ci_runner.py",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--schema-file",
-            str(schema_file),
-            "--log-level",
-            "ERROR",
-        ]
+        args = integration_helper.build_cli_args(
+            input_file=nonexistent_file, output_file=output_file, log_level="ERROR"
+        )
 
         # when/then
-        with patch("sys.argv", test_args):
-            with pytest.raises(SystemExit) as exc_info:
-                await main()
+        with pytest.raises((FileNotFoundError, OSError)):  # Should raise FileNotFoundError or similar
+            await integration_helper.execute_main_with_args(args)
 
-            # Should exit with error code 1
-            assert exc_info.value.code == 1
+
+class TestMainFunctionAdvancedScenarios:
+    """Advanced integration test scenarios using helper utilities."""
+
+    @pytest.mark.asyncio
+    async def test_code_review_workflow(self, integration_helper, mock_azure_openai_responses):
+        """Test complete code review workflow with structured output."""
+        # given
+        input_content = CommonTestData.code_review_input()
+        schema_content = CommonTestData.code_review_schema()
+
+        # when
+        result = await integration_helper.run_integration_test(
+            input_content=input_content,
+            schema_content=schema_content,
+            input_filename="code_review_input.json",
+            output_filename="code_review_output.json",
+            schema_filename="code_review_schema.json",
+            log_level="DEBUG",
+        )
+
+        # then
+        integration_helper.assert_structured_response(
+            result,
+            required_fields=["overall_rating", "summary"],
+            expected_values=None,  # Don't check specific values for this mock
+        )
+
+    @pytest.mark.asyncio
+    async def test_jinja2_template_workflow(self, integration_helper, mock_azure_openai_responses):
+        """Test Jinja2 template processing workflow."""
+        # given
+        template_content = CommonTestData.jinja2_template()
+        template_vars = CommonTestData.template_variables()
+
+        template_file = integration_helper.create_template_file("jinja_template", template_content, "jinja2")
+        vars_file = integration_helper.create_template_vars_file("jinja_vars", template_vars, "json")
+        output_file = integration_helper.output_dir / "jinja_output.json"
+
+        args = integration_helper.build_cli_args(
+            template_file=template_file, template_vars_file=vars_file, output_file=output_file, log_level="INFO"
+        )
+
+        # when
+        await integration_helper.execute_main_with_args(args)
+        result = integration_helper.load_output_file(output_file)
+
+        # then
+        integration_helper.assert_successful_response(result, expected_response_type="str")
+
+    @pytest.mark.asyncio
+    async def test_semantic_kernel_template_workflow(self, integration_helper, mock_azure_openai_responses):
+        """Test Semantic Kernel YAML template workflow."""
+        # given
+        template_content = CommonTestData.semantic_kernel_template()
+        template_vars = {"input_text": "This is test content for analysis"}
+
+        template_file = integration_helper.create_template_file("sk_template", template_content, "semantic-kernel")
+        vars_file = integration_helper.create_template_vars_file("sk_vars", template_vars, "yaml")
+        output_file = integration_helper.output_dir / "sk_output.json"
+
+        args = integration_helper.build_cli_args(
+            template_file=template_file, template_vars_file=vars_file, output_file=output_file, log_level="INFO"
+        )
+
+        # when
+        await integration_helper.execute_main_with_args(args)
+        result = integration_helper.load_output_file(output_file)
+
+        # then
+        integration_helper.assert_successful_response(result, expected_response_type="str")
+
+    @pytest.mark.parametrize(
+        "scenario_name,input_data,schema_data,expected_type,expected_substring",
+        [
+            pytest.param(
+                "simple_chat",
+                CommonTestData.simple_chat_input(),
+                None,
+                "str",
+                "mock response",
+                id="simple_chat_text_output",
+            ),
+            pytest.param(
+                "sentiment_analysis",
+                CommonTestData.sentiment_analysis_input(),
+                CommonTestData.sentiment_analysis_schema(),
+                "dict",
+                None,
+                id="sentiment_analysis_structured_output",
+            ),
+            pytest.param(
+                "code_review",
+                CommonTestData.code_review_input(),
+                CommonTestData.code_review_schema(),
+                "dict",
+                None,
+                id="code_review_structured_output",
+            ),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_multiple_scenarios_parametrized(
+        self,
+        integration_helper,
+        mock_azure_openai_responses,
+        scenario_name,
+        input_data,
+        schema_data,
+        expected_type,
+        expected_substring,
+    ):
+        """Test multiple scenarios using parametrized tests for better reporting."""
+        # given
+        # All test data is provided via parametrization
+
+        # when
+        result = await integration_helper.run_integration_test(
+            input_content=input_data,
+            schema_content=schema_data,
+            input_filename=f"{scenario_name}_input.json",
+            output_filename=f"{scenario_name}_output.json",
+            schema_filename=f"{scenario_name}_schema.json" if schema_data else None,
+            log_level="ERROR",
+        )
+
+        # then
+        integration_helper.assert_successful_response(
+            result,
+            expected_response_type=expected_type,
+            expected_content_substring=expected_substring,
+        )

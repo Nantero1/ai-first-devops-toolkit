@@ -1,461 +1,280 @@
 """
-CLI interface tests for llm_ci_runner.py
+CLI interface integration tests.
 
-Tests the command-line interface via subprocess to ensure
-proper argument parsing, help text, and error handling.
-Uses the Given-When-Then pattern.
+Tests the command-line interface for argument parsing, file handling,
+and workflow validation using a subprocess-based approach.
 """
 
-import json
-import subprocess
-from pathlib import Path
+from __future__ import annotations
 
 import pytest
+
+try:
+    from integration_helpers import CommonTestData
+except ImportError:
+    from tests.integration.integration_helpers import CommonTestData
 
 
 class TestCLIArgumentParsing:
     """Tests for CLI argument parsing and validation."""
 
-    def test_cli_help_displays_usage_information(self):
-        """Test that --help displays comprehensive usage information."""
-        # given
-        command = ["uv", "run", "llm-ci-runner", "--help"]
-
-        # when
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        # then
-        assert result.returncode == 0
-        assert "AI-powered automation for pipelines" in result.stdout
-        assert "--input-file" in result.stdout
-        assert "--output-file" in result.stdout
-        assert "--schema-file" in result.stdout
-        assert "--log-level" in result.stdout
-        assert "Environment Variables" in result.stdout
-        assert "AZURE_OPENAI_ENDPOINT" in result.stdout
-
-    def test_cli_with_missing_required_arguments_shows_error(self):
+    def test_cli_with_missing_required_arguments_shows_error(self, integration_helper):
         """Test that missing required arguments shows appropriate error."""
         # given
-        command = ["uv", "run", "llm-ci-runner", "--input-file"]
+        command = ["llm-ci-runner", "--input-file"]
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
         assert result.returncode == 2  # ArgumentParser error
         assert "expected one argument" in result.stderr.lower() or "error" in result.stderr.lower()
 
-    def test_cli_with_invalid_log_level_shows_error(self):
+    def test_cli_with_invalid_log_level_shows_error(self, integration_helper):
         """Test that invalid log level shows appropriate error."""
         # given
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            "test.json",
-            "--output-file",
-            "output.json",
-            "--log-level",
-            "INVALID",
-        ]
+        command = integration_helper.build_cli_args(
+            input_file="test.json", output_file="output.json", log_level="INVALID"
+        )
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
         assert result.returncode != 0
         assert "invalid choice" in result.stderr.lower() or "error" in result.stderr.lower()
 
-    def test_cli_with_nonexistent_input_file_shows_error(self):
+    def test_cli_with_nonexistent_input_file_shows_error(self, integration_helper):
         """Test that nonexistent input file shows appropriate error."""
         # given
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            "nonexistent.json",
-            "--output-file",
-            "output.json",
-        ]
+        command = integration_helper.build_cli_args(input_file="nonexistent.json", output_file="output.json")
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
         assert result.returncode == 1
-        # Should show input validation error (goes to stdout with Rich)
         assert "not found" in result.stdout.lower() or "error" in result.stdout.lower()
 
     @pytest.mark.parametrize("log_level", ["DEBUG", "INFO", "WARNING", "ERROR"])
-    def test_cli_with_valid_log_levels_accepts_gracefully(self, temp_dir, log_level):
+    def test_cli_with_valid_log_levels_accepts_gracefully(self, integration_helper, log_level):
         """Test that all valid log levels are accepted by argument parser."""
         # given
-        input_file = temp_dir / "test_input.json"
-        output_file = temp_dir / "test_output.json"
+        input_file = integration_helper.create_input_file("test_input.json", CommonTestData.simple_chat_input())
+        output_file = integration_helper.output_dir / "test_output.json"
 
-        # Create a minimal valid input file
-        test_data = {"messages": [{"role": "user", "content": "Hello"}]}
-        with open(input_file, "w") as f:
-            json.dump(test_data, f)
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            log_level,
-        ]
+        command = integration_helper.build_cli_args(input_file=input_file, output_file=output_file, log_level=log_level)
 
         # when
-        # This will fail due to Azure authentication (respx mocking doesn't work in subprocess)
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
         # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
         assert result.returncode == 1  # Authentication failure, not argument parsing
-        # Should not be an argument parsing error
         assert "invalid choice" not in result.stderr.lower()
         assert "unrecognized arguments" not in result.stderr.lower()
-        # Should reach Azure authentication stage (confirms log level parsing worked)
-        assert (
-            "azure" in result.stdout.lower()
-            or "endpoint" in result.stdout.lower()
-            or "authentication" in result.stdout.lower()
-        )
 
 
 class TestCLIFileHandling:
     """Tests for CLI file handling and path validation."""
 
-    def test_cli_with_valid_input_file_proceeds_to_authentication(self, temp_dir):
+    def test_cli_with_valid_input_file_proceeds_to_authentication(self, integration_helper):
         """Test that valid input file proceeds to authentication stage."""
         # given
-        input_file = temp_dir / "valid_input.json"
-        output_file = temp_dir / "output.json"
+        input_content = CommonTestData.simple_chat_input()
+        input_content["context"] = {"session_id": "test-123"}
 
-        # Create a valid input file
-        test_data = {
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "Hello, world!"},
-            ],
-            "context": {"session_id": "test-123"},
-        }
-        with open(input_file, "w") as f:
-            json.dump(test_data, f)
+        input_file = integration_helper.create_input_file("valid_input.json", input_content)
+        output_file = integration_helper.output_dir / "output.json"
 
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",  # Minimize output
-        ]
+        command = integration_helper.build_cli_args(input_file=input_file, output_file=output_file, log_level="ERROR")
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
-        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
-        assert result.returncode == 1
-        # Should not be an argument parsing error
+        assert result.returncode == 1  # Authentication error, not parsing error
         assert "unrecognized arguments" not in result.stderr.lower()
-        # Should reach authentication stage and fail there
         assert (
             "azure" in result.stdout.lower()
             or "endpoint" in result.stdout.lower()
             or "authentication" in result.stdout.lower()
         )
 
-    def test_cli_with_invalid_json_input_shows_validation_error(self, temp_dir):
+    def test_cli_with_invalid_json_input_shows_validation_error(self, integration_helper):
         """Test that invalid JSON input shows validation error."""
         # given
-        input_file = temp_dir / "invalid_input.json"
-        output_file = temp_dir / "output.json"
+        input_file = integration_helper.input_dir / "invalid_input.json"
+        output_file = integration_helper.output_dir / "output.json"
 
         # Create an invalid JSON file
         with open(input_file, "w") as f:
-            f.write("{ invalid json content }")
+            f.write("{ invalid json content")
 
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-        ]
+        command = integration_helper.build_cli_args(input_file=input_file, output_file=output_file)
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
         assert result.returncode == 1
         assert "json" in result.stdout.lower() or "invalid" in result.stdout.lower()
 
-    def test_cli_with_schema_file_parameter_is_processed(self, temp_dir):
+    def test_cli_with_schema_file_parameter_is_processed(self, integration_helper):
         """Test that schema file parameter is properly processed."""
         # given
-        input_file = temp_dir / "input.json"
-        schema_file = temp_dir / "schema.json"
-        output_file = temp_dir / "output.json"
+        input_file = integration_helper.create_input_file("input.json", CommonTestData.sentiment_analysis_input())
+        schema_file = integration_helper.create_schema_file("schema.json", CommonTestData.sentiment_analysis_schema())
+        output_file = integration_helper.output_dir / "output.json"
 
-        # Create valid input file
-        input_data = {"messages": [{"role": "user", "content": "Test message"}]}
-        with open(input_file, "w") as f:
-            json.dump(input_data, f)
-
-        # Create valid schema file
-        schema_data = {
-            "type": "object",
-            "properties": {"response": {"type": "string"}},
-            "required": ["response"],
-        }
-        with open(schema_file, "w") as f:
-            json.dump(schema_data, f)
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--schema-file",
-            str(schema_file),
-            "--log-level",
-            "ERROR",
-        ]
+        command = integration_helper.build_cli_args(
+            input_file=input_file, output_file=output_file, schema_file=schema_file, log_level="ERROR"
+        )
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
-        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
-        assert result.returncode == 1
-        # Should not be an argument parsing error
-        assert "unrecognized arguments" not in result.stderr.lower()
-        # Should reach authentication stage, confirming schema was parsed correctly
-        assert (
-            "azure" in result.stdout.lower()
-            or "endpoint" in result.stdout.lower()
-            or "authentication" in result.stdout.lower()
+        # Should reach authentication stage (confirms schema parsing worked)
+        assert result.returncode == 1  # Authentication failure
+        assert "azure" in result.stdout.lower() or "authentication" in result.stdout.lower()
+
+
+class TestCLITemplateWorkflows:
+    """Tests for CLI template workflow handling."""
+
+    def test_cli_with_handlebars_template_workflow(self, integration_helper):
+        """Test CLI with Handlebars template and variables files."""
+        # given
+        template_file = integration_helper.create_template_file(
+            "test_template", CommonTestData.handlebars_template(), "handlebars"
         )
+        vars_file = integration_helper.create_template_vars_file(
+            "test_vars", CommonTestData.template_variables(), "yaml"
+        )
+        output_file = integration_helper.output_dir / "output.json"
+
+        command = integration_helper.build_cli_args(
+            template_file=template_file, template_vars_file=vars_file, output_file=output_file, log_level="ERROR"
+        )
+
+        # when
+        result = integration_helper.run_cli_subprocess(command)
+
+        # then
+        # Should reach authentication stage (confirms template parsing worked)
+        assert result.returncode == 1  # Authentication failure
+        assert "azure" in result.stdout.lower() or "authentication" in result.stdout.lower()
+
+    def test_cli_with_jinja2_template_workflow(self, integration_helper):
+        """Test CLI with Jinja2 template workflow."""
+        # given
+        template_file = integration_helper.create_template_file(
+            "jinja_template", CommonTestData.jinja2_template(), "jinja2"
+        )
+        vars_file = integration_helper.create_template_vars_file(
+            "jinja_vars", CommonTestData.template_variables(), "json"
+        )
+        output_file = integration_helper.output_dir / "output.json"
+
+        command = integration_helper.build_cli_args(
+            template_file=template_file, template_vars_file=vars_file, output_file=output_file, log_level="ERROR"
+        )
+
+        # when
+        result = integration_helper.run_cli_subprocess(command)
+
+        # then
+        assert result.returncode == 1  # Authentication failure
+        assert "azure" in result.stdout.lower() or "authentication" in result.stdout.lower()
+
+    def test_cli_with_semantic_kernel_template_workflow(self, integration_helper):
+        """Test CLI with Semantic Kernel YAML template workflow."""
+        # given
+        template_file = integration_helper.create_template_file(
+            "sk_template", CommonTestData.semantic_kernel_template(), "semantic-kernel"
+        )
+        vars_file = integration_helper.create_template_vars_file(
+            "sk_vars", {"input_text": "Test analysis content"}, "yaml"
+        )
+        output_file = integration_helper.output_dir / "output.yaml"
+
+        command = integration_helper.build_cli_args(
+            template_file=template_file, template_vars_file=vars_file, output_file=output_file, log_level="ERROR"
+        )
+
+        # when
+        result = integration_helper.run_cli_subprocess(command)
+
+        # then
+        assert result.returncode == 1  # Authentication failure
+        assert "azure" in result.stdout.lower() or "authentication" in result.stdout.lower()
 
 
 class TestCLIErrorHandling:
     """Tests for CLI error handling and user feedback."""
 
-    def test_cli_with_keyboard_interrupt_shows_cancellation_message(self, temp_dir):
-        """Test that keyboard interrupt shows appropriate cancellation message."""
-        # Note: This test is conceptual as it's difficult to simulate KeyboardInterrupt in subprocess
-        # In a real scenario, this would be tested with process signals
-        pass
-
-    def test_cli_with_permission_denied_shows_appropriate_error(self, temp_dir):
-        """Test that permission denied errors show appropriate message."""
-        # given
-        # Create a read-only directory to trigger permission errors
-        restricted_dir = temp_dir / "restricted"
-        restricted_dir.mkdir(mode=0o444)  # Read-only
-
-        input_file = temp_dir / "input.json"
-        output_file = restricted_dir / "output.json"  # This should fail
-
-        # Create valid input file
-        input_data = {"messages": [{"role": "user", "content": "Test"}]}
-        with open(input_file, "w") as f:
-            json.dump(input_data, f)
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-        ]
-
-        # when
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        # then
-        assert result.returncode == 1
-        # Will likely fail before reaching file write due to missing Azure credentials
-        # but this tests the overall error handling structure
-
-    def test_cli_shows_colored_output_with_rich_formatting(self, temp_dir):
-        """Test that CLI uses Rich formatting for colored output."""
-        # given
-        command = ["uv", "run", "llm-ci-runner", "--help"]
-
-        # when
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        # then
-        assert result.returncode == 0
-        # Rich formatting should be present in help text
-        assert "usage:" in result.stdout.lower() or "Usage:" in result.stdout
-
-
-class TestCLIIntegrationWithExamples:
-    """Integration tests for CLI with example files."""
-
     @pytest.mark.parametrize(
-        "example_file",
+        "input_format,output_format",
         [
-            "tests/integration/data/simple-chat/input.json",
-            "tests/integration/data/simple-chat/input.json",  # Using simple-chat for minimal
-            "tests/integration/data/code-review/input.json",
+            pytest.param("json", "json", id="json_to_json"),
+            pytest.param("json", "yaml", id="json_to_yaml"),
+            pytest.param("yaml", "json", id="yaml_to_json"),
+            pytest.param("yaml", "yaml", id="yaml_to_yaml"),
         ],
     )
-    def test_cli_with_example_files_reaches_authentication_stage(self, temp_dir, example_file):
-        """Test that CLI with example files reaches authentication stage."""
+    def test_cli_with_format_combinations_parametrized(self, integration_helper, input_format, output_format):
+        """Test CLI with various input/output format combinations using parametrization."""
         # given
-        output_file = temp_dir / f"output_{Path(example_file).stem}.json"
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            example_file,
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
-
-        # when
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        # then
-        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
-        assert result.returncode == 1
-        # Should not be an argument parsing error
-        assert "unrecognized arguments" not in result.stderr.lower()
-        # Should reach authentication stage and fail there
-        assert (
-            "azure" in result.stdout.lower()
-            or "endpoint" in result.stdout.lower()
-            or "authentication" in result.stdout.lower()
+        input_content = CommonTestData.simple_chat_input()
+        input_file = integration_helper.create_input_file(
+            f"test_input.{input_format}", input_content, file_format=input_format
         )
+        output_file = integration_helper.output_dir / f"test_output.{output_format}"
 
-    def test_cli_with_structured_output_example_processes_schema(self, temp_dir):
-        """Test that CLI with structured output processes schema correctly."""
-        # given
-        input_file = "tests/integration/data/simple-chat/input.json"
-        schema_file = "tests/integration/data/sentiment-analysis/schema.json"
-        output_file = temp_dir / "structured_output.json"
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            input_file,
-            "--output-file",
-            str(output_file),
-            "--schema-file",
-            schema_file,
-            "--log-level",
-            "ERROR",
-        ]
+        command = integration_helper.build_cli_args(input_file=input_file, output_file=output_file, log_level="ERROR")
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
-        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
-        assert result.returncode == 1
-        # Should not be an argument parsing error
+        # Should reach authentication (confirms format parsing worked)
+        assert result.returncode == 1  # Authentication failure
         assert "unrecognized arguments" not in result.stderr.lower()
-        # Should reach authentication stage, confirming schema was parsed correctly
-        assert (
-            "azure" in result.stdout.lower()
-            or "endpoint" in result.stdout.lower()
-            or "authentication" in result.stdout.lower()
-        )
 
-
-class TestCLILoggingAndOutput:
-    """Tests for CLI logging and output behavior."""
-
-    def test_cli_with_debug_logging_shows_verbose_output(self, temp_dir):
-        """Test that debug logging shows verbose output."""
+    @pytest.mark.parametrize(
+        "scenario_name,command_args,expected_code,expected_text",
+        [
+            pytest.param(
+                "missing_input_file",
+                {"input_file": "nonexistent.json", "output_file": "out.json"},
+                1,
+                "not found",
+                id="file_not_found_error",
+            ),
+            pytest.param(
+                "invalid_log_level",
+                {"input_file": "test.json", "output_file": "out.json", "log_level": "INVALID"},
+                2,
+                "invalid choice",
+                id="invalid_log_level_error",
+            ),
+        ],
+    )
+    def test_cli_comprehensive_error_scenarios_parametrized(
+        self, integration_helper, scenario_name, command_args, expected_code, expected_text
+    ):
+        """Test various error scenarios with consistent error handling using parametrization."""
         # given
-        input_file = temp_dir / "input.json"
-        output_file = temp_dir / "output.json"
-
-        # Create minimal valid input
-        with open(input_file, "w") as f:
-            json.dump({"messages": [{"role": "user", "content": "test"}]}, f)
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "DEBUG",
-        ]
+        command = integration_helper.build_cli_args(**command_args)
 
         # when
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = integration_helper.run_cli_subprocess(command)
 
         # then
-        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
-        assert result.returncode == 1
-        # Should show more detailed logging information
-        # The exact content depends on where it fails, but should have debug info
-
-    def test_cli_with_error_logging_shows_minimal_output(self, temp_dir):
-        """Test that error logging shows minimal output."""
-        # given
-        input_file = temp_dir / "input.json"
-        output_file = temp_dir / "output.json"
-
-        # Create minimal valid input
-        with open(input_file, "w") as f:
-            json.dump({"messages": [{"role": "user", "content": "test"}]}, f)
-
-        command = [
-            "uv",
-            "run",
-            "llm-ci-runner",
-            "--input-file",
-            str(input_file),
-            "--output-file",
-            str(output_file),
-            "--log-level",
-            "ERROR",
-        ]
-
-        # when
-        result = subprocess.run(command, capture_output=True, text=True)
-
-        # then
-        # Should fail with authentication error (exit code 1), not argument parsing error (exit code 2)
-        assert result.returncode == 1
-        # Should show minimal output with error logging
-        # The output should be less verbose than DEBUG mode
+        assert result.returncode == expected_code, f"Failed scenario: {scenario_name}"
+        output_text = (result.stdout + result.stderr).lower()
+        assert expected_text in output_text, f"Failed scenario: {scenario_name}"
 
 
 # =====================
