@@ -107,19 +107,15 @@ def _create_success_response(request, service_config, response_spec):
 
         # Check if structured output is requested
         if "response_format" in request_data and request_data["response_format"]:
-            # Structured output response - use sequence data or defaults
+            # Structured output response - use sequence data or smart defaults
             if response_spec.get("structured"):
                 mock_response = response_spec.get(
                     "structured_data",
                     {"analysis": "This is a successful analysis after retry", "confidence": 0.95, "status": "success"},
                 )
             else:
-                mock_response = {
-                    "sentiment": service_config["structured_sentiment"],
-                    "confidence": service_config["structured_confidence"],
-                    "summary": service_config["structured_summary"],
-                    "key_points": service_config["structured_key_points"],
-                }
+                # Use smart response based on schema for consistency
+                mock_response = _get_smart_mock_response(request_data, service_config)
             content = json.dumps(mock_response)
         else:
             # Text output response
@@ -165,6 +161,89 @@ def _create_success_response(request, service_config, response_spec):
         )
 
 
+def _get_smart_mock_response(request_data: dict, service_config: dict) -> dict:
+    """
+    Generate appropriate mock response based on the schema in the request.
+
+    Analyzes the response_format schema to determine what fields to include
+    in the mock response, making tests more realistic and maintainable.
+
+    Args:
+        request_data: Parsed request JSON containing response_format
+        service_config: Service configuration dict
+
+    Returns:
+        Dict containing appropriate mock response fields
+    """
+    # Check if we have a schema to analyze
+    response_format = request_data.get("response_format")
+    if not response_format or not isinstance(response_format, dict):
+        # Default to sentiment analysis response if no schema
+        return {
+            "sentiment": service_config["structured_sentiment"],
+            "confidence": service_config["structured_confidence"],
+            "summary": service_config["structured_summary"],
+            "key_points": service_config["structured_key_points"],
+        }
+
+    # Extract schema from response_format
+    json_schema = response_format.get("json_schema", {})
+    schema = json_schema.get("schema", {})
+
+    # Get required fields to determine response type
+    required_fields = schema.get("required", [])
+    properties = schema.get("properties", {})
+
+    # Determine response type based on required fields
+    if "overall_rating" in required_fields and "summary" in required_fields:
+        # Code review schema detected
+        return {
+            "overall_rating": "good",
+            "summary": "This is a mock code review response for testing purposes.",
+            "issues": [{"type": "style", "severity": "low", "description": "Mock issue for testing"}],
+            "suggestions": ["Mock suggestion for testing"],
+        }
+    elif "sentiment" in required_fields or "sentiment" in properties:
+        # Sentiment analysis schema detected
+        return {
+            "sentiment": service_config["structured_sentiment"],
+            "confidence": service_config["structured_confidence"],
+            "summary": service_config["structured_summary"],
+            "key_points": service_config["structured_key_points"],
+        }
+    elif "analysis" in required_fields or "status" in required_fields:
+        # Retry test schema or similar analysis schema detected
+        return {
+            "analysis": "This is a mock analysis response for testing purposes.",
+            "confidence": 0.95,
+            "status": "success",
+        }
+    else:
+        # Default response - try to match any recognizable fields from properties
+        mock_response = {}
+
+        # Add commonly expected fields with reasonable defaults
+        if "summary" in properties:
+            mock_response["summary"] = service_config.get("structured_summary", "Mock summary for testing")
+        if "confidence" in properties:
+            mock_response["confidence"] = service_config.get("structured_confidence", 0.85)
+        if "status" in properties:
+            mock_response["status"] = "success"
+        if "analysis" in properties:
+            mock_response["analysis"] = "Mock analysis response"
+
+        # If no matching fields found, fall back to sentiment response
+        if not mock_response:
+            mock_response = {
+                "sentiment": service_config["structured_sentiment"],
+                "confidence": service_config["structured_confidence"],
+                "summary": service_config["structured_summary"],
+                "key_points": service_config["structured_key_points"],
+            }
+
+        return mock_response
+
+
 def _create_mock_chat_response(request, service_config):
     """
     Create a dynamic chat response based on request settings and service configuration.
@@ -186,13 +265,8 @@ def _create_mock_chat_response(request, service_config):
 
         # Check if structured output is requested
         if "response_format" in request_data and request_data["response_format"]:
-            # Structured output response
-            mock_response = {
-                "sentiment": service_config["structured_sentiment"],
-                "confidence": service_config["structured_confidence"],
-                "summary": service_config["structured_summary"],
-                "key_points": service_config["structured_key_points"],
-            }
+            # Structured output response - use smart response based on schema
+            mock_response = _get_smart_mock_response(request_data, service_config)
             content = json.dumps(mock_response)
         else:
             # Text output response

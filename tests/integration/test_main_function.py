@@ -127,8 +127,11 @@ class TestMainFunctionIntegration:
         )
 
         # when/then
-        with pytest.raises((FileNotFoundError, OSError)):  # Should raise FileNotFoundError or similar
+        with pytest.raises(SystemExit) as exc_info:  # CLI should exit with error code on missing file
             await integration_helper.execute_main_with_args(args)
+
+        # Verify it exits with error code 1 (indicating failure)
+        assert exc_info.value.code == 1
 
 
 class TestMainFunctionAdvancedScenarios:
