@@ -134,12 +134,13 @@ def should_retry_azure_exception(exception: BaseException) -> bool:
     return False
 
 
-def should_retry_network_exception(exception: BaseException) -> bool:
-    """Determine if a general network exception should be retried.
+def should_retry_llm_exception(exception: BaseException) -> bool:
+    """Determine if an LLM-related exception should be retried.
 
-    Combines both OpenAI and Azure retry conditions for unified network error handling.
-    Includes timeout errors and JSON parsing failures as retriable since they are transient
-    failures that can be resolved with a new LLM invocation.
+    Combines OpenAI, Azure, and schema validation retry conditions for unified
+    LLM error handling. Includes timeout errors and JSON parsing failures as
+    retriable since they are transient failures that can be resolved with a new
+    LLM invocation.
 
     Args:
         exception: The exception to check
@@ -198,7 +199,7 @@ def create_retry_with_timeout_decorator(
 
             # Apply retry to timeout wrapper
             retry_decorator = retry(
-                retry=retry_if_exception(should_retry_network_exception),
+                retry=retry_if_exception(should_retry_llm_exception),
                 stop=stop_after_attempt(max_retries),
                 wait=wait_random_exponential(
                     multiplier=DEFAULT_EXPONENTIAL_MULTIPLIER,

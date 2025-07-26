@@ -487,3 +487,54 @@ execution_settings:
             "files": [{"name": "test.py", "content": "print('Hello World')"}],
             "input_text": "This is test input for analysis",
         }
+
+    @staticmethod
+    def retry_test_input() -> dict[str, Any]:
+        """Standard input for retry mechanism testing with invalid JSON scenarios."""
+        return {
+            "messages": [
+                {"role": "system", "content": "You are a sentiment analysis assistant."},
+                {"role": "user", "content": "Please analyze the sentiment of this text: 'I love this product!'"},
+            ]
+        }
+
+    @staticmethod
+    def retry_test_schema() -> dict[str, Any]:
+        """Standard schema for retry mechanism testing that expects structured output."""
+        return {
+            "type": "object",
+            "properties": {
+                "sentiment": {"type": "string", "enum": ["positive", "negative", "neutral"]},
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                "summary": {"type": "string"},
+                "key_points": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["sentiment", "confidence", "summary", "key_points"],
+            "additionalProperties": False,
+        }
+
+    @staticmethod
+    def invalid_json_responses() -> list[dict[str, Any]]:
+        """Sample invalid JSON responses that should trigger retry mechanism."""
+        return [
+            {
+                "description": "Truncated JSON object",
+                "content": b"{ invalid json response that will trigger retry",
+                "expected_error": "json.JSONDecodeError",
+            },
+            {
+                "description": "Incomplete JSON with missing closing",
+                "content": b'{"incomplete": "json without closing',
+                "expected_error": "json.JSONDecodeError",
+            },
+            {
+                "description": "Malformed JSON with syntax error",
+                "content": b'{"key": value_without_quotes, "another": }',
+                "expected_error": "json.JSONDecodeError",
+            },
+            {
+                "description": "Empty response that's not valid JSON",
+                "content": b"",
+                "expected_error": "json.JSONDecodeError",
+            },
+        ]

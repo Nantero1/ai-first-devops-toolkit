@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 from .exceptions import LLMExecutionError, SchemaValidationError
 from .formatters import detect_output_format, display_formatted_console, format_output_content
 from .io_operations import create_chat_history, load_schema_file
-from .retry import retry_network_operation
+from .retry import retry_network_operation, should_retry_llm_exception
 from .schema import generate_one_shot_example
 
 LOGGER = logging.getLogger(__name__)
@@ -268,7 +268,13 @@ class LLMExecutor:
                 LOGGER.info("✅ Azure SDK execution successful")
                 return result
             except Exception as e:
-                LOGGER.warning(f"⚠️ Azure SDK failed: {e}")
+                # Let retriable exceptions (SchemaValidationError, timeout errors, SDK errors) propagate to retry decorator
+                if should_retry_llm_exception(e):
+                    LOGGER.info(f"🔄 Azure SDK encountered retriable error, will retry: {e}")
+                    raise  # Propagate retriable exception to retry decorator
+
+                # Only convert truly non-retriable exceptions to LLMExecutionError
+                LOGGER.warning(f"⚠️ Azure SDK failed with non-retriable error: {e}")
                 raise LLMExecutionError(f"Schema enforcement failed with Azure SDK: {e}") from e
         else:
             # Try OpenAI SDK for OpenAI endpoints
@@ -278,7 +284,13 @@ class LLMExecutor:
                 LOGGER.info("✅ OpenAI SDK execution successful")
                 return result
             except Exception as e:
-                LOGGER.warning(f"⚠️ OpenAI SDK failed: {e}")
+                # Let retriable exceptions (SchemaValidationError, timeout errors, SDK errors) propagate to retry decorator
+                if should_retry_llm_exception(e):
+                    LOGGER.info(f"🔄 OpenAI SDK encountered retriable error, will retry: {e}")
+                    raise  # Propagate retriable exception to retry decorator
+
+                # Only convert truly non-retriable exceptions to LLMExecutionError
+                LOGGER.warning(f"⚠️ OpenAI SDK failed with non-retriable error: {e}")
                 raise LLMExecutionError(f"Schema enforcement failed with OpenAI SDK: {e}") from e
 
         # If we reach here, no endpoint was detected

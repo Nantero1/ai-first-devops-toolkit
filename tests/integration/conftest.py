@@ -33,7 +33,136 @@ def _get_base_mock_config():
             "completion_tokens": 20,
             "total_tokens": 70,
         },
+        # NEW: Support for response sequences for retry testing
+        "response_sequence": None,
+        "call_count": 0,
     }
+
+
+def _handle_response_sequence(request, service_config):
+    """Handle multi-response sequences for retry testing.
+
+    Args:
+        request: The HTTP request object containing the chat completion request
+        service_config: Dict containing service-specific configuration including response_sequence
+
+    Returns:
+        Response: HTTP response object based on current sequence position
+    """
+    sequence = service_config["response_sequence"]
+    call_count = service_config.get("call_count", 0)
+
+    # Increment call count
+    service_config["call_count"] = call_count + 1
+
+    # Get current response from sequence
+    if call_count < len(sequence):
+        response_spec = sequence[call_count]
+    else:
+        response_spec = sequence[-1]  # Repeat last response
+
+    # Generate response based on spec
+    if response_spec["type"] == "invalid_json":
+        # Return proper OpenAI API response format with invalid JSON content in message
+        response_data = {
+            "id": service_config["response_id"],
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": service_config["model"],
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": response_spec["content"]},  # Invalid JSON content here
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": service_config["usage"]["prompt_tokens"],
+                "completion_tokens": service_config["usage"]["completion_tokens"],
+                "total_tokens": service_config["usage"]["total_tokens"],
+            },
+        }
+        return Response(200, json=response_data, headers={"content-type": "application/json"})
+    elif response_spec["type"] == "success":
+        # Use existing logic for success response - delegate to normal response creation
+        return _create_success_response(request, service_config, response_spec)
+    else:
+        # Default to success response for unknown types
+        return _create_success_response(request, service_config, response_spec)
+
+
+def _create_success_response(request, service_config, response_spec):
+    """Create a successful response using existing mock logic.
+
+    Args:
+        request: The HTTP request object
+        service_config: Service configuration dict
+        response_spec: Response specification from sequence
+
+    Returns:
+        Response: Successful HTTP response object
+    """
+    try:
+        request_data = json.loads(request.content)
+
+        # Check if structured output is requested
+        if "response_format" in request_data and request_data["response_format"]:
+            # Structured output response - use sequence data or defaults
+            if response_spec.get("structured"):
+                mock_response = response_spec.get(
+                    "structured_data",
+                    {"analysis": "This is a successful analysis after retry", "confidence": 0.95, "status": "success"},
+                )
+            else:
+                mock_response = {
+                    "sentiment": service_config["structured_sentiment"],
+                    "confidence": service_config["structured_confidence"],
+                    "summary": service_config["structured_summary"],
+                    "key_points": service_config["structured_key_points"],
+                }
+            content = json.dumps(mock_response)
+        else:
+            # Text output response
+            content = response_spec.get("text_response", service_config.get("text_response", "Success after retry"))
+
+        # Create chat completion API response format
+        response_data = {
+            "id": service_config["response_id"],
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": service_config["model"],
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": content},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": service_config["usage"]["prompt_tokens"],
+                "completion_tokens": service_config["usage"]["completion_tokens"],
+                "total_tokens": service_config["usage"]["total_tokens"],
+            },
+        }
+
+        return Response(200, json=response_data, headers={"content-type": "application/json"})
+    except Exception as e:
+        # Return error response if something goes wrong
+        error_response = {
+            "error": {
+                "message": f"{service_config['error_prefix']}: {str(e)}",
+                "type": "internal_error",
+            }
+        }
+
+        if "error_code" in service_config:
+            error_response["error"]["code"] = service_config["error_code"]
+
+        return Response(
+            500,
+            json=error_response,
+            headers={"content-type": "application/json"},
+        )
 
 
 def _create_mock_chat_response(request, service_config):
@@ -47,6 +176,11 @@ def _create_mock_chat_response(request, service_config):
     Returns:
         Response: HTTP response object with appropriate chat completion data
     """
+    # NEW: Handle response sequences for retry testing
+    if "response_sequence" in service_config and service_config["response_sequence"]:
+        return _handle_response_sequence(request, service_config)
+
+    # EXISTING: Normal single response logic (unchanged)
     try:
         request_data = json.loads(request.content)
 
@@ -262,3 +396,51 @@ def integration_helper(temp_integration_workspace):
     integration tests.
     """
     return IntegrationTestHelper(temp_integration_workspace)
+
+
+@pytest.fixture
+def mock_azure_openai_retry_responses(respx_mock):
+    """
+    Mock fixture that simulates Azure OpenAI responses with retry scenarios.
+    Returns context manager with HttpxMock for testing retry mechanism with invalid JSON responses.
+    """
+    base_url = "https://test-openai.openai.azure.com/openai/deployments/gpt-4o/chat/completions"
+
+    # Create service-specific configuration for Azure OpenAI retry testing
+    azure_retry_config = _get_base_mock_config()
+    azure_retry_config.update(
+        {
+            "model": "gpt-4o",
+            "id_prefix": "chatcmpl-azure-retry",
+            "error_prefix": "Azure OpenAI Retry API",
+            "text_response": "Successfully processed after retry",
+            "structured_sentiment": "positive",
+            "structured_confidence": 0.95,
+            "structured_summary": "Successful analysis after retry attempts",
+            "structured_key_points": ["retry", "mechanism", "worked"],
+            "response_sequence": [
+                {
+                    "type": "invalid_json",
+                    "content": "This is not JSON for schema enforcement",
+                },
+                {
+                    "type": "invalid_json",
+                    "content": '{"incomplete": "json structure"',
+                },
+                {
+                    "type": "success",
+                    "text_response": "Successfully processed after retry",
+                    "structured": True,
+                    "structured_data": {
+                        "sentiment": "positive",
+                        "confidence": 0.95,
+                        "summary": "Successful analysis after retry attempts",
+                        "key_points": ["retry", "mechanism", "worked"],
+                    },
+                },
+            ],
+        }
+    )
+
+    # Mock Azure OpenAI chat completions endpoint with retry behavior
+    return _setup_chat_completion_mock(respx_mock, base_url, azure_retry_config)
