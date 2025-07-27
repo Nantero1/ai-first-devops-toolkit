@@ -7,6 +7,7 @@ trigger:
   branches:
     include:
       - main
+      - '*'
 
 # For pull request validation builds
 pr:
@@ -51,7 +52,7 @@ extends:
           - template: Jobs/python_tests.yml@Templates
             parameters:
               requirementFiles: ""
-              pythonBinary: "VIRTUAL_ENV='' UV_NO_SYNC=0 uv run --group dev --upgrade python"
+              pythonBinary: "export PYTHONPATH=''; export AZURE_OPENAI_ENDPOINT=''; export AZURE_OPENAI_MODEL=''; VIRTUAL_ENV='' UV_NO_SYNC=0 uv run --group dev --upgrade python"
               codeCoverage: false
               container:
                 image: cdos-marketplace-docker/llm-runtime:latest
