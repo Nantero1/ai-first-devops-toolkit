@@ -58,21 +58,29 @@ Below is the original README.md:
 [![PyPI version](https://badge.fury.io/py/llm-ci-runner.svg)](https://badge.fury.io/py/llm-ci-runner) [![CI](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/ci.yml) [![Unit Tests](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/unit-tests.yml) [![Coverage badge](https://raw.githubusercontent.com/Nantero1/ai-first-devops-toolkit/python-coverage-comment-action-data/badge.svg)](https://htmlpreview.github.io/?https://github.com/Nantero1/ai-first-devops-toolkit/blob/python-coverage-comment-action-data/htmlcov/index.html) [![CodeQL](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/Nantero1/ai-first-devops-toolkit/actions/workflows/github-code-scanning/codeql) [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT) [![MyPy](https://img.shields.io/badge/mypy-checked-brightgreen)](http://mypy-lang.org/) [![Ruff](https://img.shields.io/badge/ruff-checked-brightgreen)](https://github.com/astral-sh/ruff) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10922/badge)](https://www.bestpractices.dev/projects/10922) [![Downloads](https://img.shields.io/pypi/dm/llm-ci-runner)](https://www.pepy.tech/projects/llm-ci-runner)
 
 > **🚀 The Future of DevOps is AI-First**  
-> This toolkit represents a step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential productivity gains of AI-powered development. Please read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on the motivation.
+> This toolkit represents a step
+> toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) - where
+> intelligent automation handles the entire development lifecycle. Built for teams ready to embrace the exponential
+> productivity gains of AI-powered development. Please
+> read [the blog post](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html) for more details on
+> the motivation.
 
 ## TLDR: What This Tool Does
 
-**Purpose**: Transform any unstructured business knowledge into reliable, structured data that powers intelligent automation across your entire organization.
+**Purpose**: Transform any unstructured business knowledge into reliable, structured data that powers intelligent
+automation across your entire organization.
 
 **Perfect For**:
+
 - 🏦 **Financial Operations**: Convert loan applications, audits, and regulatory docs into structured compliance data
-- 🏥 **Healthcare Systems**: Transform patient records, clinical notes, and research data into medical formats  
+- 🏥 **Healthcare Systems**: Transform patient records, clinical notes, and research data into medical formats
 - ⚖️ **Legal & Compliance**: Process contracts, court docs, and regulatory texts into actionable risk assessments
 - 🏭 **Supply Chain**: Turn logistics reports, supplier communications, and forecasts into optimization insights
 - 👥 **Human Resources**: Convert resumes, performance reviews, and feedback into structured talent analytics
 - 🛡️ **Security Operations**: Transform threat reports, incident logs, and assessments into standard frameworks
 - 🚀 **DevOps & Engineering**: Use commit logs, deployment reports, and system logs for automated AI actions
 - 🔗 **Enterprise Integration**: Connect any business process to downstream systems with guaranteed consistency
+
 ---
 
 ### Simple structured output example
@@ -82,14 +90,16 @@ Below is the original README.md:
 pip install llm-ci-runner
 llm-ci-runner --input-file examples/02-devops/pr-description/input.json --schema-file examples/02-devops/pr-description/schema.json
 ```
+
 ![Structured output of the PR review example](https://github.com/Nantero1/ai-first-devops-toolkit/raw/main/examples/02-devops/pr-description/output.png)
 
 ## The AI-First Development Revolution
 
-This toolkit embodies the principles outlined in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html):
+This toolkit embodies the principles outlined
+in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html):
 
-| Traditional DevOps          | AI-First DevOps (This Tool)                        |
-| --------------------------- | -------------------------------------------------- |
+| Traditional DevOps          | AI-First DevOps (This Tool)                         |
+|-----------------------------|-----------------------------------------------------|
 | Manual code reviews         | 🤖 AI-powered reviews with structured findings      |
 | Human-written documentation | 📝 AI-generated docs with guaranteed consistency    |
 | Reactive security scanning  | 🔍 Proactive AI security analysis                   |
@@ -98,8 +108,10 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 
 ## Features
 
-- 🎯 **100% Schema Enforcement**: Your pipeline never gets invalid data. Token-level schema enforcement with guaranteed compliance
-- 🔄 **Resilient execution**: Retries with exponential back-off and jitter plus a clear exception hierarchy keep transient cloud faults from breaking your CI.
+- 🎯 **100% Schema Enforcement**: Your pipeline never gets invalid data. Token-level schema enforcement with guaranteed
+  compliance
+- 🔄 **Resilient execution**: Retries with exponential back-off and jitter plus a clear exception hierarchy keep
+  transient cloud faults from breaking your CI.
 - 🚀 **Zero-Friction CLI**: Single script, minimal configuration for pipeline integration and automation
 - 🔐 **Enterprise Security**: Azure RBAC via DefaultAzureCredential with fallback to API Key
 - 📦 **CI-friendly CLI**: Stateless command that reads JSON/YAML, writes JSON/YAML, and exits with proper codes
@@ -108,14 +120,19 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 - 📋 **Template-Driven Workflows**: Handlebars and Jinja2 templates with YAML variables for dynamic prompt generation
 - 📄 **YAML Support**: Use YAML for schemas, input files, and output files - more readable than JSON
 - 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
-- 🤖 **Semantic Kernel foundation**: async, service-oriented design ready for skills, memories, orchestration, and future model upgrades
-- 📚 **Documentation**: Comprehensive documentation for all features and usage examples. Use your semantic kernel skills to extend the functionality.
-- 🧑‍⚖️ **Acceptance Tests**: pytest framework with the LLM-as-Judge pattern for quality gates. Test your scripts before you run them in production.
+- 🤖 **Semantic Kernel foundation**: async, service-oriented design ready for skills, memories, orchestration, and future
+  model upgrades
+- 📚 **Documentation**: Comprehensive documentation for all features and usage examples. Use your semantic kernel skills
+  to extend the functionality.
+- 🧑‍⚖️ **Acceptance Tests**: pytest framework with the LLM-as-Judge pattern for quality gates. Test your scripts before
+  you run them in production.
 - 💰 **Coming soon**: token usage and cost estimation appended to each result for budgeting and optimisation
 
 ## 🚀 The Only Enterprise AI DevOps Tool That Delivers RBAC Security, Robustness and Simplicity
 
-**LLM-CI-Runner stands alone in the market** as the only tool combining **100% schema enforcement**, **enterprise RBAC authentication**, and robust **Semantic Kernel integration with templates** in a single CLI solution. **No other tool delivers all three critical enterprise requirements together**.
+**LLM-CI-Runner stands alone in the market** as the only tool combining **100% schema enforcement**, **enterprise RBAC
+authentication**, and robust **Semantic Kernel integration with templates** in a single CLI solution. **No other tool
+delivers all three critical enterprise requirements together**.
 
 ## Installation
 
@@ -123,7 +140,8 @@ This toolkit embodies the principles outlined in [Building AI-First DevOps](http
 pip install llm-ci-runner
 ```
 
-That's it! No complex setup, no dependency management - just install and use. Perfect for CI/CD pipelines and local development.
+That's it! No complex setup, no dependency management - just install and use. Perfect for CI/CD pipelines and local
+development.
 
 ## Quick Start
 
@@ -136,6 +154,7 @@ pip install llm-ci-runner
 ### 2. Set Environment Variables
 
 **Azure OpenAI (Priority 1):**
+
 ```bash
 export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
 export AZURE_OPENAI_MODEL="gpt-4.1-nano"  # or any other GPT deployment name
@@ -143,6 +162,7 @@ export AZURE_OPENAI_API_VERSION="2024-12-01-preview"  # Optional
 ```
 
 **OpenAI (Fallback):**
+
 ```bash
 export OPENAI_API_KEY="your-very-secret-api-key"
 export OPENAI_CHAT_MODEL_ID="gpt-4.1-nano"  # or any OpenAI model
@@ -150,7 +170,10 @@ export OPENAI_ORG_ID="org-your-org-id"  # Optional
 ```
 
 **Authentication Options:**
-- **Azure RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed! See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python) for setup.
+
+- **Azure RBAC (Recommended)**: Uses `DefaultAzureCredential` for Azure RBAC authentication - no API key needed!
+  See [Microsoft Docs](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential?view=azure-python)
+  for setup.
 - **Azure API Key**: Set `AZURE_OPENAI_API_KEY` environment variable if not using RBAC.
 - **OpenAI API Key**: Required for OpenAI fallback when Azure is not configured.
 
@@ -203,12 +226,141 @@ llm-ci-runner \
 For more examples see the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples).
 
 **Benefits of Template Approach:**
+
 - 🎯 **Reusable Templates**: Create once, use across multiple scenarios
 - 📝 **YAML Configuration**: More readable than JSON for complex setups
 - 🔄 **Dynamic Content**: Variables and conditional rendering
 - 🚀 **CI/CD Ready**: Perfect for parameterized pipeline workflows
 
-### 4. Development Setup (Optional)
+### 4. Python Library Usage
+
+**You can use LLM CI Runner directly from Python with both file-based and string-based templates, and with either dict
+or file-based variables and schemas. The main entrypoint is:**
+
+```python  
+from llm_ci_runner.core import run_llm_task  # Adjust import as needed for your package layout  
+```  
+
+#### Basic Usage: File-Based Input
+
+```python  
+import asyncio  
+from llm_ci_runner.core import run_llm_task  
+   
+async def main():  
+    # Run with a traditional JSON input file (messages, etc)  
+    response = await run_llm_task(_input_file="examples/01-basic/simple-chat/input.json")  
+    print(response)  
+   
+asyncio.run(main())  
+```  
+
+#### File-Based Template Usage
+
+```python  
+import asyncio  
+from llm_ci_runner.core import run_llm_task  
+   
+async def main():  
+    # Handlebars, Jinja2, or Semantic Kernel YAML template via file  
+    response = await run_llm_task(  
+        template_file="examples/05-templates/pr-review-template/template.hbs",  
+        template_vars_file="examples/05-templates/pr-review-template/template-vars.yaml",  
+        schema_file="examples/05-templates/pr-review-template/schema.yaml",  
+        output_file="analysis.json"  
+    )  
+    print(response)  
+   
+asyncio.run(main())  
+```  
+
+#### String-Based Template Usage
+
+```python  
+import asyncio  
+from llm_ci_runner.core import run_llm_task  
+   
+async def main():  
+    # String template (Handlebars example)  
+    response = await run_llm_task(  
+        template_content="Hello {{name}}!",  
+        template_format="handlebars",  
+        template_vars={"name": "World"},  
+    )  
+    print(response)  
+   
+asyncio.run(main())  
+```  
+
+#### Semantic Kernel YAML Template with Embedded Schema
+
+Please refer to the full example in [examples/05-templates/sem-ker-structured-analysis/README.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/05-templates/sem-ker-structured-analysis/README.md).
+
+```python  
+import asyncio  
+from llm_ci_runner.core import run_llm_task  
+   
+async def main():  
+    template_content = """  
+template: "Analyze: {{input_text}}"  
+input_variables:  
+  - name: input_text  
+execution_settings:  
+  azure_openai:  
+    temperature: 0.1  
+"""  
+    response = await run_llm_task(  
+        template_content=template_content,  
+        template_format="semantic-kernel",  
+        template_vars={"input_text": "Sample data"}  
+    )  
+    print(response)  
+   
+asyncio.run(main())  
+```  
+
+#### Advanced: Dict-based Schema and Variables
+
+```python  
+import asyncio  
+from llm_ci_runner.core import run_llm_task  
+   
+async def main():  
+    schema = {  
+        "type": "object",  
+        "properties": {  
+            "sentiment": {"type": "string", "enum": ["positive", "negative", "neutral"]},  
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1}  
+        },  
+        "required": ["sentiment", "confidence"]  
+    }  
+    template = "Analyze this review: {{review}}"  
+    variables = {"review": "I love the new update!"}  
+  
+    response = await run_llm_task(  
+        template_content=template,  
+        template_format="handlebars",  
+        template_vars=variables,  
+        schema=schema  
+    )  
+    print(response)  
+   
+asyncio.run(main())  
+```  
+
+#### Notes & Tips
+
+- **Only one of** `_input_file`, `template_file`, or `template_content` **may be specified** at a time.
+- **Template variables**: Use `template_vars` (Python dict or YAML file path), or `template_vars_file` (YAML file path).
+- **Schema**: Use `schema` (dict or JSON/YAML file path), or `schema_file` (file path).
+- **template_format** is required with `template_content`. Allowed: `"handlebars"`, `"jinja2"`, `"semantic-kernel"`.
+- **output_file**: If specified, writes response to file.
+
+**Returns:** String (for text output) or dict (for structured JSON output).
+
+**Errors:** Raises `InputValidationError` or `LLMRunnerError` on invalid input or execution failure.
+
+### 5. Development Setup (Optional)
 
 For contributors or advanced users who want to modify the source:
 
@@ -227,14 +379,18 @@ uv run llm-ci-runner --input-file examples/01-basic/simple-chat/input.json
 
 ## The AI-First Transformation: Why Unstructured → Structured Matters
 
-LLMs excel at extracting meaning from messy text, logs, documents, and mixed-format data, then emitting **schema-compliant JSON/YAML** that downstream systems can trust. This unlocks:
+LLMs excel at extracting meaning from messy text, logs, documents, and mixed-format data, then emitting *
+*schema-compliant JSON/YAML** that downstream systems can trust. This unlocks:
 
-- **🔄 Straight-Through Processing**: Structured payloads feed BI dashboards, RPA robots, and CI/CD gates without human parsing
-- **🎯 Context-Aware Decisions**: LLMs fuse domain knowledge with live telemetry to prioritize incidents, forecast demand, and spot security drift
+- **🔄 Straight-Through Processing**: Structured payloads feed BI dashboards, RPA robots, and CI/CD gates without human
+  parsing
+- **🎯 Context-Aware Decisions**: LLMs fuse domain knowledge with live telemetry to prioritize incidents, forecast
+  demand, and spot security drift
 - **📋 Auditable Compliance**: Formal outputs make it easy to track decisions for regulators and ISO/NIST audits
-- **⚡ Rapid Workflow Automation**: Enable automation across customer service, supply-chain planning, HR case handling, and security triage
-- **🔗 Safe Pipeline Composition**: Structured contracts let AI-first pipelines remain observable and composable while capitalizing on unstructured enterprise data
-
+- **⚡ Rapid Workflow Automation**: Enable automation across customer service, supply-chain planning, HR case handling,
+  and security triage
+- **🔗 Safe Pipeline Composition**: Structured contracts let AI-first pipelines remain observable and composable while
+  capitalizing on unstructured enterprise data
 
 ## Input Formats
 
@@ -248,7 +404,7 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
       "content": "You are a helpful assistant."
     },
     {
-      "role": "user", 
+      "role": "user",
       "content": "Your task description here"
     }
   ],
@@ -278,24 +434,27 @@ context:
 ### Template-Based Input
 
 **Handlebars Template** (`template.hbs`):
+
 ```handlebars
+
 <message role="system">
-You are an expert {{expertise.domain}} engineer.
-Focus on {{expertise.focus_areas}}.
+    You are an expert {{expertise.domain}} engineer.
+    Focus on {{expertise.focus_areas}}.
 </message>
 
 <message role="user">
-Analyze this {{task.type}}:
+    Analyze this {{task.type}}:
 
-{{#each task.items}}
-- {{this}}
-{{/each}}
+    {{#each task.items}}
+        - {{this}}
+    {{/each}}
 
-Requirements: {{task.requirements}}
+    Requirements: {{task.requirements}}
 </message>
 ```
 
 **Jinja2 Template** (`template.j2`):
+
 ```jinja2
 <message role="system">
 You are an expert {{expertise.domain}} engineer.
@@ -314,6 +473,7 @@ Requirements: {{task.requirements}}
 ```
 
 **Template Variables** (`vars.yaml`):
+
 ```yaml
 expertise:
   domain: "DevOps"
@@ -344,7 +504,7 @@ llm-ci-runner \
 ✅ Numeric constraints (minimum, maximum, multipleOf)  
 ✅ Array constraints (minItems, maxItems, items type)  
 ✅ Required fields enforced at generation time  
-✅ Type validation (string, number, integer, boolean, array)  
+✅ Type validation (string, number, integer, boolean, array)
 
 ## CI/CD Integration
 
@@ -371,18 +531,22 @@ llm-ci-runner \
     AZURE_OPENAI_MODEL: ${{ secrets.AZURE_OPENAI_MODEL }}
 ```
 
-For complete CI/CD examples, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**. This repo is also using itself for release note generation, **check it out [here](https://github.com/Nantero1/ai-first-devops-toolkit/blob/c4066d347ae14d37cb674e36007a678f38b36439/.github/workflows/release.yml#L145-L149)**.
+For complete CI/CD examples, see *
+*[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)
+**. This repo is also using itself for release note generation, **check it
+out [here](https://github.com/Nantero1/ai-first-devops-toolkit/blob/c4066d347ae14d37cb674e36007a678f38b36439/.github/workflows/release.yml#L145-L149)
+**.
 
 ## Authentication
 
 **Azure OpenAI**: Uses Azure's `DefaultAzureCredential` supporting:
+
 - Environment variables (local development)
 - Managed Identity (recommended for Azure CI/CD)
 - Azure CLI (local development)
 - Service Principal (non-Azure CI/CD)
 
 **OpenAI**: Uses API key authentication with optional organization ID.
-
 
 ## Testing
 
@@ -409,6 +573,7 @@ uv run pytest acceptance/ -v
 ## Architecture
 
 Built on **Microsoft Semantic Kernel** for:
+
 - Enterprise-ready Azure OpenAI and OpenAI integration
 - Future-proof model compatibility
 - **100% Schema Enforcement**: KernelBaseModel integration with token-level constraints
@@ -418,20 +583,26 @@ Built on **Microsoft Semantic Kernel** for:
 
 ## The AI-First Development Journey
 
-This toolkit is your first step toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html). As you integrate AI into your development workflows, you'll experience:
+This toolkit is your first step
+toward [AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html). As you
+integrate AI into your development workflows, you'll experience:
 
 1. **🚀 Exponential Productivity**: AI handles routine tasks while you focus on architecture
 2. **🎯 Guaranteed Quality**: Schema enforcement eliminates validation errors
 3. **🤖 Autonomous Operations**: AI agents make decisions in your pipelines
 4. **📈 Continuous Improvement**: Every interaction improves your AI system
 
-**The future belongs to teams that master AI-first principles.** This toolkit gives you the foundation to start that journey today.
+**The future belongs to teams that master AI-first principles.** This toolkit gives you the foundation to start that
+journey today.
 
 ## Real-World Examples
 
-You can explore the **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)** for a complete collection of self-contained examples organized by category.
+You can explore the **[examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)** for
+a complete collection of self-contained examples organized by category.
 
-For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)**. 
+For comprehensive real-world CI/CD scenarios, see *
+*[examples/uv-usage-example.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/uv-usage-example.md)
+**.
 
 ### 100 AI Automation Use Cases for AI-First Automation
 
@@ -441,7 +612,7 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 2. 📝 Release note composer – map commits to semantic-version bump rules and structured changelogs
 3. 🔍 Vulnerability scanner – map code vulnerabilities to OWASP standards with actionable remediation
 4. ☸️ Kubernetes manifest optimizer – produce risk-scored diffs and security hardening recommendations
-5. 📊 Log anomaly triager – convert system logs into OTEL-formatted events for SIEM ingestion  
+5. 📊 Log anomaly triager – convert system logs into OTEL-formatted events for SIEM ingestion
 6. 💰 Cloud cost explainer – output tagged spend by team in FinOps schema for budget optimization
 7. 🔄 API diff analyzer – produce backward-compatibility scorecards from specification changes
 8. 🛡️ IaC drift detector – turn Terraform plans into CVE-linked security findings
@@ -452,7 +623,7 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 
 11. 📊 Regulatory delta analyzer – emit change-impact matrices from new compliance requirements
 12. 🌱 ESG report synthesizer – map CSR prose to GRI indicators and sustainability metrics
-13. 📋 SOX-404 narrative converter – transform controls descriptions into testable audit checklists  
+13. 📋 SOX-404 narrative converter – transform controls descriptions into testable audit checklists
 14. 🏦 Basel III stress-test interpreter – output capital risk buckets from regulatory scenarios
 15. 🕵️ AML SAR formatter – convert investigator notes into Suspicious Activity Report structures
 16. 🔒 Privacy policy parser – generate GDPR data-processing-activity logs from legal text
@@ -502,7 +673,7 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 
 **Customer Experience & Sales** 🛒
 
-51. 🎧 Tier-1 support chatbot – convert customer queries into tickets with reproducible troubleshooting steps  
+51. 🎧 Tier-1 support chatbot – convert customer queries into tickets with reproducible troubleshooting steps
 52. ⭐ Review sentiment miner – produce product-feature tallies from customer feedback analysis
 53. 📉 Churn risk email summarizer – export CRM risk scores from customer communication patterns
 54. 🗺️ Omnichannel conversation unifier – generate customer journey maps from multi-platform interactions
@@ -557,7 +728,7 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 91. 🎙️ Meeting transcript processor – extract action items with owners and deadlines into project tracking JSON
 92. 📚 Research paper summarizer – export citation graphs and key findings for literature review databases
 93. 📋 SOP generator – convert process narratives into step-by-step validation checklists
-94. 🔄 Code diff summarizer – generate reviewer hints and impact analysis from version control changes  
+94. 🔄 Code diff summarizer – generate reviewer hints and impact analysis from version control changes
 95. 📊 API changelog analyzer – produce backward-compatibility scorecards for development teams
 96. 🧠 Mind map creator – structure brainstorming sessions into hierarchical knowledge trees
 97. 📖 Knowledge base gap detector – suggest article stubs from frequently asked questions analysis
@@ -565,10 +736,10 @@ For comprehensive real-world CI/CD scenarios, see **[examples/uv-usage-example.m
 99. 💼 White paper composer – transform technical discussions into structured thought leadership content
 100. 🧩 Universal transformer – convert any unstructured domain knowledge into your custom schema-validated JSON
 
-
 ## License
 
-MIT License - See [LICENSE](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/LICENSE) file for details. Copyright (c) 2025, Benjamin Linnik.
+MIT License - See [LICENSE](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/LICENSE) file for details.
+Copyright (c) 2025, Benjamin Linnik.
 
 ## Support
 
@@ -581,13 +752,16 @@ MIT License - See [LICENSE](https://github.com/Nantero1/ai-first-devops-toolkit/
 - **🔧 Source Code**: [View source](https://github.com/Nantero1/ai-first-devops-toolkit)
 
 **Before opening an issue, please:**
-1. ✅ Check the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples) for solutions
+
+1. ✅ Check the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples) for
+   solutions
 2. ✅ Review the error logs (beautiful output with Rich!)
 3. ✅ Validate your Azure authentication and permissions
 4. ✅ Ensure your input JSON follows the required format
 5. ✅ Search existing [issues](https://github.com/Nantero1/ai-first-devops-toolkit/issues) for similar problems
 
 **Quick Links:**
+
 - 🚀 [Getting Started Guide](https://github.com/Nantero1/ai-first-devops-toolkit#quick-start)
 - 📚 [Complete Examples](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples)
 - 🔧 [CI/CD Integration](https://github.com/Nantero1/ai-first-devops-toolkit#cicd-integration)
@@ -595,4 +769,6 @@ MIT License - See [LICENSE](https://github.com/Nantero1/ai-first-devops-toolkit/
 
 ---
 
-*Ready to embrace the AI-First future? Start with this toolkit and build your path to exponential productivity. Learn more about the AI-First DevOps revolution in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html).*
+*Ready to embrace the AI-First future? Start with this toolkit and build your path to exponential productivity. Learn
+more about the AI-First DevOps revolution
+in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/building-ai-first-devops.html).*

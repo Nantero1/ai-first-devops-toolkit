@@ -1,0 +1,45 @@
+name: StructuredAnalysis
+description: SK template with embedded JSON schema for structured output
+template_format: semantic-kernel
+template: |
+  Analyze the following text and provide a structured response: {{$text_to_analyze}}
+
+input_variables:
+  - name: text_to_analyze
+    description: The text content to analyze
+    is_required: true
+
+execution_settings:
+  azure_openai:
+    model_id: gpt-4.1-stable
+    temperature: 0.3
+    max_tokens: 800
+    response_format:
+      type: json_schema
+      json_schema:
+        name: analysis_result
+        schema:
+          type: object
+          properties:
+            sentiment:
+              type: string
+              enum: ["positive", "negative", "neutral"]
+              description: Overall sentiment of the text
+            confidence:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              description: Confidence score for the sentiment analysis
+            key_themes:
+              type: array
+              items:
+                type: string
+              description: Main themes identified in the text
+            summary:
+              type: string
+              description: Brief summary of the text
+            word_count:
+              type: integer
+              description: Approximate word count
+          required: ["sentiment", "confidence", "summary"]
+          additionalProperties: false

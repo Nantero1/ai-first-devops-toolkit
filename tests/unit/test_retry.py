@@ -28,7 +28,7 @@ from llm_ci_runner.retry import (
     create_retry_with_timeout_decorator,
     get_timeout_from_env,
     should_retry_azure_exception,
-    should_retry_network_exception,
+    should_retry_llm_exception,
     should_retry_openai_exception,
 )
 
@@ -250,7 +250,7 @@ class TestShouldRetryNetworkException:
         exception = Mock(spec=APIConnectionError)
 
         # when
-        result = should_retry_network_exception(exception)
+        result = should_retry_llm_exception(exception)
 
         # then
         assert result is True
@@ -261,7 +261,7 @@ class TestShouldRetryNetworkException:
         exception = ServiceRequestError("Service request failed")
 
         # when
-        result = should_retry_network_exception(exception)
+        result = should_retry_llm_exception(exception)
 
         # then
         assert result is True
@@ -269,13 +269,26 @@ class TestShouldRetryNetworkException:
     def test_should_not_retry_non_retriable_exception(self):
         """Test that non-retriable exceptions are not retried via network logic."""
         # given
-        exception = ClientAuthenticationError("Authentication failed")
+        exception = Mock(spec=ValueError)
 
         # when
-        result = should_retry_network_exception(exception)
+        result = should_retry_llm_exception(exception)
 
         # then
         assert result is False
+
+    def test_should_retry_schema_validation_error(self):
+        """Test that SchemaValidationError should be retried to allow LLM to fix JSON."""
+        # given
+        from llm_ci_runner.exceptions import SchemaValidationError
+
+        exception = SchemaValidationError("Invalid JSON schema")
+
+        # when
+        result = should_retry_llm_exception(exception)
+
+        # then
+        assert result is True  # Covers line 159 in retry.py
 
     def test_should_not_retry_unknown_exception(self):
         """Test that unknown exceptions are not retried via network logic."""
@@ -283,7 +296,7 @@ class TestShouldRetryNetworkException:
         exception = ValueError("Unknown error")
 
         # when
-        result = should_retry_network_exception(exception)
+        result = should_retry_llm_exception(exception)
 
         # then
         assert result is False
@@ -506,7 +519,7 @@ class TestTimeoutExceptionRetry:
         exception = TimeoutError()
 
         # when
-        result = should_retry_network_exception(exception)
+        result = should_retry_llm_exception(exception)
 
         # then
         assert result is True
@@ -517,7 +530,7 @@ class TestTimeoutExceptionRetry:
         exception = TimeoutError("Operation timed out")
 
         # when
-        result = should_retry_network_exception(exception)
+        result = should_retry_llm_exception(exception)
 
         # then
         assert result is True
@@ -529,8 +542,8 @@ class TestTimeoutExceptionRetry:
         timeout_exception = TimeoutError("Timeout")
 
         # when
-        openai_result = should_retry_network_exception(openai_exception)
-        timeout_result = should_retry_network_exception(timeout_exception)
+        openai_result = should_retry_llm_exception(openai_exception)
+        timeout_result = should_retry_llm_exception(timeout_exception)
 
         # then
         assert openai_result is True

@@ -215,3 +215,41 @@ testing_notes:
 ```
 
 **Technical Details**: The fix addresses the core issue where ruamel.yaml's default width behavior was causing problematic line wrapping. By using appropriate scalar types based on content characteristics (multiline vs single-line), we achieve both technical correctness and visual clarity without requiring extreme width configurations like `yaml.width = 1000`.
+
+### [2025-01-27] Complete Microsoft Semantic Kernel YAML Model_ID Support Implementation
+**Achievement**: Successfully implemented full Microsoft Semantic Kernel YAML native support with dynamic model selection, answering user question "do we have full microsoft semantic kernel yaml native support? if i specify the model name inside the yaml, will it be used?" with definitive YES.
+
+**Core Implementation**: 
+- **Dynamic Service Creation**: Added `_extract_model_id_from_yaml()` function to extract model_id from YAML execution_settings.azure_openai.model_id, created `_create_azure_service_with_model()` to generate AzureChatCompletion services using YAML model_id as deployment_name
+- **Direct 1:1 Mapping**: YAML model_id → Azure deployment_name → HTTP endpoint calls, eliminating need for hardcoded model lists or translation layers
+- **Architecture Pattern**: Modified `_process_template_unified()` to detect YAML templates, extract model_id, create dynamic service, add to kernel, execute with correct model deployment
+- **Future-Proof Design**: Any new Azure deployment works immediately by specifying real deployment name in YAML, zero code maintenance required
+
+**Technical Evidence**: 
+```logs
+DEBUG    🎯 YAML specifies model_id: gpt-4.1-stable                                           
+INFO     🔧 Creating Azure service with model: gpt-4.1-stable                                 
+INFO     ✅ Using YAML-specified model: gpt-4.1-stable                                        
+DEBUG    Sending HTTP Request: POST                                                           
+         https://ai-openai-dev-swecen-001.openai.azure.com/openai/deployments/gpt-4.1-stable/chat/completions
+```
+
+**MyPy Type Safety Resolved**: 
+- **Issue 1**: `core.py:73: error: Returning Any from function declared to return "str | None"` - Fixed with explicit `str(model_id)` cast after `isinstance(model_id, str)` type guard
+- **Issue 2**: `core.py:688: error: Statement is unreachable` - Fixed by removing unreachable else clause since all union types covered by isinstance checks
+
+**Architecture Insights**: 
+- **Service Selection**: Semantic Kernel matches services by service_id, not model_id - service's deployment_name determines actual Azure model called
+- **Dynamic Creation**: Creating services on-demand based on YAML content provides maximum flexibility vs pre-registering multiple services
+- **Clean Fallbacks**: Environment service used for non-YAML templates, maintaining backward compatibility
+
+**Key Benefits Achieved**:
+- ✅ Zero Model Tracking: No hardcoded model lists to maintain
+- ✅ Future-Proof: Any Azure deployment works immediately  
+- ✅ User-Friendly: Real deployment names in YAML
+- ✅ Type Safe: All mypy errors resolved without ignore comments
+- ✅ Clean Architecture: 2 helper functions, minimal code changes
+
+**Files Modified**: `llm_ci_runner/core.py` - Added helper functions and updated template processing logic
+
+**Impact**: Complete Microsoft Semantic Kernel YAML native support with dynamic model selection, exactly fulfilling user requirements with production-ready implementation. #semantic-kernel #yaml-templates #dynamic-models #type-safety #future-proof
