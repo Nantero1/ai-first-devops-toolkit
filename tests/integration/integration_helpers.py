@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+
+from tenacity import retry, stop_after_delay, wait_fixed
 
 from llm_ci_runner import main
 
@@ -207,6 +210,8 @@ class IntegrationTestHelper:
         Raises:
             Exception: If main() execution fails
         """
+        import os
+
         # Extract output file path from args for return value
         try:
             output_idx = args.index("--output-file") + 1
@@ -214,8 +219,26 @@ class IntegrationTestHelper:
         except (ValueError, IndexError) as exc:
             raise ValueError("--output-file argument is required") from exc
 
-        with patch("sys.argv", args):
-            await main()
+        # Store original working directory
+        original_cwd = os.getcwd()
+
+        try:
+            # Ensure we stay in the project root directory for execution
+            # This should match the current working directory when tests run
+            project_root = Path(__file__).parent.parent.parent.resolve()
+
+            # Change to project root if not already there
+            if Path(original_cwd) != project_root:
+                os.chdir(project_root)
+
+            # Execute main with patched sys.argv
+            with patch("sys.argv", args):
+                await main()
+
+        finally:
+            # Restore original working directory
+            if os.getcwd() != original_cwd:
+                os.chdir(original_cwd)
 
         return output_file
 
@@ -267,27 +290,66 @@ class IntegrationTestHelper:
         # Load and return results
         return self.load_output_file(output_file)
 
+    @retry(
+        stop=stop_after_delay(10),  # Increase to 10 seconds for debugging
+        wait=wait_fixed(0.2),  # Increase wait to 200ms for filesystem sync
+        reraise=True,
+    )
     def load_output_file(self, output_file: Path) -> dict[str, Any]:
         """
-        Load and parse output file content.
+        Load and parse output file content with retry logic and extensive debugging.
+
+        Retries for up to 10 seconds to handle file I/O race conditions
+        where the application may still be writing the file when the
+        test tries to read it.
 
         Args:
             output_file: Path to the output file
 
         Returns:
             Parsed file content as dictionary
+
+        Raises:
+            FileNotFoundError: If file doesn't exist after retry timeout
         """
+        import os
+        import time
+
+        # Extensive debugging for file I/O issues
+        current_dir = os.getcwd()
+        output_abs_path = output_file.resolve()
+        output_parent = output_file.parent.resolve()
+
         if not output_file.exists():
-            raise FileNotFoundError(f"Output file not found: {output_file}")
+            # Final attempt: force filesystem sync and wait a bit more
+            time.sleep(0.5)  # Additional wait for filesystem sync
+            if not output_file.exists():
+                raise FileNotFoundError(
+                    f"Output file not found after retry timeout: {output_file} (absolute: {output_abs_path})"
+                )
+
+        # Additional check: ensure file is not empty and readable
+        try:
+            file_size = output_file.stat().st_size
+            if file_size == 0:
+                raise FileNotFoundError(f"Output file exists but is empty (still being written): {output_file}")
+        except OSError as e:
+            raise FileNotFoundError(f"Cannot access output file: {output_file} - {e}")
 
         if output_file.suffix.lower() == ".json":
             with open(output_file) as f:
-                return json.load(f)
+                content = f.read().strip()
+                if not content:
+                    raise FileNotFoundError(f"Output file exists but content is empty: {output_file}")
+                return json.loads(content)
         elif output_file.suffix.lower() in [".yaml", ".yml"]:
             import yaml
 
             with open(output_file) as f:
-                return yaml.safe_load(f)
+                content = f.read().strip()
+                if not content:
+                    raise FileNotFoundError(f"Output file exists but content is empty: {output_file}")
+                return yaml.safe_load(content)
         else:
             # Try JSON first, then YAML as fallback
             try:

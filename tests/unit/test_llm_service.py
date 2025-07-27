@@ -42,10 +42,10 @@ def test_setup_azure_service_uses_ad_token_provider(monkeypatch):
             mock_service = Mock()
             mock_azure_chat.return_value = mock_service
 
-            # Run setup_azure_service
+            # Run setup_azure_service using modern asyncio pattern
             import asyncio
 
-            service, credential = asyncio.get_event_loop().run_until_complete(llm_service.setup_azure_service())
+            service, credential = asyncio.run(llm_service.setup_azure_service())
 
             # Assert the correct provider was used
             mock_token_provider.assert_called_once()

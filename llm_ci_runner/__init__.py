@@ -90,11 +90,7 @@ from .core import (
     execute_llm_with_chat_history,
     load_template_from_string,
     main,
-    process_handlebars_jinja_template,
-    process_handlebars_jinja_template_with_vars,
     process_input_file,
-    process_sk_yaml_template,
-    process_sk_yaml_template_with_vars,
     run_llm_task,
 )
 from .exceptions import (
@@ -147,10 +143,6 @@ __all__ = [
     # Library functions for programmatic use
     "run_llm_task",
     "process_input_file",
-    "process_sk_yaml_template",
-    "process_sk_yaml_template_with_vars",
-    "process_handlebars_jinja_template",
-    "process_handlebars_jinja_template_with_vars",
     "execute_llm_with_chat_history",
     "load_template_from_string",
     # Functions for testing compatibility

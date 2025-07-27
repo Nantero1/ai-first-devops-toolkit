@@ -1,19 +1,17 @@
 """
 Unit tests for string-based template functions in LLM CI Runner.
 
-Tests the enhanced run_llm_task function with template_content, template_format,
+Tests the run_llm_task function with template_content, template_format,
 and template_vars parameters, following behavior-focused testing principles.
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
 from llm_ci_runner import (
     InputValidationError,
     load_template_from_string,
-    process_handlebars_jinja_template_with_vars,
-    process_sk_yaml_template_with_vars,
     run_llm_task,
 )
 
@@ -30,7 +28,7 @@ class TestRunLlmTaskStringTemplates:
         # when & then
         with pytest.raises(
             InputValidationError,
-            match="Either input_file, template_file, or template_content must be specified",
+            match="Either template_content, template_file, or input file must be specified",
         ):
             await run_llm_task()
 
@@ -38,55 +36,90 @@ class TestRunLlmTaskStringTemplates:
     async def test_run_llm_task_validation_mutually_exclusive_inputs(self):
         """Test that template inputs are mutually exclusive."""
         # given
-        input_file = "input.json"
         template_file = "template.hbs"
         template_content = "Hello {{name}}"
 
         # when & then
         with pytest.raises(
             InputValidationError,
-            match="Cannot specify multiple template inputs.*mutually exclusive",
+            match="Cannot specify multiple input sources",
         ):
             await run_llm_task(
-                input_file=input_file,
                 template_file=template_file,
                 template_content=template_content,
+                template_format="handlebars",
             )
 
     @pytest.mark.asyncio
     async def test_run_llm_task_validation_template_format_required(self):
-        """Test that template_format is required with template_content."""
+        """Test that template_format is required when using templates."""
         # given
         template_content = "Hello {{name}}"
-        # template_format not provided
 
         # when & then
         with pytest.raises(
             InputValidationError,
-            match="template_format is required when using template_content",
+            match="template_format is required when using templates",
         ):
             await run_llm_task(template_content=template_content)
 
     @pytest.mark.asyncio
-    async def test_run_llm_task_validation_mutually_exclusive_template_vars(self):
-        """Test that template variables inputs are mutually exclusive."""
+    async def test_run_llm_task_validation_smart_template_vars_working(self, tmp_path):
+        """Test that smart auto-detection for template_vars works (no validation error)."""
         # given
         template_content = "Hello {{name}}"
         template_format = "handlebars"
-        template_vars_file = "vars.yaml"
-        template_vars = {"name": "World"}
 
-        # when & then
-        with pytest.raises(
-            InputValidationError,
-            match="Cannot specify both template_vars_file and template_vars",
-        ):
-            await run_llm_task(
+        # This should NOT raise an error because template_vars supports both dict and string
+        # Testing that the new unified API accepts both formats
+        with patch("llm_ci_runner.core.setup_llm_service") as mock_setup:
+            mock_service = Mock()
+            mock_credential = Mock()
+            mock_setup.return_value = (mock_service, mock_credential)
+
+            with patch("llm_ci_runner.core._process_template_unified") as mock_process:
+                mock_process.return_value = "mocked response"
+
+                # when - should work with dict
+                result1 = await run_llm_task(
+                    template_content=template_content,
+                    template_format=template_format,
+                    template_vars={"name": "World"},  # Dict format
+                )
+
+                # when - should work with string (file path) - create temp file
+                temp_vars_file = tmp_path / "vars.yaml"
+                temp_vars_file.write_text("name: World\n")
+
+                result2 = await run_llm_task(
+                    template_content=template_content,
+                    template_format=template_format,
+                    template_vars=str(temp_vars_file),  # String format (file path)
+                )
+
+                # then
+                assert result1 == "mocked response"
+                assert result2 == "mocked response"
+
+    @pytest.mark.asyncio
+    async def test_run_llm_task_validation_mutually_exclusive_template_vars(self, mock_environment_variables):
+        """Test that the unified API accepts both dict and file path for template_vars."""
+        # given
+        template_content = "Hello {{name}}"
+        template_format = "handlebars"
+
+        with patch("llm_ci_runner.core._process_template_unified") as mock_process:
+            mock_process.return_value = "mocked response"
+
+            # when - Test with dict (should work)
+            result1 = await run_llm_task(
                 template_content=template_content,
                 template_format=template_format,
-                template_vars_file=template_vars_file,
-                template_vars=template_vars,
+                template_vars={"name": "World"},  # Dict format
             )
+
+            # then
+            assert result1 == "mocked response"
 
     @pytest.mark.asyncio
     async def test_run_llm_task_validation_invalid_template_format(self):
@@ -108,12 +141,16 @@ class TestRunLlmTaskStringTemplates:
     @pytest.mark.asyncio
     @patch("llm_ci_runner.core.setup_llm_service")
     @patch("llm_ci_runner.core.load_template_from_string")
-    @patch("llm_ci_runner.core.process_handlebars_jinja_template_with_vars")
+    @patch("llm_ci_runner.core.render_template")
+    @patch("llm_ci_runner.core.parse_rendered_template_to_chat_history")
+    @patch("llm_ci_runner.core._convert_chat_history_to_list")
     @patch("llm_ci_runner.core.execute_llm_with_chat_history")
     async def test_run_llm_task_handlebars_template_string_workflow(
         self,
         mock_execute_llm,
-        mock_process_template,
+        mock_convert_chat,
+        mock_parse_rendered,
+        mock_render_template,
         mock_load_template,
         mock_setup_service,
     ):
@@ -135,8 +172,14 @@ class TestRunLlmTaskStringTemplates:
         mock_load_template.return_value = mock_template
 
         # Mock template processing
+        mock_rendered_content = "Hello World!"
+        mock_render_template.return_value = mock_rendered_content
+
+        mock_chat_history_raw = Mock()
+        mock_parse_rendered.return_value = mock_chat_history_raw
+
         mock_chat_history = [{"role": "user", "content": "Hello World!"}]
-        mock_process_template.return_value = mock_chat_history
+        mock_convert_chat.return_value = mock_chat_history
 
         # Mock LLM execution
         mock_execute_llm.return_value = expected_response
@@ -154,17 +197,19 @@ class TestRunLlmTaskStringTemplates:
         # Verify workflow steps
         mock_setup_service.assert_called_once()
         mock_load_template.assert_called_once_with(template_content, template_format)
-        mock_process_template.assert_called_once_with(mock_template, template_vars)
+        mock_render_template.assert_called_once()
+        mock_parse_rendered.assert_called_once_with(mock_rendered_content)
+        mock_convert_chat.assert_called_once_with(mock_chat_history_raw)
         mock_execute_llm.assert_called_once_with(mock_service, mock_chat_history, None, None)
         mock_credential.close.assert_called_once()
 
     @pytest.mark.asyncio
     @patch("llm_ci_runner.core.setup_llm_service")
     @patch("llm_ci_runner.core.load_template_from_string")
-    @patch("llm_ci_runner.core.process_sk_yaml_template_with_vars")
+    @patch("llm_ci_runner.core.execute_llm_with_chat_history")
     async def test_run_llm_task_sk_yaml_template_string_workflow(
         self,
-        mock_process_sk_template,
+        mock_execute_llm,
         mock_load_template,
         mock_setup_service,
     ):
@@ -199,24 +244,38 @@ execution_settings:
         mock_template = Mock(spec=KernelFunctionFromPrompt)
         mock_load_template.return_value = mock_template
 
-        # Mock SK template processing
-        mock_process_sk_template.return_value = expected_response
+        # Mock kernel execution for SK templates
+        with patch("llm_ci_runner.core._create_kernel_with_service") as mock_create_kernel:
+            mock_kernel = Mock()
+            mock_create_kernel.return_value = mock_kernel
 
-        # when
-        result = await run_llm_task(
-            template_content=template_content,
-            template_format=template_format,
-            template_vars=template_vars,
-        )
+            # Mock kernel.invoke result
+            mock_chat_content = Mock()
+            mock_chat_content.content = '{"analysis": "positive", "confidence": 0.8}'
+            mock_result = Mock()
+            mock_result.value = [mock_chat_content]
+            mock_kernel.invoke = AsyncMock(return_value=mock_result)
 
-        # then
-        assert result == expected_response
+            # Mock JSON output requirement
+            with patch("llm_ci_runner.core._template_requires_json_output") as mock_requires_json:
+                mock_requires_json.return_value = True
 
-        # Verify SK workflow steps
-        mock_setup_service.assert_called_once()
-        mock_load_template.assert_called_once_with(template_content, template_format)
-        mock_process_sk_template.assert_called_once_with(mock_template, mock_service, template_vars, None)
-        mock_credential.close.assert_called_once()
+                # when
+                result = await run_llm_task(
+                    template_content=template_content,
+                    template_format=template_format,
+                    template_vars=template_vars,
+                )
+
+                # then
+                assert result == expected_response
+
+                # Verify SK workflow steps
+                mock_setup_service.assert_called_once()
+                mock_load_template.assert_called_once_with(template_content, template_format)
+                mock_create_kernel.assert_called_once_with(mock_service)
+                mock_kernel.invoke.assert_called_once()
+                mock_credential.close.assert_called_once()
 
 
 class TestLoadTemplateFromString:
@@ -293,109 +352,3 @@ input_variables:
             match="Unsupported template format: unsupported_format",
         ):
             await load_template_from_string(template_content, template_format)
-
-
-class TestProcessTemplateWithVars:
-    """Tests for template processing functions with dict-based variables."""
-
-    @pytest.mark.asyncio
-    @patch("llm_ci_runner.core.render_template")
-    @patch("llm_ci_runner.core.parse_rendered_template_to_chat_history")
-    @patch("llm_ci_runner.core._convert_chat_history_to_list")
-    async def test_process_handlebars_jinja_template_with_vars(
-        self,
-        mock_convert_chat_history,
-        mock_parse_template,
-        mock_render_template,
-    ):
-        """Test processing Handlebars/Jinja2 template with dict variables."""
-        # given
-        mock_template = Mock()
-        template_vars = {"name": "World", "greeting": "Hello"}
-        rendered_content = "Hello World!"
-        mock_chat_history = Mock()
-        expected_result = [{"role": "user", "content": "Hello World!"}]
-
-        # Mock template processing chain
-        mock_render_template.return_value = rendered_content
-        mock_parse_template.return_value = mock_chat_history
-        mock_convert_chat_history.return_value = expected_result
-
-        # when
-        result = await process_handlebars_jinja_template_with_vars(mock_template, template_vars)
-
-        # then
-        assert result == expected_result
-
-        # Verify processing chain
-        mock_render_template.assert_called_once()
-        mock_parse_template.assert_called_once_with(rendered_content)
-        mock_convert_chat_history.assert_called_once_with(mock_chat_history)
-
-    @pytest.mark.asyncio
-    @patch("llm_ci_runner.core._create_kernel_with_service")
-    @patch("llm_ci_runner.core._template_requires_json_output")
-    async def test_process_sk_yaml_template_with_vars(
-        self,
-        mock_requires_json,
-        mock_create_kernel,
-    ):
-        """Test processing SK YAML template with dict variables."""
-        # given
-        from semantic_kernel.functions.kernel_function_from_prompt import (
-            KernelFunctionFromPrompt,
-        )
-
-        mock_template = Mock(spec=KernelFunctionFromPrompt)
-        mock_service = Mock()
-        template_vars = {"input_text": "Sample data"}
-
-        # Mock kernel creation and execution
-        mock_kernel = Mock()
-        mock_create_kernel.return_value = mock_kernel
-
-        # Mock SK execution result
-        mock_chat_content = Mock()
-        mock_chat_content.content = '{"result": "success"}'
-        mock_result = Mock()
-        mock_result.value = [mock_chat_content]
-        mock_kernel.invoke = AsyncMock(return_value=mock_result)
-
-        # Mock JSON output requirement
-        mock_requires_json.return_value = True
-
-        # when
-        result = await process_sk_yaml_template_with_vars(mock_template, mock_service, template_vars)
-
-        # then
-        assert result == {"result": "success"}
-
-        # Verify SK execution
-        mock_create_kernel.assert_called_once_with(mock_service)
-        mock_kernel.invoke.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_process_handlebars_jinja_template_with_none_vars(self):
-        """Test template processing with None variables uses empty dict."""
-        # given
-        mock_template = Mock()
-        template_vars = None
-
-        # Mock the render_template function to capture vars argument
-        with (
-            patch("llm_ci_runner.core.render_template") as mock_render,
-            patch("llm_ci_runner.core.parse_rendered_template_to_chat_history") as mock_parse,
-            patch("llm_ci_runner.core._convert_chat_history_to_list") as mock_convert,
-        ):
-            mock_render.return_value = "rendered content"
-            mock_parse.return_value = Mock()
-            mock_convert.return_value = []
-
-            # when
-            await process_handlebars_jinja_template_with_vars(mock_template, template_vars)
-
-            # then
-            # Verify render_template was called with empty dict
-            mock_render.assert_called_once()
-            args, kwargs = mock_render.call_args
-            assert args[1] == {}  # Second argument should be empty dict

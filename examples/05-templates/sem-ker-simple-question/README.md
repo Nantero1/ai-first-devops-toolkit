@@ -20,13 +20,13 @@ This example demonstrates a basic Semantic Kernel YAML template that asks questi
 ```bash
 # Run with template variables
 uv run python -m llm_ci_runner \
-  --template-file examples/05-templates/sk-simple-question/template.yaml \
-  --template-vars examples/05-templates/sk-simple-question/template-vars.yaml \
+  --template-file examples/05-templates/sem-ker-simple-question/template.yaml \
+  --template-vars examples/05-templates/sem-ker-simple-question/template-vars.yaml \
   --output-file result.json
 
 # Run with inline variables (not recommended for complex content)
 uv run python -m llm_ci_runner \
-  --template-file examples/05-templates/sk-simple-question/template.yaml \
+  --template-file examples/05-templates/sem-ker-simple-question/template.yaml \
   --output-file result.json
 ```
 

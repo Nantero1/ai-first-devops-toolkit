@@ -103,8 +103,8 @@ examples/
     ├── jinja2-example/              # ✅ Auto-tested (Jinja2 template)
     ├── static-example/               # ✅ Auto-tested (Handlebars template)
     ├── pr-review-template/           # ✅ Auto-tested (Handlebars template)
-    ├── sk-simple-question/          # ✅ Auto-tested (Semantic Kernel YAML)
-    └── sk-structured-analysis/       # ✅ Auto-tested (Semantic Kernel YAML)
+    ├── sem-ker-simple-question/          # ✅ Auto-tested (Semantic Kernel YAML)
+    └── sem-ker-structured-analysis/       # ✅ Auto-tested (Semantic Kernel YAML)
 ```
 
 **Discovery Priority:**

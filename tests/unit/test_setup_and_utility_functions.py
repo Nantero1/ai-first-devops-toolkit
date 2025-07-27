@@ -306,6 +306,7 @@ class TestMainFunction:
             mock_args = Mock()
             mock_args.input_file = Path("input.json")
             mock_args.template_file = None  # Use input file mode, not template mode
+            mock_args.template_vars = None  # Fix: Set template_vars to None
             mock_args.output_file = Path("output.json")
             mock_args.schema_file = None
             mock_args.log_level = "INFO"

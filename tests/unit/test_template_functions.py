@@ -123,6 +123,32 @@ history:
         with pytest.raises(InputValidationError, match="Failed to load template variables"):
             load_template_vars(non_dict_vars_file)
 
+    @patch("llm_ci_runner.templates.CONSOLE")
+    @patch("llm_ci_runner.templates.LOGGER")
+    def test_load_template_vars_debug_display(self, mock_logger, mock_console, temp_dir):
+        """Test template variables console display when DEBUG logging is enabled."""
+        # given
+        vars_file = temp_dir / "vars.json"
+        vars_data = {"key": "value", "number": 42}
+        with open(vars_file, "w") as f:
+            json.dump(vars_data, f)
+
+        # Mock logger to return True for DEBUG level
+        mock_logger.isEnabledFor.return_value = True
+
+        # when
+        result = load_template_vars(vars_file)
+
+        # then
+        assert result == vars_data
+        mock_logger.isEnabledFor.assert_called_once()
+        mock_console.print.assert_called_once()
+
+        # Verify console.print called with Panel containing syntax-highlighted JSON
+        panel_call = mock_console.print.call_args[0][0]
+        assert hasattr(panel_call, "title")
+        assert "📝 Template Variables" in panel_call.title
+
 
 class TestLoadHandlebarsTemplate:
     """Tests for load_handlebars_template function."""

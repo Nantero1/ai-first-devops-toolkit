@@ -31,7 +31,16 @@ jobs:
     steps:
       - name: Display parameters
         shell: bash
-        run: echo "${{ format('<h1>Parameters</h1><p>{0}</p>', tojson(inputs)) }}" > "$GITHUB_STEP_SUMMARY"
+        run: |
+          cat << 'EOF' > "$GITHUB_STEP_SUMMARY"
+          <h1>Parameters</h1>
+          <p>{
+            "dry_run": "${{ github.event.inputs.dry_run }}",
+            "publish_to_pypi": "${{ github.event.inputs.publish_to_pypi }}",
+            "release_notes": "${{ github.event.inputs.release_notes }}",
+            "version": "${{ github.event.inputs.version }}"
+          }</p>
+          EOF
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -417,4 +426,4 @@ jobs:
           fi
           
           echo ""
-          echo "✅ Release v$VERSION is now available!" 
+          echo "✅ Release v$VERSION is now available!"

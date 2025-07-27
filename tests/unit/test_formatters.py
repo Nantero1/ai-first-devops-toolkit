@@ -182,6 +182,41 @@ class TestFormatOutputContent:
         assert result.format_type == "json"
         assert result.display_title == "📋 Structured Output (JSON)"
 
+    def test_format_output_content_json_decode_error_fallback(self):
+        """Test JSON parsing error fallback in format_output_content."""
+        # given
+        invalid_json_response = "invalid json content {not json"
+        format_type = "json"
+        mode = "text"
+
+        # when
+        result = format_output_content(invalid_json_response, format_type, mode)
+
+        # then
+        assert isinstance(result, FormattedOutput)
+        assert result.format_type == "json"
+        assert result.display_title == "📝 Text Output"  # Text mode gives text title
+        assert result.raw_data == invalid_json_response
+        # Should fall back to plain text when JSON parsing fails
+        assert result.content == invalid_json_response
+
+    def test_format_output_content_unknown_format_defaults_else_clause(self):
+        """Test format_output_content with unknown format hitting else clause."""
+        # given
+        data = "test content"
+        format_type = "unknown_format"  # Not markdown, yaml, json
+        mode = "some_mode"  # Not text mode
+
+        # when
+        result = format_output_content(data, format_type, mode)
+
+        # then
+        assert isinstance(result, FormattedOutput)
+        assert result.format_type == "unknown_format"
+        assert result.display_title == "📝 Text Output"  # Covers line 125 else clause
+        assert result.raw_data == data
+        assert result.content == data
+
 
 class TestDisplayFormattedConsole:
     """Tests for console display functionality."""
@@ -227,6 +262,104 @@ class TestDisplayFormattedConsole:
         header_call = mock_console.print.call_args_list[0][0][0]
         assert "🤖 LLM Response (Text)" in header_call
         assert "bold green" in header_call
+
+    @patch("llm_ci_runner.formatters.CONSOLE")
+    def test_display_json_with_parse_error_fallback(self, mock_console):
+        """Test JSON display with parsing error fallback to plain text."""
+        # given - FormattedOutput that will trigger JSON parsing in _apply_syntax_highlighting
+        invalid_json_content = "invalid json content {not valid"
+        formatted_output = FormattedOutput(
+            content=invalid_json_content,
+            format_type="json",  # This will trigger JSON parsing in _apply_syntax_highlighting
+            display_title="📄 JSON Output",
+            raw_data=invalid_json_content,
+        )
+
+        # when
+        display_formatted_console(formatted_output)
+
+        # then - The _apply_syntax_highlighting should catch JSONDecodeError and return plain text
+        assert mock_console.print.call_count == 2
+        header_call = mock_console.print.call_args_list[0][0][0]
+        assert "🤖 LLM Response (Text)" in header_call
+
+        # Panel should contain the original invalid JSON as plain text (no syntax highlighting)
+        panel_call = mock_console.print.call_args_list[1][0][0]
+        assert hasattr(panel_call, "renderable")
+        # The renderable should be the original string, not a Syntax object
+        assert panel_call.renderable == invalid_json_content
+
+    @patch("llm_ci_runner.formatters.CONSOLE")
+    def test_display_empty_response_handling(self, mock_console):
+        """Test display handling of empty response in _apply_syntax_highlighting."""
+        # given - FormattedOutput with empty content to trigger line 253
+        empty_content = ""
+        formatted_output = FormattedOutput(
+            content=empty_content,
+            format_type="json",
+            display_title="📄 JSON Output",
+            raw_data=empty_content,
+        )
+
+        # when
+        display_formatted_console(formatted_output)
+
+        # then - Should handle empty content gracefully (covers line 253)
+        assert mock_console.print.call_count == 2
+        panel_call = mock_console.print.call_args_list[1][0][0]
+        assert hasattr(panel_call, "renderable")
+        # Empty content should remain empty
+        assert panel_call.renderable == empty_content
+
+    @patch("llm_ci_runner.formatters.CONSOLE")
+    def test_display_markdown_syntax_highlighting(self, mock_console):
+        """Test markdown syntax highlighting in _apply_syntax_highlighting."""
+        # given - FormattedOutput with markdown content to trigger line 269
+        markdown_content = "# Header\n\n**Bold text** and *italic*"
+        formatted_output = FormattedOutput(
+            content=markdown_content,
+            format_type="markdown",
+            display_title="📄 Markdown Output",
+            raw_data=markdown_content,
+        )
+
+        # when
+        display_formatted_console(formatted_output)
+
+        # then - Should apply markdown formatting (covers line 269)
+        assert mock_console.print.call_count == 2
+        panel_call = mock_console.print.call_args_list[1][0][0]
+        assert hasattr(panel_call, "renderable")
+        # Should be a Markdown object for syntax highlighting
+        from rich.markdown import Markdown
+
+        assert isinstance(panel_call.renderable, Markdown)
+
+    @patch("llm_ci_runner.formatters.CONSOLE")
+    def test_display_yaml_syntax_highlighting(self, mock_console):
+        """Test YAML syntax highlighting in _apply_syntax_highlighting."""
+        # given - FormattedOutput with YAML content to trigger line 266
+        yaml_content = "key: value\nlist:\n  - item1\n  - item2"
+        formatted_output = FormattedOutput(
+            content=yaml_content,
+            format_type="yaml",
+            display_title="📄 YAML Output",
+            raw_data=yaml_content,
+        )
+
+        # when
+        display_formatted_console(formatted_output)
+
+        # then - Should apply YAML syntax highlighting (covers line 266)
+        assert mock_console.print.call_count == 2
+        panel_call = mock_console.print.call_args_list[1][0][0]
+        assert hasattr(panel_call, "renderable")
+        # Should be a Syntax object for YAML highlighting
+        from rich.syntax import Syntax
+
+        assert isinstance(panel_call.renderable, Syntax)
+        # Check that the lexer is a YAML lexer (it's a Pygments lexer object, not a string)
+        assert "yaml" in str(panel_call.renderable.lexer).lower()
 
 
 class TestWriteFormattedFile:

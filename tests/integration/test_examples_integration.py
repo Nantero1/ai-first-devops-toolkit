@@ -171,8 +171,9 @@ class TestBatchProcessingScenarios:
         [
             pytest.param("json", "json", id="json_to_json"),
             pytest.param("json", "yaml", id="json_to_yaml"),
-            pytest.param("yaml", "json", id="yaml_to_json"),
-            pytest.param("yaml", "yaml", id="yaml_to_yaml"),
+            # NOTE: YAML input with messages is forbidden by design constraint
+            # pytest.param("yaml", "json", id="yaml_to_json"),
+            # pytest.param("yaml", "yaml", id="yaml_to_yaml"),
         ],
     )
     @pytest.mark.asyncio
@@ -197,6 +198,23 @@ class TestBatchProcessingScenarios:
         integration_helper.assert_successful_response(
             result, expected_response_type="str", expected_content_substring="mock response"
         )
+
+    @pytest.mark.asyncio
+    async def test_yaml_constraint_validation(self, integration_helper, mock_azure_openai_responses):
+        """Test that YAML files with messages are properly rejected."""
+        # given
+        input_content = CommonTestData.simple_chat_input()
+        input_file = integration_helper.create_input_file("yaml_input.yaml", input_content, file_format="yaml")
+        output_file = integration_helper.output_dir / "yaml_output.json"
+
+        args = integration_helper.build_cli_args(input_file=input_file, output_file=output_file, log_level="ERROR")
+
+        # when/then - expect the YAML constraint to be enforced
+        with pytest.raises(SystemExit) as exc_info:
+            await integration_helper.execute_main_with_args(args)
+
+        # Verify it exits with error code 1 (indicating validation failure)
+        assert exc_info.value.code == 1
 
     @pytest.mark.parametrize(
         "scenario_name,input_data,schema_data,expected_type,log_level",

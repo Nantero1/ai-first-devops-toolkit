@@ -122,7 +122,7 @@ class TestGenericExampleEvaluation:
         if schema_file:
             self._validate_schema_compliance(result, schema_file, example_name)
             console.print(f"  ✅ {example_name} schema compliance verified", style="green")
-        elif "_yaml" in example_name and "sk-" in example_name:
+        elif "sem-ker-" in example_name:
             # Check if SK template has embedded JSON schema for structured output
             has_embedded_schema = self._sk_template_has_embedded_schema(input_file)
             response_data = result.get("response", {})

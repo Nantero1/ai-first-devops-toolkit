@@ -53,7 +53,7 @@ class TestMainFunctionIntegration:
             input_filename="sentiment_input.json",
             output_filename="sentiment_output.json",
             schema_filename="sentiment_schema.json",
-            log_level="ERROR",
+            log_level="DEBUG",
         )
 
         # then
@@ -92,8 +92,8 @@ class TestMainFunctionIntegration:
         )
 
     @pytest.mark.asyncio
-    async def test_main_with_yaml_files(self, integration_helper, mock_azure_openai_responses):
-        """Test main() with YAML input and output files."""
+    async def test_main_with_yaml_constraint_validation(self, integration_helper, mock_azure_openai_responses):
+        """Test main() properly rejects YAML files with messages due to constraint."""
         # given
         input_content = CommonTestData.simple_chat_input()
         input_content["context"] = {"session_id": "test-yaml-123"}
@@ -104,16 +104,12 @@ class TestMainFunctionIntegration:
         # Build CLI args
         args = integration_helper.build_cli_args(input_file=input_file, output_file=output_file, log_level="ERROR")
 
-        # when
-        await integration_helper.execute_main_with_args(args)
-        result = integration_helper.load_output_file(output_file)
+        # when/then - expect the YAML constraint to be enforced
+        with pytest.raises(SystemExit) as exc_info:  # CLI should exit with error due to YAML constraint
+            await integration_helper.execute_main_with_args(args)
 
-        # then
-        integration_helper.assert_successful_response(
-            result,
-            expected_response_type="str",
-            expected_content_substring="This is a mock response from the test Azure service",
-        )
+        # Verify it exits with error code 1 (indicating validation failure)
+        assert exc_info.value.code == 1
 
     @pytest.mark.asyncio
     async def test_main_error_handling_missing_file(self, integration_helper, mock_azure_openai_responses):

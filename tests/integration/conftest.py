@@ -272,22 +272,48 @@ def _create_mock_chat_response(request, service_config):
             # Text output response
             content = service_config["text_response"]
 
-        # Create chat completion API response format
+        # Create Azure OpenAI API response format matching real API structure
         response_data = {
-            "id": service_config["response_id"],
-            "object": "chat.completion",
-            "created": 1234567890,
-            "model": service_config["model"],
             "choices": [
                 {
-                    "index": 0,
-                    "message": {"role": "assistant", "content": content},
+                    "content_filter_results": {
+                        "hate": {"filtered": False, "severity": "safe"},
+                        "self_harm": {"filtered": False, "severity": "safe"},
+                        "sexual": {"filtered": False, "severity": "safe"},
+                        "violence": {"filtered": False, "severity": "safe"},
+                    },
                     "finish_reason": "stop",
+                    "index": 0,
+                    "logprobs": None,
+                    "message": {"annotations": [], "content": content, "refusal": None, "role": "assistant"},
                 }
             ],
+            "created": 1753540308,
+            "id": service_config["response_id"],
+            "model": service_config["model"],
+            "object": "chat.completion",
+            "prompt_filter_results": [
+                {
+                    "prompt_index": 0,
+                    "content_filter_results": {
+                        "hate": {"filtered": False, "severity": "safe"},
+                        "self_harm": {"filtered": False, "severity": "safe"},
+                        "sexual": {"filtered": False, "severity": "safe"},
+                        "violence": {"filtered": False, "severity": "safe"},
+                    },
+                }
+            ],
+            "system_fingerprint": "fp_68472df8fd",
             "usage": {
-                "prompt_tokens": service_config["usage"]["prompt_tokens"],
                 "completion_tokens": service_config["usage"]["completion_tokens"],
+                "completion_tokens_details": {
+                    "accepted_prediction_tokens": 0,
+                    "audio_tokens": 0,
+                    "reasoning_tokens": 0,
+                    "rejected_prediction_tokens": 0,
+                },
+                "prompt_tokens": service_config["usage"]["prompt_tokens"],
+                "prompt_tokens_details": {"audio_tokens": 0, "cached_tokens": 0},
                 "total_tokens": service_config["usage"]["total_tokens"],
             },
         }

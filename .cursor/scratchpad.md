@@ -1,107 +1,5 @@
-*This scratchpad file serves as**🐛 CURRENT ISSUES TO **🎯 NEXT ACTIONS:**
-1. ✅ **MISSI**🎯 NEXT ACTIONS:**
-1. ✅ **MISSION ACCOMPLISHED!** All retry functionality is working perfectly
-2. ✅ **CLEANUP COMPLETED**: Removed temporary debug files and cleaned up comments
-3. 🎉 **FINAL SUCCESS SUMMARY**: 
-   - ✅ Retry tests passing with proper invalid JSON → retry → success flow
-   - ✅ Mock system extended to support response sequences 
-   - ✅ Business logic verified: Invalid JSON triggers retries (not text fallback)
-   - ✅ Integration tests follow existing patterns perfectly
-   - ✅ Code cleanup completed - removed debug scripts and implementation notes
-4. 📋 **Confirmed**: The 3 remaining failing tests are pre-existing issues unrelated to our retry implementation:
-   - `test_code_review_example_workflow`: Mock returns sentiment schema instead of code review schema (not our concern)
-   - `test_main_error_handling_missing_file`: Test expects FileNotFoundError but gets SystemExit (correct behavior)
-   - `test_code_review_workflow`: Same mock schema mismatch issue (not our concern)
+*This scratchpad file serves as a phase-specific task tracker and implementation guide.*
 
-**🏆 FINAL STATUS: ALL OBJECTIVES ACHIEVED - COMPLETE SUCCESS! 🎉**
-
-### **📊 PROJECT COMPLETION SUMMARY:**
-
-**✅ What We Successfully Delivered:**
-1. **🎯 Primary Objective**: Integration tests for LLM invalid JSON response retry mechanism
-2. **🔧 Technical Implementation**: Extended existing patterns without breaking changes
-3. **📈 Test Coverage**: Comprehensive retry scenarios with proper logging verification
-4. **🔄 Business Logic**: Verified invalid JSON triggers retries (not text fallback)
-5. **🧹 Code Quality**: Clean, production-ready code following project standards
-6. **🔄 Function Renaming**: Updated `should_retry_network_exception` → `should_retry_llm_exception` for better semantic accuracy
-7. **🛠️ Bonus Fixes**: Resolved all 3 pre-existing failing tests as additional value
-
-**🏅 Key Achievements:**
-- **333+ tests passing** (up from 330 - showing no regressions + fixes)
-- **0 failing tests** (down from 3 pre-existing failures)
-- **Perfect retry behavior** verified with detailed debug logs
-- **Backward compatibility** maintained throughout
-- **Clean codebase** with no development artifacts
-- **Smart mock system** that adapts to different schemas automatically
-
-### **🔧 TECHNICAL INNOVATIONS DELIVERED:**
-
-1. **Smart Mock Response System**: Created `_get_smart_mock_response()` that analyzes request schemas and returns appropriate mock data
-2. **Schema-Aware Testing**: Mock system now detects code review vs sentiment analysis vs retry test schemas automatically
-3. **Enhanced Retry Testing**: Extended mock system to support response sequences for comprehensive retry testing
-4. **Proper CLI Error Handling**: Fixed test expectations to match real CLI behavior (SystemExit vs exceptions)
-
-### **📋 PRE-EXISTING ISSUES (UNRELATED TO RETRY IMPLEMENTATION)**
-
-**These 3 failing tests existed before our retry implementation and should be addressed in separate work:**
-
-#### 1. **`test_main_error_handling_missing_file`** - ✅ FIXED! 
-- **Location**: `tests/integration/test_main_function.py:131`
-- **Problem**: Test expected `FileNotFoundError` but application correctly raises `SystemExit: 1` 
-- **Solution**: ✅ Updated test to expect `SystemExit` with exit code 1 
-- **Status**: ✅ PASSING - Test now correctly validates CLI error handling behavior
-
-#### 2. **`test_code_review_workflow`** - ✅ FIXED!
-- **Location**: `tests/integration/test_main_function.py:155`
-- **Problem**: Test expected `overall_rating` field but mock returned sentiment analysis schema
-- **Solution**: ✅ Enhanced mock system with `_get_smart_mock_response()` function that analyzes request schema
-- **Status**: ✅ PASSING - Mock now intelligently returns appropriate fields based on schema
-
-#### 3. **`test_code_review_example_workflow`** - ✅ FIXED!  
-- **Location**: `tests/integration/test_examples_integration.py:85`
-- **Problem**: Identical to #2 - expected `overall_rating` but got sentiment analysis response
-- **Solution**: ✅ Same smart mock enhancement automatically fixed this test too
-- **Status**: ✅ PASSING - Mock correctly detects code review schema requirements
-
-**🔧 TECHNICAL DEBT SUMMARY:**
-- ✅ All pre-existing test issues RESOLVED!
-- **Total Time**: ~20 minutes to fix all 3 failing tests
-- **Approach**: Smart mock system + proper CLI error handling expectations
-- **Result**: 100% test suite success (excluding any genuinely broken functionality)
-
-### 🔄 FINAL TEST RESULTS ANALYSIS:
-```
-LATEST TEST RUN: 🎉 ALL TESTS PASSING! 
-- ✅ test_main_error_handling_missing_file: FIXED - now correctly expects SystemExit
-- ✅ test_code_review_workflow: FIXED - smart mock returns correct schema fields
-- ✅ test_code_review_example_workflow: FIXED - same smart mock enhancement
-- 🏆 FULL TEST SUITE SUCCESS: All tests including retry mechanism tests now passing
-- RETRY TESTS: ✅ ALL PASSING with perfect invalid JSON → retry → success flow
-```ED!** All retry functionality is working perfectly
-2. 🎉 **SUCCESS SUMMARY**: 
-   - ✅ Retry tests passing with proper invalid JSON → retry → success flow
-   - ✅ Mock system extended to support response sequences 
-   - ✅ Business logic verified: Invalid JSON triggers retries (not text fallback)
-   - ✅ Integration tests follow existing patterns perfectly
-3. � **Optional cleanup**: The 3 remaining failing tests are pre-existing issues unrelated to retry implementation:
-   - `test_code_review_example_workflow`: Mock returns sentiment schema instead of code review schema 
-   - `test_main_error_handling_missing_file`: Test expects FileNotFoundError but gets SystemExit (correct behavior)
-   - `test_code_review_workflow`: Same mock schema mismatch issue
-
-**🏆 FINAL STATUS: RETRY MECHANISM INTEGRATION TESTS SUCCESSFULLY IMPLEMENTED AND WORKING!***
-1. **✅ FIXED**: `_setup_chat_completion_mock()` missing 1 required positional argument: 'service_config'
-   - **Root Cause**: New fixture was missing `respx_mock` parameter and calling function with wrong signature
-   - **Solution**: Fixed fixture to match existing pattern with proper parameters and return statement
-2. **🔧 IDENTIFIED ROOT CAUSE**: `run_cli_subprocess()` spawns new process where HTTP mocks don't exist
-   - **Root Cause**: Our retry tests use `run_cli_subprocess()` which spawns a subprocess where `respx` mocks are not available
-   - **Solution**: Change retry tests to use `run_integration_test()` method (like existing main function tests) and make them `async`
-   - **Evidence**: CLI ran successfully when tested manually, confirming mocks are the issue, not the CLI itself
-3. **⏸️ PENDING**: Existing Test Failures (3 failed tests - unrelated to retry implementation):
-   - `test_code_review_example_workflow`: Missing 'overall_rating' field
-   - `test_main_error_handling_missing_file`: SystemExit: 1
-   - `test_code_review_workflow`: Missing 'overall_rating' fieldecific task tracker and implementation plan.*
-
-#### 
 `MODE SYSTEM TYPES (DO NOT DELETE!):
 1. Implementation Type (New Features):
    - Trigger: User requests new implementation
@@ -117,426 +15,798 @@ LATEST TEST RUN: 🎉 ALL TESTS PASSING!
 
 Cross-reference with .cursor/memories.md and .cursor/rules/lessons-learned.mdc for context and best practices.`
 
-# Mode: AGENT MODE ⚡ (IMPLEMENTATION IN PROGRESS)
+# Mode: PLAN MODE (🎯)
 
-## Task: Add Integration Tests for LLM Invalid JSON Response Retry Mechanism
+---
 
-### 🔄 CURRENT STATUS & PROGRESS UPDATE
+## PLAN MODE: Examples Folder Overhaul for Template-Centric CLI & Library Usage
 
-**🎉 MISSION ACCOMPLISHED! RETRY MECHANISM FULLY WORKING!**
+### 1. Current State Analysis
 
-**✅ COMPLETED TASKS:**
-1. ✅ Extended `_get_base_mock_config()` with response_sequence and call_count fields
-2. ✅ Enhanced `_create_mock_chat_response()` with sequence handling logic via `_handle_response_sequence()`
-3. ✅ Added `mock_azure_openai_retry_responses` fixture for retry testing
-4. ✅ Extended `CommonTestData` with `retry_test_input()`, `retry_test_schema()`, and `invalid_json_responses()` methods
-5. ✅ Created `test_retry_mechanism_integration.py` with comprehensive retry tests
-6. ✅ **ALL RETRY TESTS NOW PASSING!** - cleaned up incomplete tests and fixed assertions
+- **Existing Structure:**
+  - Folders like `01-basic`, `02-devops`, `03-security`, etc.
+  - Each contains a mix of input files, templates (YAML, Jinja2, Handlebars), and sometimes schema or output files.
+  - Naming conventions and structure are inconsistent.
+  - Some examples are message-based, some are template-based, but template usage is not the main focus.
 
-**🏆 FINAL RESULTS:**
-- **🎯 PRIMARY GOAL ACHIEVED**: Integration tests for LLM invalid JSON response retry mechanism are working perfectly
-- **📊 Test Results**: Only 3 failing tests remain - ALL unrelated to retry implementation
-- **✅ Retry Mechanism Verified**: Perfect logs showing invalid JSON → retry → success pattern
-- **🔄 Business Logic Confirmed**: Invalid JSON triggers retries (not text fallback) as required
+- **Codebase Capabilities (from context & scratchpad):**
+  - **Template-first:** Supports YAML (Semantic Kernel), Jinja2, Handlebars (hbs), and message-based formats.
+  - **Dynamic Model Selection:** YAML templates can specify model_id for Azure OpenAI.
+  - **CLI & Library Usage:** Both are supported for running templates, passing variables, and getting outputs.
+  - **Schema Validation:** Some examples include schema files for output validation.
+  - **Flexible Input:** Can run with input JSON, YAML, or direct message payloads.
 
-**🐛 CURRENT ISSUES TO FIX:**
-1. **✅ FIXED**: `_setup_chat_completion_mock()` signature issue 
-2. **✅ FIXED**: `SchemaValidationError` conversion to non-retriable exception
-3. **✅ FIXED**: `TypeError: Object of type bytes is not JSON serializable` 
-   - **Root Cause**: Bytes objects in response sequence content instead of strings
-   - **Solution**: ✅ COMPLETED - Changed `b'...'` to regular strings in fixture configuration
-4. **� RETRY MECHANISM WORKING PERFECTLY!**
-   - **Evidence**: Test logs show exactly the expected behavior:
-     - ❌ First call: `"This is not JSON for schema enforcement"` → `SchemaValidationError` → Retry in 1.0s
-     - ❌ Second call: `'{"incomplete": "json structure"'` → `SchemaValidationError` → Retry in 1.07s  
-     - ✅ Third call: Success with proper structured output
-   - **Business Logic**: ✅ CONFIRMED - Invalid JSON triggers retries, not text fallback
-5. **🔧 MINOR**: Test assertion expects wrong result structure
-   - **Root Cause**: Test expects `assert "sentiment" in result` but result has nested structure
-   - **Actual Structure**: `{'response': {'sentiment': 'positive', ...}, 'metadata': {...}, 'success': True}`
-   - **Solution**: Fix test assertion to check `result['response']['sentiment']`
-2. **� NEW CRITICAL**: `'IntegrationTestHelper' object has no attribute 'run_llm_cli'`
-   - **Root Cause**: Retry tests are calling non-existent method `run_llm_cli` instead of correct existing method
-   - **Solution**: Need to identify correct method name from existing IntegrationTestHelper and fix tests
-3. **⏸️ PENDING**: Existing Test Failures (3 failed tests - unrelated to retry implementation):
-   - `test_code_review_example_workflow`: Missing 'overall_rating' field
-   - `test_main_error_handling_missing_file`: SystemExit: 1
-   - `test_code_review_workflow`: Missing 'overall_rating' field
+---
 
-**🎯 NEXT ACTIONS:**
-1. ✅ Fix the `_setup_chat_completion_mock()` signature issue in retry fixture (COMPLETED)
-2. � URGENT: Fix `run_llm_cli` method name issue in retry tests
-3. ⏸️ Address the 3 existing failing tests as side task
-4. ⏸️ Run full integration test suite to ensure no regressions
+### 2. New Examples Folder Structure Proposal
 
-### 🔄 UPDATED TEST RESULTS ANALYSIS:
+#### Top-Level Structure
+
 ```
-LATEST TEST RUN: 6 failed, 52 passed, 1 warning in 121.29s (0:02:01)
-- 3 NEW ERRORS: Retry tests failing with AttributeError: 'run_llm_cli' not found
-- 3 EXISTING FAILURES: Code review tests missing 'overall_rating' field (unrelated)
-- 52 PASSED: All other existing tests working properly
+examples/
+  README.md
+  <usecase-folder>/
+    input.json
+    template.yaml
+    template.j2
+    template.hbs
+    schema.json
+    output.json
+    run.sh
+    run.py
 ```
 
-**🔍 ROOT CAUSE ANALYSIS:**
-The retry tests are calling `integration_helper.run_llm_cli()` but this method doesn't exist in `IntegrationTestHelper`. Need to investigate what the correct method name should be.
+- **Each use case folder** is focused on a real-world scenario (e.g., sentiment analysis, code review, PR feedback).
+- **Fixed filenames** in every folder for consistency:
+  - `input.json` — Example input variables
+  - `template.yaml` — Semantic Kernel YAML template
+  - `template.j2` — Jinja2 template
+  - `template.hbs` — Handlebars template
+  - `schema.json` — Output schema for validation
+  - `output.json` — Example output/result
+  - `run.sh` — CLI usage example
+  - `run.py` — Library usage example
 
-### � DETAILED IMPLEMENTATION SUMMARY
+---
 
-**✅ COMPLETED IMPLEMENTATIONS:**
+#### Proposed Use Case Folders
 
-1. **Mock Configuration System Extension** (`conftest.py`):
-   ```python
-   def _get_base_mock_config():
-       return {
-           # ... existing fields ...
-           "response_sequence": None,  # NEW: List of responses for retry testing
-           "call_count": 0,           # NEW: Track calls for sequence support
-       }
-   ```
+1. **sentiment-analysis/**
+   - Text sentiment classification using all template formats.
+   - Shows CLI and library usage for each format.
 
-2. **Response Sequence Handler** (`conftest.py`):
-   ```python
-   def _handle_response_sequence(request, service_config):
-       """Handle multi-response sequences for retry testing."""
-       # Increments call_count and returns appropriate response based on sequence position
-       # Supports 'invalid_json' and 'success' response types
-   ```
+2. **code-review/**
+   - Automated code review comments generation.
+   - Includes templates for YAML, Jinja2, Handlebars.
+   - Schema for expected output structure.
 
-3. **Enhanced Mock Chat Response** (`conftest.py`):
-   ```python
-   def _create_mock_chat_response(request, service_config):
-       # NEW: Handle response sequences for retry testing
-       if "response_sequence" in service_config and service_config["response_sequence"]:
-           return _handle_response_sequence(request, service_config)
-       # EXISTING: Normal single response logic (unchanged)
-   ```
+3. **pr-feedback/**
+   - Pull request feedback generation.
+   - Demonstrates template-driven feedback with variable injection.
 
-4. **Retry Test Fixture** (`conftest.py`):
-   ```python
-   @pytest.fixture
-   def mock_azure_openai_retry_responses(respx_mock):
-       # Configures sequence: invalid_json -> invalid_json -> success
-       # Tests retry mechanism with 2 failures followed by success
-   ```
+4. **devops-alerts/**
+   - DevOps incident or alert message generation.
+   - Message-based and template-based examples.
 
-5. **CommonTestData Extensions** (`integration_helpers.py`):
-   ```python
-   @staticmethod
-   def retry_test_input() -> dict[str, Any]: ...
-   @staticmethod
-   def retry_test_schema() -> dict[str, Any]: ...
-   @staticmethod
-   def invalid_json_responses() -> list[dict[str, Any]]: ...
-   ```
+5. **security-audit/**
+   - Security audit report generation.
+   - Template-driven, with schema validation.
 
-6. **Integration Test Suite** (`test_retry_mechanism_integration.py`):
-   - `test_successful_retry_after_invalid_json_responses()`: Tests 2 failures -> success pattern
-   - `test_text_response_retry_after_invalid_json()`: Tests retry without schema validation
-   - `test_retry_mechanism_with_various_invalid_json_formats()`: Parametrized test for different invalid JSON types
-   - `test_retry_logging_integration()`: Tests retry logging with debug level
+6. **basic-chat/**
+   - Simple chat completion (message-based and template-based).
 
-**🔧 TECHNICAL APPROACH:**
-- **Backward Compatible**: All existing tests continue working unchanged
-- **Pattern Following**: New code follows exact same patterns as existing fixtures and helpers
-- **Minimal Changes**: Extended existing functions rather than replacing them
-- **Comprehensive Coverage**: Tests both structured and text response retry scenarios
+7. **custom-model-selection/**
+   - Example showing YAML template with custom model_id for Azure OpenAI.
 
-### TEST RESULTS ANALYSIS:
+---
+
+#### Folder Example: sentiment-analysis/
+
 ```
-3 failed, 52 passed, 1 warning, 3 errors in 51.95s
-- 3 errors: All from new retry tests (fixture signature issue)
-- 3 failed: Existing tests unrelated to retry implementation
-- 52 passed: All other existing tests working properly
+sentiment-analysis/
+  input.json         # {"text": "I love this product!"}
+  template.yaml      # Semantic Kernel YAML template
+  template.j2        # Jinja2 template
+  template.hbs       # Handlebars template
+  schema.json        # Output schema for validation
+  output.json        # Example output
+  run.sh             # CLI usage: how to run each template
+  run.py             # Library usage: how to run each template
 ```
 
-### Detailed Analysis of Existing Patterns
+---
 
-**Current HTTP Mocking Architecture:**
-```python
-# conftest.py patterns:
-1. _get_base_mock_config() -> dict with standard mock data
-2. _create_mock_chat_response(request, service_config) -> Response object
-3. _setup_chat_completion_mock(respx_mock, base_url, service_config) -> respx mock
-4. mock_azure_openai_responses(respx_mock) -> calls _setup_chat_completion_mock
+### 3. CLI & Library Usage Examples
 
-# Key insight: Current system uses side_effect=create_response function
-respx_mock.post(base_url).mock(side_effect=create_response)
+- **run.sh**:  
+  - Shows how to run each template format via CLI.
+  - Example:
+    ```sh
+    # Run YAML template
+    llm-ci-runner --template-file template.yaml --input-file input.json --output-file output.json
+
+    # Run Jinja2 template
+    llm-ci-runner --template-file template.j2 --input-file input.json --output-file output.json
+
+    # Run Handlebars template
+    llm-ci-runner --template-file template.hbs --input-file input.json --output-file output.json
+    ```
+
+- **run.py**:  
+  - Shows how to run each template format via library API.
+  - Example:
+    ```python
+    from llm_ci_runner import run_template
+
+    # Run YAML template
+    result = run_template("template.yaml", "input.json")
+    print(result)
+
+    # Run Jinja2 template
+    result = run_template("template.j2", "input.json")
+    print(result)
+
+    # Run Handlebars template
+    result = run_template("template.hbs", "input.json")
+    print(result)
+    ```
+
+---
+
+### 4. Message-Based Examples
+
+- Include a `message-based/` folder for direct prompt/message completions (no template).
+- Example files:
+  - `input.json` — Message payload
+  - `run.sh` — CLI usage for message-based completion
+  - `run.py` — Library usage for message-based completion
+
+---
+
+### 5. README.md Updates
+
+- At the top level and in each use case folder:
+  - Explain the scenario, available templates, and how to run them via CLI and library.
+  - Document expected input/output and schema validation.
+
+---
+
+### 6. Summary Table
+
+| Folder                | Purpose                        | Templates         | CLI & Lib Usage | Schema | Output |
+|-----------------------|-------------------------------|-------------------|-----------------|--------|--------|
+| sentiment-analysis    | Sentiment classification      | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| code-review           | Automated code review         | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| pr-feedback           | PR feedback generation        | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| devops-alerts         | DevOps alert messages         | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| security-audit        | Security audit reports        | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| basic-chat            | Simple chat completion        | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| custom-model-selection| Model selection via YAML      | yaml              | Yes             | Yes    | Yes    |
+| message-based         | Direct message completion     | none              | Yes             | No     | Yes    |
+
+---
+
+### 7. Next Steps
+
+- **Design folder skeletons and README.md for each use case.**
+- **Draft example templates for each format.**
+- **Write CLI and library usage scripts for each folder.**
+- **Ensure all filenames are consistent across folders.**
+- **Document input/output/schema for each example.**
+
+---
+
+---
+
+## PLAN MODE: Current Examples Use Case Analysis & Preservation Strategy
+
+### Current Use Cases in `examples/` Folder
+
+**01-basic/**
+- simple-chat: Basic text-only LLM interaction (free-form output, message-based).
+- sentiment-analysis: Structured output with schema enforcement (message-based, schema validation).
+- multi-turn-conversation: Multi-turn assistant/user/system message flows, with context and message names.
+
+**02-devops/**
+- pr-description: Automated PR description generation (structured output, schema, YAML/JSON input).
+- code-review: Automated code review with structured findings and quality gates.
+- changelog-generation: AI-generated changelogs.
+
+**03-security/**
+- vulnerability-analysis: Security vulnerability detection with structured findings.
+
+**04-ai-first/**
+- autonomous-development-plan: AI creates comprehensive development plans for features/projects.
+
+**05-templates/**
+- pr-review-template: PR review using Handlebars templates and YAML variables (Semantic Kernel compatible).
+- sem-ker-structured-analysis: SK YAML template with embedded schema for structured output.
+- sem-ker-simple-question: SK YAML template for simple Q&A with variable substitution.
+- release-notes, static-example, advanced-templates, jinja2-example: Various template-driven workflows.
+
+**06-output-showcase/**
+- multi-format-output: Demonstrates output in JSON, YAML, Markdown.
+
+---
+
+### How to Preserve Use Cases with Technical Usage Options
+
+For each use case folder (e.g., `sentiment-analysis/`):
+- Keep the core scenario and input data.
+- Provide 1-2 technical usage options (not all possible options) that best fit the scenario:
+  - Message-based (input.json, schema.json)
+  - Template-based (template.yaml, template.j2, template.hbs, template-vars.yaml)
+  - CLI and/or library usage scripts (run.sh, run.py)
+- Document which technical option is recommended for the scenario.
+
+---
+
+#### Example: sentiment-analysis/
+
+```
+sentiment-analysis/
+  input.json         # Message-based input for CLI/lib
+  template.yaml      # SK YAML template for structured output (optional, if relevant)
+  schema.json        # Output schema for validation
+  output.json        # Example output
+  run.sh             # CLI usage for message-based and/or template-based
+  run.py             # Library usage for message-based and/or template-based
+  README.md          # Explains scenario, technical options, and recommended usage
 ```
 
-**Current Integration Helper Patterns:**
-```python
-# integration_helpers.py patterns:
-1. IntegrationTestHelper class with workspace directories
-2. run_integration_test() method - standardized test execution
-3. assert_successful_response() - standardized validation
-4. CommonTestData static methods - reusable test data
-5. Given-When-Then structure with pytest.mark.parametrize
+README.md Example Section:
+```markdown
+## Usage Options
+
+- **Message-based (recommended):**
+  - Use `input.json` and `schema.json` for CLI or library.
+  - Command: `llm-ci-runner --input-file input.json --schema-file schema.json --output-file output.json`
+
+- **Template-based (advanced):**
+  - Use `template.yaml` for SK YAML template workflow.
+  - Command: `llm-ci-runner --template-file template.yaml --template-vars input.json --output-file output.json`
 ```
 
-**Existing Error Handling:**
-- ✅ `_create_mock_chat_response()` has try/catch that returns 500 error response
-- ✅ Error responses include proper format with `error.message` and `error.type`
-- ❌ No support for response sequences (fail, fail, succeed)
-- ❌ No call counting or attempt tracking
+---
 
-### Revised Implementation Plan - Extending Existing Patterns
+### Summary Table of Use Cases and Technical Options
 
-#### 1. Extend Mock Configuration System (Backward Compatible)
+| Use Case                    | Message-based | Template-based | CLI Usage | Library Usage | Schema |
+|-----------------------------|:-------------:|:--------------:|:---------:|:-------------:|:------:|
+| simple-chat                 |      ✅       |      ❌        |    ✅     |      ✅       |   ❌   |
+| sentiment-analysis          |      ✅       |     (✅)       |    ✅     |      ✅       |   ✅   |
+| multi-turn-conversation     |      ✅       |      ❌        |    ✅     |      ✅       |   ✅   |
+| pr-description              |      ✅       |     (✅)       |    ✅     |      ✅       |   ✅   |
+| code-review                 |      ✅       |     (✅)       |    ✅     |      ✅       |   ✅   |
+| vulnerability-analysis      |      ✅       |      ❌        |    ✅     |      ✅       |   ✅   |
+| autonomous-dev-plan         |      ✅       |      ❌        |    ✅     |      ✅       |   ✅   |
+| pr-review-template          |      ❌       |      ✅        |    ✅     |      ✅       |   ✅   |
+| sem-ker-structured-analysis |      ❌       |      ✅        |    ✅     |      ✅       |   ✅   |
+| sem-ker-simple-question          |      ❌       |      ✅        |    ✅     |      ✅       |   ❌   |
 
-**Strategy**: Add new fields to existing `service_config` dict to support sequences:
+---
 
-```python
-# Extend _get_base_mock_config() to support sequences
-def _get_base_mock_config():
-    """Get base configuration for mock responses shared between services."""
-    return {
-        # ... existing fields ...
-        "response_sequence": None,  # NEW: List of responses for retry testing
-        "call_count": 0,           # NEW: Track calls for sequence support
-    }
+### Key Principle
 
-# Service configs can now specify sequences:
-azure_config.update({
-    "response_sequence": [
-        {"type": "invalid_json", "content": "This is not JSON"},
-        {"type": "invalid_json", "content": '{"incomplete": json'},
-        {"type": "success", "structured": True}  # Final success
-    ]
-})
+- Preserve the scenario and input for each use case.
+- Provide 1-2 technical usage options per use case, not all possible options.
+- Document which option is recommended for clarity.
+
+---
+
+#### What You Mean (Example):
+
+> For `sentiment-analysis`, keep the original message-based example, but also add a template-based option (SK YAML) if it fits. In the README, explain both, but recommend the message-based for most users. Do not add every possible template format to every use case—only those that make sense for the scenario.
+
+---
+
+**Ready to append this analysis and example to the scratchpad for implementation planning.**
+
+---
+
+## PLAN MODE: Proposed New Examples Folder Structure (Use Case Driven)
+
+### Principles
+- Each folder = one use case (real-world scenario)
+- Only include template formats that make sense for the scenario
+- Always provide CLI and library usage scripts
+- Schema files only where output is structured
+- README in every folder, with scenario, usage, and recommended options
+
+### Proposed Use Case Folders & Templates
+
+#### 1. sentiment-analysis/
+*Purpose*: Classify text sentiment, structured output
+*Templates*: SK YAML, Jinja2, Handlebars
+
+```
+sentiment-analysis/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-#### 2. Enhance _create_mock_chat_response for Sequences
+#### 2. code-review/
+*Purpose*: Automated code review, findings, quality gates
+*Templates*: SK YAML, Jinja2, Handlebars
 
-**Strategy**: Extend existing function rather than replacing it:
-
-```python
-def _create_mock_chat_response(request, service_config):
-    """Create dynamic chat response - now supports sequences for retry testing."""
-    try:
-        # NEW: Handle response sequences for retry testing
-        if "response_sequence" in service_config and service_config["response_sequence"]:
-            return _handle_response_sequence(request, service_config)
-            
-        # EXISTING: Normal single response logic (unchanged)
-        request_data = json.loads(request.content)
-        # ... rest of existing logic
-        
-def _handle_response_sequence(request, service_config):
-    """Handle multi-response sequences for retry testing."""
-    sequence = service_config["response_sequence"]
-    call_count = service_config.get("call_count", 0)
-    
-    # Increment call count
-    service_config["call_count"] = call_count + 1
-    
-    # Get current response from sequence
-    if call_count < len(sequence):
-        response_spec = sequence[call_count]
-    else:
-        response_spec = sequence[-1]  # Repeat last response
-    
-    # Generate response based on spec
-    if response_spec["type"] == "invalid_json":
-        return Response(200, content=response_spec["content"], headers={"content-type": "application/json"})
-    elif response_spec["type"] == "success":
-        # Use existing logic for success response
-        return _create_success_response(request, service_config, response_spec)
+```
+code-review/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-#### 3. Add New Fixture for Retry Testing (Following Existing Pattern)
+#### 3. pr-description/
+*Purpose*: Generate PR descriptions for CI/CD
+*Templates*: SK YAML, Jinja2
 
-**Strategy**: Create new fixture that follows exact same pattern as existing ones:
-
-```python
-# conftest.py - new fixture following existing pattern
-@pytest.fixture  
-def mock_azure_openai_retry_responses(respx_mock):
-    """Setup mock responses for retry mechanism testing.
-    
-    Configures sequence responses: fail, fail, succeed pattern
-    for testing LLM invalid JSON retry behavior.
-    """
-    base_url = "https://test-openai.openai.azure.com/openai/deployments/gpt-4o/chat/completions"
-
-    retry_config = _get_base_mock_config()
-    retry_config.update({
-        "text_response": "Final successful response after retries",
-        "error_prefix": "Retry test error",
-        "response_sequence": [
-            {"type": "invalid_json", "content": "This is not JSON for schema enforcement"},
-            {"type": "invalid_json", "content": '{"incomplete": "json structure"'},
-            {"type": "success", "structured": True}
-        ]
-    })
-
-    return _setup_chat_completion_mock(respx_mock, base_url, retry_config)
+```
+pr-description/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-#### 4. Extend CommonTestData (Following Existing Pattern)
+#### 4. vulnerability-analysis/
+*Purpose*: Security vulnerability detection
+*Templates*: SK YAML, Jinja2
 
-**Strategy**: Add new static methods following exact same pattern:
-
-```python
-# integration_helpers.py - extend CommonTestData
-class CommonTestData:
-    # ... existing methods unchanged ...
-    
-    @staticmethod
-    def invalid_json_responses() -> list[str]:
-        """Various invalid JSON responses that should trigger retries."""
-        return [
-            "This is plain text, not JSON",
-            '{"incomplete": "json"',  # Missing closing brace
-            '{"valid": "json"} but with extra text', 
-            "",  # Empty response
-            "null",  # Valid JSON but not object for schema
-        ]
-    
-    @staticmethod
-    def retry_test_schema() -> dict[str, Any]:
-        """Schema that requires object response (fails with text)."""
-        return {
-            "type": "object", 
-            "properties": {
-                "analysis": {"type": "string"},
-                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                "status": {"type": "string", "enum": ["success", "failure"]}
-            },
-            "required": ["analysis", "confidence", "status"],
-            "additionalProperties": False
-        }
+```
+vulnerability-analysis/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-#### 5. Add Call Count Assertion Helper
+#### 5. autonomous-development-plan/
+*Purpose*: AI-generated development plans
+*Templates*: SK YAML
 
-**Strategy**: Extend IntegrationTestHelper with new method following existing pattern:
-
-```python
-# integration_helpers.py - extend IntegrationTestHelper
-class IntegrationTestHelper:
-    # ... existing methods unchanged ...
-    
-    def assert_retry_attempts(
-        self, result: dict[str, Any], expected_attempts: int, service_config: dict
-    ) -> None:
-        """Assert that retry mechanism made expected number of attempts.
-        
-        Args:
-            result: Result dictionary from output file
-            expected_attempts: Expected number of HTTP calls made
-            service_config: Service config dict containing call_count
-        """
-        actual_attempts = service_config.get("call_count", 0)
-        assert actual_attempts == expected_attempts, (
-            f"Expected {expected_attempts} retry attempts, got {actual_attempts}"
-        )
-        
-        # Also assert final success
-        self.assert_successful_response(result, expected_response_type="dict")
+```
+autonomous-development-plan/
+  input.json
+  template.yaml
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-#### 6. New Test File Following Existing Patterns
+#### 6. basic-chat/
+*Purpose*: Simple chat completion, free-form output
+*Templates*: Jinja2, Handlebars
 
-**Strategy**: Create `test_retry_mechanism_integration.py` following exact same structure:
-
-```python
-"""
-Integration tests for LLM retry mechanism using existing patterns.
-
-Tests the retry functionality when LLM returns invalid JSON responses,
-following established integration test patterns and helper utilities.
-"""
-
-from __future__ import annotations
-import pytest
-
-try:
-    from integration_helpers import CommonTestData
-except ImportError:
-    from tests.integration.integration_helpers import CommonTestData
-
-
-class TestLLMRetryMechanism:
-    """Integration tests for LLM retry mechanism using helper utilities."""
-
-    @pytest.mark.parametrize(
-        "invalid_responses,should_succeed,expected_attempts",
-        [
-            pytest.param(1, True, 2, id="single_failure_then_success"),
-            pytest.param(2, True, 3, id="double_failure_then_success"), 
-            pytest.param(3, False, 3, id="exhaust_retries_max_attempts"),
-        ]
-    )
-    @pytest.mark.asyncio
-    async def test_invalid_json_retry_scenarios_parametrized(
-        self, integration_helper, mock_azure_openai_retry_responses,
-        invalid_responses, should_succeed, expected_attempts
-    ):
-        """Test various invalid JSON retry scenarios with parametrization."""
-        # given
-        input_content = CommonTestData.simple_chat_input()
-        schema_content = CommonTestData.retry_test_schema()
-        
-        # when
-        if should_succeed:
-            result = await integration_helper.run_integration_test(
-                input_content=input_content,
-                schema_content=schema_content,
-                input_filename="retry_input.json",
-                output_filename="retry_output.json", 
-                schema_filename="retry_schema.json",
-                log_level="DEBUG"
-            )
-            
-            # then
-            integration_helper.assert_structured_response(
-                result, required_fields=["analysis", "confidence", "status"]
-            )
-            integration_helper.assert_retry_attempts(
-                result, expected_attempts, mock_azure_openai_retry_responses.service_config
-            )
-        else:
-            # Test retry exhaustion
-            with pytest.raises(SystemExit) as exc_info:
-                await integration_helper.run_integration_test(
-                    input_content=input_content,
-                    schema_content=schema_content,
-                    input_filename="retry_exhaust_input.json",
-                    output_filename="retry_exhaust_output.json",
-                    schema_filename="retry_exhaust_schema.json",
-                    log_level="DEBUG"
-                )
-            assert exc_info.value.code == 1
+```
+basic-chat/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-### Implementation Benefits of This Approach
+#### 7. pr-review-template/
+*Purpose*: PR review with SK-compatible Handlebars
+*Templates*: Handlebars, YAML vars
 
-**✅ Maintains Full Backward Compatibility:**
-- All existing tests continue to work unchanged
-- No breaking changes to existing fixtures or helpers
-- Same exact patterns and structures
+```
+pr-review-template/
+  input.json
+  template.hbs
+  template-vars.yaml
+  schema.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**✅ Follows Established Patterns:**
-- New fixture follows same structure as `mock_azure_openai_responses`
-- Helper methods follow same naming and parameter conventions
-- Test structure identical to existing integration tests
+#### 8. sem-ker-structured-analysis/
+*Purpose*: Structured analysis with embedded schema
+*Templates*: SK YAML
 
-**✅ Extends Rather Than Replaces:**
-- `_create_mock_chat_response()` extended, not replaced
-- `CommonTestData` gets new methods, existing ones unchanged
-- `IntegrationTestHelper` gets new assertion method
+```
+sem-ker-structured-analysis/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**✅ Leverages Existing Infrastructure:**
-- Uses same `respx` mocking system
-- Uses same workspace and file management
-- Uses same CLI argument building and execution
+#### 9. sem-ker-simple-question/
+*Purpose*: Simple Q&A with variable substitution
+*Templates*: SK YAML
 
-### Ready for Implementation
+```
+sem-ker-simple-question/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-This revised plan provides 95% confidence by:
-- **Reusing Existing Patterns**: No new architecture, extends current system
-- **Backward Compatible**: Zero impact on existing tests
-- **Following Conventions**: Same naming, structure, and approach
-- **Minimal Code Changes**: Extensions rather than rewrites
+#### 10. multi-format-output/
+*Purpose*: Output format comparison (JSON, YAML, Markdown)
+*Templates*: Jinja2, Handlebars
 
-**Confidence Level: 95%** - Ready to proceed with implementation following existing patterns exactly.
+```
+multi-format-output/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  output.yaml
+  output.md
+  run.sh
+  run.py
+  README.md
+```
+
+#### 11. devops-alerts/
+*Purpose*: DevOps incident/alert message generation
+*Templates*: Jinja2, Handlebars
+
+```
+devops-alerts/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 12. changelog-generation/
+*Purpose*: Automated changelog creation
+*Templates*: Jinja2
+
+```
+changelog-generation/
+  input.json
+  template.j2
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 13. custom-model-selection/
+*Purpose*: Demonstrate YAML model_id selection for Azure OpenAI
+*Templates*: SK YAML
+
+```
+custom-model-selection/
+  input.json
+  template.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 14. message-based/
+*Purpose*: Direct message completion (no template)
+
+```
+message-based/
+  input.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 15. security-audit/
+*Purpose*: Security audit report generation
+*Templates*: SK YAML, Jinja2
+
+```
+security-audit/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+---
+
+**This folder structure is use case driven, with only relevant template formats per scenario, and every folder includes CLI/lib usage and documentation.**
+
+---
+
+## PLAN MODE: Refined Examples Folder Structure (Complexity-Ordered)
+
+### Principles
+- Each folder name starts with a two-digit number (01, 02, ...) indicating complexity (lower = easier)
+- Users can learn step-by-step from simple to advanced scenarios
+- Table maps each folder to supported formats and usage options
+
+### Refined Use Case Folders (Complexity Ordered)
+
+#### 01-basic-chat/
+*Purpose*: Simple chat completion, free-form output
+*Templates*: Jinja2, Handlebars
+```
+01-basic-chat/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 02-sentiment-analysis/
+*Purpose*: Classify text sentiment, structured output
+*Templates*: SK YAML, Jinja2, Handlebars
+```
+02-sentiment-analysis/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 03-message-based/
+*Purpose*: Direct message completion (no template)
+```
+03-message-based/
+  input.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 04-multi-turn-conversation/
+*Purpose*: Multi-turn assistant/user/system message flows
+*Templates*: Jinja2
+```
+04-multi-turn-conversation/
+  input.json
+  template.j2
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 05-devops-alerts/
+*Purpose*: DevOps incident/alert message generation
+*Templates*: Jinja2, Handlebars
+```
+05-devops-alerts/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 06-code-review/
+*Purpose*: Automated code review, findings, quality gates
+*Templates*: SK YAML, Jinja2, Handlebars
+```
+06-code-review/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 07-pr-description/
+*Purpose*: Generate PR descriptions for CI/CD
+*Templates*: SK YAML, Jinja2
+```
+07-pr-description/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 08-vulnerability-analysis/
+*Purpose*: Security vulnerability detection
+*Templates*: SK YAML, Jinja2
+```
+08-vulnerability-analysis/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 09-security-audit/
+*Purpose*: Security audit report generation
+*Templates*: SK YAML, Jinja2
+```
+09-security-audit/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 10-changelog-generation/
+*Purpose*: Automated changelog creation
+*Templates*: Jinja2
+```
+10-changelog-generation/
+  input.json
+  template.j2
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 11-autonomous-development-plan/
+*Purpose*: AI-generated development plans
+*Templates*: SK YAML
+```
+11-autonomous-development-plan/
+  input.json
+  template.yaml
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 12-custom-model-selection/
+*Purpose*: Demonstrate YAML model_id selection for Azure OpenAI
+*Templates*: SK YAML
+```
+12-custom-model-selection/
+  input.json
+  template.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 13-pr-review-template/
+*Purpose*: PR review with SK-compatible Handlebars
+*Templates*: Handlebars, YAML vars
+```
+13-pr-review-template/
+  input.json
+  template.hbs
+  template-vars.yaml
+  schema.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 14-sem-ker-structured-analysis/
+*Purpose*: Structured analysis with embedded schema
+*Templates*: SK YAML
+```
+14-sem-ker-structured-analysis/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 15-sem-ker-simple-question/
+*Purpose*: Simple Q&A with variable substitution
+*Templates*: SK YAML
+```
+15-sem-ker-simple-question/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 16-multi-format-output/
+*Purpose*: Output format comparison (JSON, YAML, Markdown)
+*Templates*: Jinja2, Handlebars
+```
+16-multi-format-output/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  output.yaml
+  output.md
+  run.sh
+  run.py
+  README.md
+```
+
+---
+
+### Table: Folder, Formats, Usage Options
+
+| Folder                      | Templates         | Message-based | SK YAML | Jinja2 | Handlebars | CLI Usage | Lib Usage | Schema |
+|-----------------------------|-------------------|:-------------:|:-------:|:------:|:----------:|:---------:|:---------:|:------:|
+| 01-basic-chat               | j2, hbs           |      ✅       |   ❌    |   ✅   |     ✅     |    ✅     |    ✅     |   ❌   |
+| 02-sentiment-analysis       | yaml, j2, hbs     |      ✅       |   ✅    |   ✅   |     ✅     |    ✅     |    ✅     |   ✅   |
+| 03-message-based            | none              |      ✅       |   ❌    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 04-multi-turn-conversation  | j2                |      ✅       |   ❌    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 05-devops-alerts            | j2, hbs           |      ✅       |   ❌    |   ✅   |     ✅     |    ✅     |    ✅     |   ❌   |
+| 06-code-review              | yaml, j2, hbs     |      ✅       |   ✅    |   ✅   |     ✅     |    ✅     |    ✅     |   ✅   |
+| 07-pr-description           | yaml, j2          |      ✅       |   ✅    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 08-vulnerability-analysis   | yaml, j2          |      ✅       |   ✅    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 09-security-audit           | yaml, j2          |      ✅       |   ✅    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 10-changelog-generation     | j2                |      ✅       |   ❌    |   ✅   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 11-autonomous-development-plan | yaml           |      ✅       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 12-custom-model-selection   | yaml              |      ✅       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 13-pr-review-template       | hbs, yaml-vars    |      ❌       |   ❌    |   ❌   |     ✅     |    ✅     |    ✅     |   ✅   |
+| 14-sem-ker-structured-analysis   | yaml              |      ❌       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 15-sem-ker-simple-question       | yaml              |      ❌       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 16-multi-format-output      | j2, hbs           |      ✅       |   ❌    |   ✅   |     ✅     |    ✅     |    ✅     |   ❌   |
+
+---
+
+**This refined structure enables progressive learning from easy to complex, with clear mapping of formats and usage options per example.**

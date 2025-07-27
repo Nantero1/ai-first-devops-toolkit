@@ -15,6 +15,7 @@ from llm_ci_runner import (
     InputValidationError,
     LLMRunnerError,
     load_input_file,
+    load_schema_file,
     parse_arguments,
     write_output_file,
 )
@@ -118,8 +119,19 @@ class TestLoadInputFile:
             with pytest.raises(InputValidationError, match="Error reading input file"):
                 load_input_file(error_file)
 
-    def test_load_valid_yaml_file(self, temp_dir):
-        """Test loading a valid YAML input file."""
+    def test_load_file_yaml_parsing_error_fallback(self, temp_dir):
+        """Test YAML parsing error fallback for non-JSON files."""
+        # given
+        invalid_yaml_file = temp_dir / "invalid.yaml"
+        with open(invalid_yaml_file, "w") as f:
+            f.write("invalid: yaml: content: {\nunmatched braces")
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Invalid YAML in input file"):
+            load_input_file(invalid_yaml_file)
+
+    def test_yaml_message_lists_not_supported(self, temp_dir):
+        """Test that YAML message lists are rejected with clear error message."""
         # given
         yaml_file = temp_dir / "input.yaml"
         yaml_content = """
@@ -134,17 +146,11 @@ context:
         with open(yaml_file, "w") as f:
             f.write(yaml_content)
 
-        # when
-        result = load_input_file(yaml_file)
-
-        # then
-        assert isinstance(result, dict)
-        assert "messages" in result
-        assert isinstance(result["messages"], list)
-        assert len(result["messages"]) == 2
-        assert result["messages"][0]["role"] == "system"
-        assert result["messages"][1]["role"] == "user"
-        assert result["context"]["session_id"] == "test-yaml"
+        # when & then
+        with pytest.raises(
+            InputValidationError, match="YAML message lists are not supported.*JSON format.*SK templates and schemas"
+        ):
+            load_input_file(yaml_file)
 
     def test_load_invalid_yaml_raises_error(self, temp_dir):
         """Test that invalid YAML raises InputValidationError."""
@@ -736,3 +742,53 @@ class TestYAMLRecursivelyForceLiteral:
         assert isinstance(result["items"][1], scalarstring.LiteralScalarString)
         assert isinstance(result["nested"]["text"], scalarstring.LiteralScalarString)
         assert result["items"][0] == "item1"  # Single line should not be converted
+
+
+class TestLoadSchemaFile:
+    """Tests for schema file loading functionality."""
+
+    def test_load_schema_file_invalid_dict_content(self, temp_dir):
+        """Test schema file with non-dict content raises validation error."""
+        # given - schema file with list instead of dict (covers line 359)
+        invalid_schema_file = temp_dir / "invalid_schema.json"
+        with open(invalid_schema_file, "w") as f:
+            json.dump(["not", "a", "dict"], f)
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Schema file must contain a dictionary"):
+            load_schema_file(invalid_schema_file)
+
+    def test_load_schema_file_json_decode_error(self, temp_dir):
+        """Test schema file with invalid JSON raises decode error."""
+        # given - schema file with invalid JSON (covers line 371)
+        invalid_json_file = temp_dir / "invalid.json"
+        with open(invalid_json_file, "w") as f:
+            f.write('{"invalid": json content')
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Invalid JSON in schema file"):
+            load_schema_file(invalid_json_file)
+
+    def test_load_schema_file_generic_error(self, temp_dir):
+        """Test schema file loading with generic error handling."""
+        # given - non-existent schema file (covers line 372)
+        non_existent_file = temp_dir / "does_not_exist.json"
+
+        # when & then
+        with pytest.raises(InputValidationError, match="Schema file not found"):
+            load_schema_file(non_existent_file)
+
+
+class TestArgumentValidation:
+    """Tests for CLI argument validation edge cases."""
+
+    def test_parse_arguments_template_and_input_conflict(self):
+        """Test that template and input file conflict raises parser error."""
+        # given - arguments with both template and input file (covers line 106)
+        import sys
+        from unittest.mock import patch
+
+        test_args = ["prog", "--template-file", "template.hbs", "--input-file", "input.json"]
+        with patch.object(sys, "argv", test_args):
+            with pytest.raises(SystemExit):  # argparse raises SystemExit on error
+                parse_arguments()

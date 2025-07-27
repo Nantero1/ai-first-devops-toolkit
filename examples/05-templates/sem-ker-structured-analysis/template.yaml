@@ -1,4 +1,4 @@
-name: StructuredAnalysis  
+name: StructuredAnalysis
 description: SK template with embedded JSON schema for structured output
 template_format: semantic-kernel
 template: |
@@ -11,6 +11,7 @@ input_variables:
 
 execution_settings:
   azure_openai:
+    model_id: gpt-4.1-stable
     temperature: 0.3
     max_tokens: 800
     response_format:

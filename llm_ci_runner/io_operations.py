@@ -152,6 +152,15 @@ def load_input_file(input_file: Path) -> dict[str, Any]:
             # Try YAML first, fallback to JSON
             try:
                 data = yaml.load(content)
+
+                # ENFORCE JSON-ONLY CONSTRAINT for simple message lists
+                # YAML is only allowed for SK templates and schemas, NOT for message lists
+                if isinstance(data, dict) and "messages" in data:
+                    raise InputValidationError(
+                        f"YAML message lists are not supported. Please convert {input_file} to JSON format. "
+                        f"YAML is only supported for SK templates and schemas, not for simple message lists."
+                    )
+
             except YAMLError as e:
                 # For .yaml/.yml files, don't fallback to JSON - fail immediately
                 raise InputValidationError(f"Invalid YAML in input file: {e}") from e
@@ -305,6 +314,7 @@ def write_output_file(output_file: Path, response: str | dict[str, Any]) -> None
 
         # Write using unified formatter
         write_formatted_file(formatted_output, output_file)
+
     except Exception as e:
         LOGGER.error(f"❌ Error writing output file: {e}")
         raise LLMRunnerError(f"Error writing output file: {e}") from e

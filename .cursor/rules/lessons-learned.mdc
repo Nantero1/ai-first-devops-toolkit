@@ -47,7 +47,30 @@ alwaysApply: false
 → Solution: Implement unified load_template() with file extension-based detection (.hbs, .jinja, .j2), separate loader functions, keep existing signatures.    
 → Impact: Enables multi-engine support, backward compatibility, and easy future extension.
 
-**Critical**: Microsoft Semantic Kernel Integration Success Pattern
+**Critical**: Microsoft Semantic Kernel Integration Success Pattern    
+→ Issue: Initially unclear how to make YAML model_id specifications actually control which Azure deployment is used by Semantic Kernel.    
+→ Solution: Semantic Kernel selects services by service_id matching YAML execution_settings keys, not by model_id. Service's deployment_name determines actual Azure model called. Create services dynamically based on YAML model_id and use as deployment_name directly.    
+→ Impact: Enables true YAML-driven model selection without hardcoded model lists, future-proof for any Azure deployment.
+
+**Critical**: Semantic Kernel Service Registration Architecture  
+→ Issue: YAML execution_settings.azure_openai.model_id was being ignored because service was pre-created with fixed deployment_name from environment.  
+→ Solution: Extract model_id from YAML execution_settings at runtime, create dynamic AzureChatCompletion service with model_id as deployment_name, add service to kernel before execution. Pattern: YAML model_id → service deployment_name → Azure HTTP endpoint.  
+→ Impact: Direct 1:1 mapping between YAML specifications and actual Azure deployments called, no model tracking needed.
+
+**Important**: MyPy Type Safety Without Ignore Comments  
+→ Issue: MyPy errors like "Returning Any from function" and "Statement is unreachable" blocking clean code quality.  
+→ Solution: Use explicit type guards (isinstance checks) followed by explicit casting (str(value)) for Any returns. Remove unreachable else clauses when type unions are fully covered by isinstance checks.  
+→ Impact: Clean type-safe code without mypy ignore comments, proper runtime type validation, compiler-verified type safety.
+
+**Important**: Future-Proof Dynamic Model Selection Pattern  
+→ Issue: Hardcoded model lists require constant maintenance as new Azure deployments are added.  
+→ Solution: Let YAML model_id BE the actual Azure deployment name. No translation layer, no mapping dictionaries, no version tracking. User specifies real deployment name in YAML, system uses it directly.  
+→ Impact: Zero maintenance for new models, immediate compatibility with any Azure deployment, user controls exactly which model is called.
+
+**Enhancement**: Defensive Programming vs Type Safety Balance  
+→ Issue: Else clauses for "unexpected" types become unreachable when proper type annotations are used, causing mypy errors.  
+→ Solution: With proper typing, defensive else clauses are unnecessary. Trust the type system - if union types are fully covered by isinstance checks, the else is genuinely unreachable.  
+→ Impact: Cleaner code that relies on type safety rather than runtime defensive checks, better mypy compliance.
 → Issue: SK YAML template integration failing with "KernelServiceNotFoundError" in tests, suspected architecture problems with kernel.invoke() approach.
 → Solution: Architecture was correct - issue was integration test anti-patterns. Fixed by: 1) SK service mocks must inherit/spec real AzureChatCompletion for isinstance() checks, 2) Mock only external dependencies (kernel.invoke), never internal SK components, 3) Use realistic response content from actual API calls, 4) Test behavior (end-to-end results), not implementation (internal SK component calls).
 → Impact: All 6/6 SK integration tests passing, proper integration testing patterns established, SK templates work perfectly in production. Critical lesson: suspect test patterns before suspecting working architecture.

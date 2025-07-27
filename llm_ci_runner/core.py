@@ -10,6 +10,7 @@ commands and as library methods for programmatic access.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import sys
 from pathlib import Path
@@ -19,7 +20,6 @@ from rich.panel import Panel
 from rich.traceback import install as install_rich_traceback
 from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatHistory
-from semantic_kernel.functions import KernelArguments
 from semantic_kernel.functions.kernel_function_from_prompt import KernelFunctionFromPrompt
 
 from .exceptions import (
@@ -48,6 +48,87 @@ from .templates import (
 install_rich_traceback()
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _extract_model_id_from_yaml(yaml_function: KernelFunctionFromPrompt) -> str | None:
+    """
+    Extract model_id from YAML execution_settings.
+
+    This function looks for model_id in the YAML template's execution_settings
+    and returns it to be used as the actual deployment_name.
+
+    Args:
+        yaml_function: The loaded Semantic Kernel function from YAML
+
+    Returns:
+        model_id if found in YAML, None otherwise
+    """
+    try:
+        if hasattr(yaml_function, "prompt_execution_settings"):
+            # Check for azure_openai execution settings
+            azure_settings = yaml_function.prompt_execution_settings.get("azure_openai")
+            if azure_settings and hasattr(azure_settings, "extension_data"):
+                model_id = azure_settings.extension_data.get("model_id")
+                if model_id and isinstance(model_id, str):
+                    LOGGER.debug(f"🎯 YAML specifies model_id: {model_id}")
+                    return str(model_id)  # Explicit cast to satisfy mypy
+
+        LOGGER.debug("🎯 No model_id found in YAML execution_settings")
+        return None
+
+    except Exception as e:
+        LOGGER.warning(f"⚠️ Error extracting model_id from YAML: {e}")
+        return None
+
+
+async def _create_azure_service_with_model(model_id: str) -> Any:
+    """
+    Create Azure OpenAI service with specific model as deployment_name.
+
+    This creates a new service instance using the YAML-specified model_id
+    as the actual deployment_name, enabling dynamic model selection.
+
+    Args:
+        model_id: The model/deployment name from YAML
+
+    Returns:
+        Configured AzureChatCompletion service
+    """
+    import os
+
+    from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
+    from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
+
+    # Get Azure configuration from environment
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    api_key = os.getenv("AZURE_OPENAI_API_KEY")
+
+    if not endpoint:
+        raise ValueError("AZURE_OPENAI_ENDPOINT environment variable is required")
+
+    if api_key:
+        # API key authentication
+        service = AzureChatCompletion(
+            service_id="azure_openai",
+            endpoint=endpoint,
+            api_key=api_key,
+            deployment_name=model_id,  # Use YAML model_id as deployment_name
+            api_version=api_version,
+        )
+    else:
+        # RBAC authentication
+        credential = DefaultAzureCredential()
+        token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
+        service = AzureChatCompletion(
+            service_id="azure_openai",
+            endpoint=endpoint,
+            deployment_name=model_id,  # Use YAML model_id as deployment_name
+            api_version=api_version,
+            ad_token_provider=token_provider,
+        )
+
+    return service
 
 
 async def process_input_file(input_file: str) -> list[dict[str, str]]:
@@ -149,128 +230,6 @@ def _template_requires_json_output(template: KernelFunctionFromPrompt) -> bool:
         return False
 
 
-async def process_sk_yaml_template(
-    template: KernelFunctionFromPrompt,
-    service: Any,
-    template_vars_file: str | None = None,
-    output_file: str | None = None,
-) -> str | dict[str, Any]:
-    """
-    Process SK YAML template through direct kernel execution.
-
-    PURPOSE: Executes self-contained Semantic Kernel YAML templates that include
-    embedded prompt template, input variables, execution settings, and optional
-    schema definitions. Uses SK's native kernel.invoke() for complete template
-    lifecycle management including schema validation and structured output.
-
-    Args:
-        template: Loaded SK YAML template function
-        service: Configured LLM service (Azure/OpenAI)
-        template_vars_file: Optional external template variables file
-        output_file: Optional output file path for writing results
-
-    Returns:
-        Response from template execution - either string for text output
-        or dictionary for structured JSON output
-
-    Raises:
-        LLMRunnerError: If template execution fails
-    """
-    LOGGER.info("📋 Using Semantic Kernel YAML template")
-
-    # Create kernel with service
-    kernel = _create_kernel_with_service(service)
-
-    # Prepare arguments - merge template vars with SK input variables
-    sk_arguments = KernelArguments()
-    template_vars = _load_template_variables(template_vars_file)
-    sk_arguments.update(template_vars)
-
-    # SK handles EVERYTHING: template rendering, chat history, schema validation, LLM execution
-    LOGGER.info("🚀 Executing SK YAML template")
-
-    # Debug: Pre-invoke service validation
-    LOGGER.debug(f"🔍 Template execution settings: {getattr(template, 'prompt_execution_settings', 'NO_SETTINGS')}")
-    LOGGER.debug(f"🔍 Available kernel services: {kernel.services}")
-    LOGGER.debug(f"🔍 Template name: {getattr(template, 'name', 'NO_NAME')}")
-    LOGGER.debug(f"🔍 SK Arguments: {dict(sk_arguments)}")
-
-    try:
-        result = await kernel.invoke(template, sk_arguments)
-        LOGGER.debug("✅ SK template execution successful")
-    except Exception as e:
-        LOGGER.error(f"🚨 SK invoke failed: {e}")
-        LOGGER.error(f"🚨 Error type: {type(e).__name__}")
-        LOGGER.error(f"🚨 Template: {getattr(template, 'name', 'UNKNOWN')}")
-        LOGGER.error(
-            f"🚨 Available services: {[s.service_id for s in kernel.services.values() if hasattr(s, 'service_id')]}"
-        )
-        if hasattr(template, "prompt_execution_settings"):
-            LOGGER.error(f"🚨 Template execution settings: {template.prompt_execution_settings}")
-        raise
-
-    # Extract content (SK returns FunctionResult with value list of ChatMessageContent)
-    response: str | dict[str, Any]
-    if result is not None and hasattr(result, "value") and result.value:
-        # Get the first ChatMessageContent from the value list
-        chat_content = result.value[0]
-        if hasattr(chat_content, "content"):
-            content = str(chat_content.content)
-
-            # Check if template requires JSON output by examining execution settings
-            requires_json = _template_requires_json_output(template)
-
-            # Parse JSON based on template requirements
-            try:
-                import json
-
-                response = json.loads(content)
-                LOGGER.debug("✅ Parsed structured JSON response from SK template")
-            except (json.JSONDecodeError, ValueError) as e:
-                if requires_json:
-                    # Template explicitly requires JSON - this is an error that should trigger retry
-                    raise SchemaValidationError(
-                        f"SK template requires JSON output but received invalid JSON: {str(e)}. "
-                        f"Content: {content[:200]}..."
-                    ) from e
-                else:
-                    # Template allows text output - fallback to string is acceptable
-                    response = content
-                    LOGGER.debug("📝 Keeping text response from SK template (JSON not required)")
-        else:
-            response = str(chat_content)
-    elif result is not None and hasattr(result, "content"):
-        # Fallback for direct content access
-        content = str(result.content)
-
-        # Check if template requires JSON output
-        requires_json = _template_requires_json_output(template)
-
-        # Parse JSON based on template requirements
-        try:
-            import json
-
-            response = json.loads(content)
-            LOGGER.debug("✅ Parsed structured JSON response from SK template")
-        except (json.JSONDecodeError, ValueError) as e:
-            if requires_json:
-                # Template explicitly requires JSON - this is an error that should trigger retry
-                raise SchemaValidationError(
-                    f"SK template requires JSON output but received invalid JSON: {str(e)}. Content: {content[:200]}..."
-                ) from e
-            else:
-                # Template allows text output - fallback to string is acceptable
-                response = content
-                LOGGER.debug("📝 Keeping text response from SK template (JSON not required)")
-    else:
-        response = str(result) if result is not None else ""
-
-    # Write output if specified (write_output_file handles both str and dict)
-    _write_output_if_specified(output_file, response)
-
-    return response
-
-
 def _load_template_variables(template_vars_file: str | None) -> dict[str, Any]:
     """Load template variables from file or return empty dict."""
     if template_vars_file:
@@ -278,6 +237,162 @@ def _load_template_variables(template_vars_file: str | None) -> dict[str, Any]:
     else:
         LOGGER.info("📝 No template variables provided - using defaults")
         return {}
+
+
+def _detect_template_format(template_file: str) -> str:
+    """Detect template format from file extension."""
+    extension = Path(template_file).suffix.lower()
+    if extension in [".yaml", ".yml"]:
+        return "semantic-kernel"
+    elif extension in [".hbs"]:
+        return "handlebars"
+    elif extension in [".j2", ".jinja"]:
+        return "jinja2"
+    else:
+        # Default to handlebars for unknown extensions
+        return "handlebars"
+
+
+async def _process_template_unified(
+    template: Any,  # KernelFunctionFromPrompt | HandlebarsPromptTemplate | Jinja2PromptTemplate
+    template_format: str,  # "semantic-kernel", "handlebars", "jinja2"
+    template_vars: dict[str, Any],  # Unified variables
+    service: Any,  # LLM service
+    schema_result: tuple[Any, dict] | None,  # Schema model + dict
+    output_file: str | None,  # Output file path
+) -> str | dict[str, Any]:
+    """
+    Unified template processor that handles all template types.
+
+    This function consolidates the logic from the old duplicate functions:
+    - process_sk_yaml_template_with_vars()
+    - process_handlebars_jinja_template_with_vars()
+
+    Args:
+        template: Loaded template object (SK, Handlebars, or Jinja2)
+        template_format: Template format identifier
+        template_vars: Template variables dictionary
+        service: LLM service instance
+        schema_result: Optional schema validation tuple
+        output_file: Optional output file path
+
+    Returns:
+        Response from LLM execution - string or dict based on schema
+    """
+    from semantic_kernel.functions.kernel_function_from_prompt import KernelFunctionFromPrompt
+
+    # Initialize response variable with proper typing
+    response: str | dict[str, Any]
+
+    if isinstance(template, KernelFunctionFromPrompt):
+        # SK YAML template - dynamic service creation based on YAML model_id
+        LOGGER.info("🔧 Processing Semantic Kernel YAML template")
+
+        # Extract model_id from YAML and create appropriate service
+        try:
+            yaml_model_id = _extract_model_id_from_yaml(template)
+
+            if yaml_model_id:
+                # Create service with YAML model_id as deployment_name
+                dynamic_service = await _create_azure_service_with_model(yaml_model_id)
+                LOGGER.info(f"✅ Using YAML-specified model: {yaml_model_id}")
+                kernel = _create_kernel_with_service(dynamic_service)
+            else:
+                # Fallback to environment-configured service
+                LOGGER.info("✅ Using environment model")
+                kernel = _create_kernel_with_service(service)
+
+        except Exception as e:
+            LOGGER.warning(f"⚠️ Dynamic service creation failed, using environment service: {e}")
+            # Fallback to original service
+            kernel = _create_kernel_with_service(service)
+
+        # Execute template with variables
+        try:
+            result = await kernel.invoke(template, **template_vars)
+
+            # Check if template requires JSON output
+            requires_json = _template_requires_json_output(template)
+
+            if requires_json and result and result.value:
+                # Parse JSON from SK result
+                import json
+
+                content = result.value[0].content if hasattr(result.value[0], "content") else str(result.value[0])
+                try:
+                    response = json.loads(content)
+                    LOGGER.info(f"✅ SK template executed successfully - JSON response: {type(response)}")
+                except json.JSONDecodeError as e:
+                    raise SchemaValidationError(f"Schema enforcement failed: Invalid JSON response - {e}") from e
+            else:
+                # Return as string
+                response = str(result.value[0]) if result and result.value else ""
+                LOGGER.info(f"✅ SK template executed successfully - string response: {len(response)} chars")
+
+        except Exception as e:
+            LOGGER.error(f"❌ SK template execution failed: {e}")
+            raise
+
+    else:
+        # Handlebars/Jinja2 template workflow
+        LOGGER.info(f"🔧 Processing {template_format} template")
+
+        # Use template variables or empty dict
+        vars_dict = template_vars if template_vars is not None else {}
+        LOGGER.debug(f"🔧 Using template variables: {list(vars_dict.keys())}")
+
+        # Create kernel for template rendering
+        kernel = Kernel()
+
+        # Render template
+        rendered_content = await render_template(template, vars_dict, kernel)
+
+        # Parse rendered content to chat history
+        chat_history = parse_rendered_template_to_chat_history(rendered_content)
+
+        # Convert to list format
+        chat_history_list = _convert_chat_history_to_list(chat_history)
+
+        # Execute with LLM and schema enforcement
+        if schema_result:
+            # Create temporary schema file for execute_llm_task function
+            import json
+            import os
+            import tempfile
+
+            schema_model, schema_dict = schema_result
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+                json.dump(schema_dict, tmp_file, indent=2)
+                schema_file_path = tmp_file.name
+
+            # Create kernel for execution
+            kernel = _create_kernel_with_service(service)
+
+            # Use execute_llm_task for proper schema enforcement
+            llm_result = await execute_llm_task(kernel, chat_history_list, schema_file_path, output_file)
+
+            # Clean up temporary file
+            os.unlink(schema_file_path)
+
+            # Extract response from result
+            if isinstance(llm_result, dict) and "output" in llm_result:
+                # Keep structured output as dict, convert text output to string
+                if llm_result.get("mode") == "structured":
+                    response = llm_result["output"]
+                else:
+                    response = str(llm_result["output"])
+            else:
+                response = str(llm_result)
+        else:
+            # No schema - use simple execution
+            response = await execute_llm_with_chat_history(service, chat_history_list, None, output_file)
+
+    # Save output if requested
+    if output_file:
+        _write_output_if_specified(output_file, response)
+        LOGGER.info(f"💾 Response saved to {output_file}")
+
+    return response
 
 
 def _convert_chat_history_to_list(chat_history: Any) -> list[dict[str, str]]:
@@ -375,145 +490,6 @@ async def load_template_from_string(template_content: str, template_format: str)
         raise InputValidationError(f"Unsupported template format: {template_format}")
 
 
-async def process_sk_yaml_template_with_vars(
-    template: KernelFunctionFromPrompt,
-    service: Any,
-    template_vars: dict[str, Any] | None = None,
-    output_file: str | None = None,
-) -> str | dict[str, Any]:
-    """
-    Process SK YAML template with dict-based template variables.
-
-    Enhanced version of process_sk_yaml_template that accepts template variables
-    as a Python dict rather than requiring a file.
-    """
-    LOGGER.info("📋 Using Semantic Kernel YAML template with dict vars")
-
-    # Create kernel with service
-    kernel = _create_kernel_with_service(service)
-
-    # Prepare arguments from dict
-    sk_arguments = KernelArguments()
-    if template_vars:
-        sk_arguments.update(template_vars)
-        LOGGER.debug(f"🔧 Using template variables: {list(template_vars.keys())}")
-    else:
-        LOGGER.debug("🔧 No template variables provided")
-
-    # Execute template
-    LOGGER.info("🚀 Executing SK YAML template")
-
-    try:
-        result = await kernel.invoke(template, sk_arguments)
-        LOGGER.debug("✅ SK template execution successful")
-    except Exception as e:
-        LOGGER.error(f"🚨 SK invoke failed: {e}")
-        raise
-
-    # Extract and process response (same logic as original function)
-    response: str | dict[str, Any]
-    if result is not None and hasattr(result, "value") and result.value:
-        # Get the first ChatMessageContent from the value list
-        chat_content = result.value[0]
-        if hasattr(chat_content, "content"):
-            content = str(chat_content.content)
-
-            # Check if template requires JSON output by examining execution settings
-            requires_json = _template_requires_json_output(template)
-
-            # Parse JSON based on template requirements
-            try:
-                import json
-
-                response = json.loads(content)
-                LOGGER.debug("✅ Parsed structured JSON response from SK template")
-            except (json.JSONDecodeError, ValueError) as e:
-                if requires_json:
-                    raise SchemaValidationError(
-                        f"SK template requires JSON output but received invalid JSON: {str(e)}. "
-                        f"Content: {content[:200]}..."
-                    ) from e
-                else:
-                    response = content
-                    LOGGER.debug("📝 Keeping text response from SK template (JSON not required)")
-        else:
-            response = str(chat_content)
-    else:
-        response = str(result) if result is not None else ""
-
-    # Write output if specified
-    _write_output_if_specified(output_file, response)
-
-    return response
-
-
-async def process_handlebars_jinja_template_with_vars(
-    template: Any,
-    template_vars: dict[str, Any] | None = None,
-) -> list[dict[str, str]]:
-    """
-    Process Handlebars or Jinja2 template with dict-based template variables.
-
-    Enhanced version of process_handlebars_jinja_template that accepts template variables
-    as a Python dict rather than requiring a file.
-    """
-    LOGGER.info("🎨 Processing Handlebars/Jinja2 template with dict vars")
-
-    # Use template variables or empty dict
-    vars_dict = template_vars if template_vars is not None else {}
-    LOGGER.debug(f"🔧 Using template variables: {list(vars_dict.keys())}")
-
-    # Create kernel for template rendering
-    kernel = Kernel()
-
-    # Render template
-    rendered_content = await render_template(template, vars_dict, kernel)
-
-    # Parse rendered content to chat history
-    chat_history = parse_rendered_template_to_chat_history(rendered_content)
-
-    # Convert to list format
-    return _convert_chat_history_to_list(chat_history)
-
-
-async def process_handlebars_jinja_template(
-    template: Any,
-    template_vars_file: str | None = None,
-) -> list[dict[str, str]]:
-    """
-    Process Handlebars or Jinja2 template.
-
-    Handles template variable loading, rendering, and chat history conversion
-    for Handlebars (.hbs) and Jinja2 (.j2, .jinja) templates.
-
-    Args:
-        template: Loaded template object (Handlebars/Jinja2)
-        template_vars_file: Optional template variables file path
-
-    Returns:
-        List of message dictionaries in chat history format
-
-    Raises:
-        LLMRunnerError: If template processing fails
-    """
-    LOGGER.info("🎨 Processing Handlebars/Jinja2 template")
-
-    # Load template variables
-    template_vars = _load_template_variables(template_vars_file)
-
-    # Create kernel for template rendering
-    kernel = Kernel()
-
-    # Render template
-    rendered_content = await render_template(template, template_vars, kernel)
-
-    # Parse rendered content to chat history
-    chat_history = parse_rendered_template_to_chat_history(rendered_content)
-
-    # Convert to list format
-    return _convert_chat_history_to_list(chat_history)
-
-
 async def execute_llm_with_chat_history(
     service: Any,
     chat_history: list[dict[str, str]],
@@ -569,16 +545,22 @@ async def execute_llm_with_chat_history(
 
 
 async def run_llm_task(
-    input_file: str | None = None,
-    template_file: str | None = None,
-    template_vars_file: str | None = None,
-    schema_file: str | None = None,
+    # Template input (explicit for reliability)
+    template_content: str | None = None,  # Python library primary
+    template_file: str | None = None,  # CLI compatibility
+    # Required format specification
+    template_format: str | None = None,  # "handlebars", "jinja2", "semantic-kernel"
+    # SMART auto-detection (99% reliable)
+    template_vars: dict[str, Any] | str | None = None,  # Dict content OR file path
+    schema: dict[str, Any] | str | Path | None = None,  # Dict content OR file path
+    # Backward compatibility - separate file parameters
+    template_vars_file: str | None = None,  # For explicit file-based template vars
+    schema_file: str | None = None,  # For explicit schema file
+    # Standard parameters
     output_file: str | None = None,
     log_level: str = "INFO",
-    # NEW: String-based parameters for direct Python usage
-    template_content: str | None = None,
-    template_format: str | None = None,  # "handlebars", "jinja2", "semantic-kernel"
-    template_vars: dict[str, Any] | None = None,
+    # Input file compatibility (internal use only)
+    _input_file: str | None = None,
 ) -> str | dict[str, Any]:
     """
     Run LLM task with specified parameters.
@@ -640,24 +622,28 @@ async def run_llm_task(
         ...     template_vars={"input_text": "Sample data"}
         ... )
     """
-    # Validate input parameters - enhanced for string-based templates
-    if not input_file and not template_file and not template_content:
-        raise InputValidationError("Either input_file, template_file, or template_content must be specified")
+    # Validate input parameters - unified API approach
+    if not _input_file and not template_file and not template_content:
+        raise InputValidationError("Either template_content, template_file, or input file must be specified")
 
     # Check mutually exclusive template inputs
-    template_inputs = [input_file, template_file, template_content]
+    template_inputs = [_input_file, template_file, template_content]
     if sum(1 for x in template_inputs if x is not None) > 1:
+        raise InputValidationError("Cannot specify multiple input sources")
+
+    # Check mutually exclusive template_vars parameters
+    if template_vars is not None and template_vars_file is not None:
         raise InputValidationError(
-            "Cannot specify multiple template inputs: input_file, template_file, and template_content are mutually exclusive"
+            "Cannot specify both template_vars and template_vars_file - they are mutually exclusive"
         )
+
+    # Check mutually exclusive schema parameters
+    if schema is not None and schema_file is not None:
+        raise InputValidationError("Cannot specify both schema and schema_file - they are mutually exclusive")
 
     # Check template_format requirement for string templates
     if template_content and not template_format:
-        raise InputValidationError("template_format is required when using template_content")
-
-    # Check mutually exclusive template variables
-    if template_vars_file and template_vars:
-        raise InputValidationError("Cannot specify both template_vars_file and template_vars")
+        raise InputValidationError("template_format is required when using templates")
 
     # Validate template_format values
     if template_format and template_format not in ["handlebars", "jinja2", "semantic-kernel"]:
@@ -674,58 +660,123 @@ async def run_llm_task(
         LOGGER.info("🔐 Setting up LLM service")
         service, credential = await setup_llm_service()
 
-        # Load schema if provided
-        schema_result = load_schema_file(Path(schema_file) if schema_file else None)
-        if schema_result:
-            schema_model, schema_dict = schema_result
-            LOGGER.debug(f"📋 Schema loaded - model: {type(schema_model)}, dict: {type(schema_dict)}")
-        else:
+        # Smart auto-detection for schema (supports both dict and file path)
+        schema_result = None
+        if schema_file is not None:
+            # Handle explicit schema_file parameter first
+            LOGGER.debug(f"🔧 Loading schema_file: {schema_file}")
+            schema_result = load_schema_file(Path(schema_file))
+            LOGGER.debug(
+                f"📋 Explicit schema_file loaded from: {schema_file}, result: {type(schema_result) if schema_result else 'None'}"
+            )
+        elif schema is not None:
+            # Handle smart auto-detection schema parameter
+            LOGGER.debug(f"🔧 Loading schema parameter: {type(schema)}")
+            if isinstance(schema, dict):
+                # Direct dict schema - convert to tuple format
+                from llm_ci_runner.schema import create_dynamic_model_from_schema
+
+                schema_model = create_dynamic_model_from_schema(schema)
+                schema_result = (schema_model, schema)
+                LOGGER.debug(f"📋 Dict schema loaded - model: {type(schema_model)}")
+            elif isinstance(schema, str | Path):
+                # File path schema - load from file (handle both str and Path)
+                schema_result = load_schema_file(Path(schema))
+                LOGGER.debug(f"📋 File schema loaded from: {schema}")
+
+        # Log when no schema is provided
+        if schema_result is None:
+            LOGGER.debug("🔧 No schema or schema_file parameter provided")
             LOGGER.debug("📋 No schema loaded")
+
+        # Smart auto-detection for template variables (supports both dict and file path)
+        resolved_template_vars = {}
+        # Handle explicit template_vars_file parameter first
+        if template_vars_file is not None:
+            resolved_template_vars = _load_template_variables(template_vars_file)
+            LOGGER.debug(f"📋 Explicit template_vars_file loaded from: {template_vars_file}")
+        elif template_vars is not None:
+            if isinstance(template_vars, dict):
+                # Direct dict variables
+                resolved_template_vars = template_vars
+                LOGGER.debug("📋 Dict template variables loaded")
+            elif isinstance(template_vars, str):
+                # File path variables - load from file
+                resolved_template_vars = _load_template_variables(template_vars)
+                LOGGER.debug(f"📋 File template variables loaded from: {template_vars}")
 
         # Initialize response variable with proper typing
         response: str | dict[str, Any]
 
-        # Process input based on mode
-        if input_file:
-            # Traditional input file mode
-            chat_history = await process_input_file(input_file)
-            response = await execute_llm_with_chat_history(service, chat_history, schema_file, output_file)
+        # Process input based on mode using unified approach
+        if _input_file:
+            # Traditional input file mode (CLI compatibility)
+            chat_history = await process_input_file(_input_file)
+
+            # Use execute_llm_task for proper schema enforcement
+            if schema_result:
+                # Create temporary schema file for execute_llm_task function
+                import tempfile
+
+                schema_model, schema_dict = schema_result
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
+                    json.dump(schema_dict, tmp_file, indent=2)
+                    schema_file_path = tmp_file.name
+
+                # Create kernel for execution
+                kernel = _create_kernel_with_service(service)
+
+                # Use execute_llm_task for proper schema enforcement
+                input_result = await execute_llm_task(kernel, chat_history, schema_file_path, output_file)
+
+                # Clean up temporary file
+                import os
+
+                os.unlink(schema_file_path)
+
+                # Extract response from result
+                if isinstance(input_result, dict) and "output" in input_result:
+                    # Keep structured output as dict, convert text output to string
+                    if input_result.get("mode") == "structured":
+                        response = input_result["output"]
+                    else:
+                        response = str(input_result["output"])
+                else:
+                    response = str(input_result)
+
+                # 🔧 FIX: Write output file - this was missing!
+                _write_output_if_specified(output_file, response)
+            else:
+                # No schema - use direct schema file path if available (string format)
+                input_schema_file_path: str | None = schema if isinstance(schema, str) else None
+                response = await execute_llm_with_chat_history(
+                    service, chat_history, input_schema_file_path, output_file
+                )
 
         elif template_file:
-            # File-based template mode
+            # File-based template mode with unified processing
             LOGGER.info("📄 Processing template file")
-
-            # Load template from file
             template = load_template(Path(template_file))
-
-            # Handle different template types
-            if isinstance(template, KernelFunctionFromPrompt):
-                # SK YAML template - self-contained execution
-                response = await process_sk_yaml_template(template, service, template_vars_file, output_file)
-            else:
-                # Handlebars/Jinja2 template workflow
-                chat_history = await process_handlebars_jinja_template(template, template_vars_file)
-                response = await execute_llm_with_chat_history(service, chat_history, schema_file, output_file)
+            response = await _process_template_unified(
+                template,
+                template_format or _detect_template_format(template_file),
+                resolved_template_vars,
+                service,
+                schema_result,
+                output_file,
+            )
 
         elif template_content:
-            # String-based template mode
+            # String-based template mode with unified processing
             LOGGER.info("📄 Processing template content")
-
-            # Validate template_format is provided
             if template_format is None:
                 raise ValueError("template_format must be specified when using template_content")
 
-            # Load template from string content
             template = await load_template_from_string(template_content, template_format)
+            response = await _process_template_unified(
+                template, template_format, resolved_template_vars, service, schema_result, output_file
+            )
 
-            # Handle different template types
-            if isinstance(template, KernelFunctionFromPrompt):
-                # SK YAML template - self-contained execution
-                response = await process_sk_yaml_template_with_vars(template, service, template_vars, output_file)
-            else:
-                # Handlebars/Jinja2 template workflow
-                chat_history = await process_handlebars_jinja_template_with_vars(template, template_vars)
-                response = await execute_llm_with_chat_history(service, chat_history, schema_file, output_file)
         else:
             # This should never happen due to validation above
             raise InputValidationError("No input method specified")
@@ -766,13 +817,13 @@ async def main() -> None:
             )
         )
 
-        # Execute using library function
+        # Execute using library function with unified API
         response = await run_llm_task(
-            input_file=args.input_file,
-            template_file=args.template_file,
-            template_vars_file=args.template_vars,
-            schema_file=args.schema_file,
-            output_file=args.output_file,
+            _input_file=str(args.input_file) if args.input_file else None,  # Convert Path to string
+            template_file=str(args.template_file) if args.template_file else None,  # Convert Path to string
+            template_vars=str(args.template_vars) if args.template_vars else None,  # Convert Path to string
+            schema=str(args.schema_file) if args.schema_file else None,  # Convert Path to string
+            output_file=str(args.output_file) if args.output_file else None,
             log_level=args.log_level,
         )
 
