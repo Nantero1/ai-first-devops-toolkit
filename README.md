@@ -62,7 +62,7 @@ in [Building AI-First DevOps](https://technologyworkroom.blogspot.com/2025/06/bu
 - 📦 **CI-friendly CLI**: Stateless command that reads JSON/YAML, writes JSON/YAML, and exits with proper codes
 - 🎨 **Beautiful Logging**: Rich console output with timestamps and colors
 - 📁 **File-based I/O**: CI/CD friendly with JSON/YAML input/output
-- 📋 **Template-Driven Workflows**: Handlebars and Jinja2 templates with YAML variables for dynamic prompt generation
+- 📋 **Template-Driven Workflows**: Handlebars, Jinja2, and Microsoft Semantic Kernel YAML templates with YAML variables for dynamic prompt generation
 - 📄 **YAML Support**: Use YAML for schemas, input files, and output files - more readable than JSON
 - 🔧 **Simple & Extensible**: Easy to understand and modify for your specific needs
 - 🤖 **Semantic Kernel foundation**: async, service-oriented design ready for skills, memories, orchestration, and future
@@ -150,7 +150,7 @@ llm-ci-runner \
 
 ### 3b. Template-Based Workflows
 
-**Dynamic prompt generation with YAML, Handlebars or Jinja2 templates:**
+**Dynamic prompt generation with YAML, Handlebars, Jinja2, or Microsoft Semantic Kernel templates:**
 
 ```bash
 # Handlebars template example
@@ -166,6 +166,12 @@ llm-ci-runner \
   --template-vars examples/05-templates/jinja2-template/template-vars.yaml \
   --schema-file examples/05-templates/jinja2-template/schema.yaml \
   --output-file jinja2-result.yaml
+
+# Or using Microsoft Semantic Kernel YAML templates with embedded schemas
+llm-ci-runner \
+  --template-file examples/05-templates/sem-ker-structured-analysis/template.yaml \
+  --template-vars examples/05-templates/sem-ker-structured-analysis/template-vars.yaml \
+  --output-file sk-analysis-result.json
 ```
 
 For more examples see the [examples directory](https://github.com/Nantero1/ai-first-devops-toolkit/tree/main/examples).
@@ -176,6 +182,7 @@ For more examples see the [examples directory](https://github.com/Nantero1/ai-fi
 - 📝 **YAML Configuration**: More readable than JSON for complex setups
 - 🔄 **Dynamic Content**: Variables and conditional rendering
 - 🚀 **CI/CD Ready**: Perfect for parameterized pipeline workflows
+- 🤖 **Semantic Kernel Integration**: Microsoft Semantic Kernel YAML templates with embedded schemas and model settings
 
 ### 4. Python Library Usage
 
@@ -239,6 +246,8 @@ asyncio.run(main())
 
 #### Semantic Kernel YAML Template with Embedded Schema
 
+Microsoft Semantic Kernel YAML templates provide embedded JSON schemas and model settings directly in the template. See [Microsoft Semantic Kernel YAML Template Documentation](https://learn.microsoft.com/en-us/semantic-kernel/concepts/prompts/yaml-schema) for more details.
+
 Please refer to the full example in [examples/05-templates/sem-ker-structured-analysis/README.md](https://github.com/Nantero1/ai-first-devops-toolkit/blob/main/examples/05-templates/sem-ker-structured-analysis/README.md).
 
 ```python  
@@ -253,6 +262,15 @@ input_variables:
 execution_settings:  
   azure_openai:  
     temperature: 0.1  
+    response_format:  
+      type: json_schema  
+      json_schema:  
+        schema:  
+          type: object  
+          properties:  
+            sentiment: {type: string, enum: [positive, negative, neutral]}  
+            confidence: {type: number, minimum: 0, maximum: 1}  
+          required: [sentiment, confidence]  
 """  
     response = await run_llm_task(  
         template_content=template_content,  
