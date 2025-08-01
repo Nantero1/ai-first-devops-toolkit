@@ -290,6 +290,14 @@ DEFAULT_TIMEOUT = 30
 - Implement proper session management
 - Follow OWASP security guidelines
 
+# Command Output Handling
+
+Whenever you run a command in the terminal, pipe the output to a file, output.txt, that you can read from. Make sure to overwrite each time so that it doesn't grow too big. There is a bug in the current version of Copilot that causes it to not read the output of commands correctly. This workaround allows you to read the output from the temporary file instead. 
+
+# Progress and task tracking
+
+Always update .cursor/scratchpad.md to keep track of your progress and tasks. This file serves as a scratchpad for ongoing work, ideas, and reminders. Use it to document what you have done, what needs to be done, and any issues you encounter. Make sure to read the file before starting a new task to understand the current state of the project.
+
 ---
 
 *This file serves as the primary source of truth for GitHub Copilot assistance. Follow these guidelines for all code generation, documentation, and testing activities to maintain consistency and quality across the project.* 

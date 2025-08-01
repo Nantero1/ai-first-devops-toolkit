@@ -1,4 +1,4 @@
-*This scratchpad file serves as a phase-specific task tracker and implementation planner. The Mode System on Line 1 is critical and must never be deleted. It defines two core modes: Implementation Type for new feature development and Bug Fix Type for issue resolution. Each mode requires specific documentation formats, confidence tracking, and completion criteria. Use "plan" trigger for planning phase (🎯) and "agent" trigger for execution phase (⚡) after reaching 95% confidence. Follow strict phase management with clear documentation transfer process.*
+*This scratchpad file serves as a phase-specific task tracker and implementation guide.*
 
 `MODE SYSTEM TYPES (DO NOT DELETE!):
 1. Implementation Type (New Features):
@@ -15,347 +15,798 @@
 
 Cross-reference with .cursor/memories.md and .cursor/rules/lessons-learned.mdc for context and best practices.`
 
-# Mode: PLAN 🎯
+# Mode: PLAN MODE (🎯)
 
-Current Task: Add timeout resilience to existing retry mechanism (2-minute default, integrated with retry module)
-Understanding: The codebase already has comprehensive retry logic. Now we need to add timeout protection with close coupling to retry functionality, potentially integrating directly into retry.py module.
+---
 
-## Current State Analysis
+## PLAN MODE: Examples Folder Overhaul for Template-Centric CLI & Library Usage
 
-**Existing Implementation (Completed):**
-✅ Tenacity retry mechanism fully implemented in `llm_ci_runner/retry.py`
-✅ 6 critical API points protected with retry decorators
-✅ 245/245 tests passing, 90.15% coverage  
-✅ Selective exception handling (retry transient, skip permanent errors)
+### 1. Current State Analysis
 
-**Gap Identified: Timeout Protection**
-❌ No explicit timeout controls on API calls (2-minute default needed)
-❌ Risk of indefinite hangs during network operations
-❌ No integrated timeout + retry solution
+- **Existing Structure:**
+  - Folders like `01-basic`, `02-devops`, `03-security`, etc.
+  - Each contains a mix of input files, templates (YAML, Jinja2, Handlebars), and sometimes schema or output files.
+  - Naming conventions and structure are inconsistent.
+  - Some examples are message-based, some are template-based, but template usage is not the main focus.
 
-## Architecture Decision: Integrated vs Separate
+- **Codebase Capabilities (from context & scratchpad):**
+  - **Template-first:** Supports YAML (Semantic Kernel), Jinja2, Handlebars (hbs), and message-based formats.
+  - **Dynamic Model Selection:** YAML templates can specify model_id for Azure OpenAI.
+  - **CLI & Library Usage:** Both are supported for running templates, passing variables, and getting outputs.
+  - **Schema Validation:** Some examples include schema files for output validation.
+  - **Flexible Input:** Can run with input JSON, YAML, or direct message payloads.
 
-**Current Functions with Retry Decorators (HIGH PRIORITY):**
-1. `setup_azure_service()` - @retry_network_operation ✅
-2. `setup_openai_service()` - ❌ **Missing retry decorator**
-3. `_execute_semantic_kernel_with_schema()` - @retry_network_operation ✅  
-4. `_execute_sdk_with_schema()` - @retry_network_operation ✅
+---
 
-**Functions WITHOUT Retry Decorators (but need timeout):**
-5. `_create_azure_client()` - ❌ No retry, needs both timeout + retry
-6. `_create_openai_client()` - ❌ No retry, needs both timeout + retry
+### 2. New Examples Folder Structure Proposal
 
-**Analysis**: Only 3/6 critical functions currently have retry protection!
+#### Top-Level Structure
 
-**Architecture Evaluation: Integrated Approach**
-
-**✅ PROS of Integrating into retry.py:**
-- **Single Responsibility**: One module handles all resilience (retry + timeout)
-- **Atomic Operations**: Timeout and retry are applied together, no separate decorators
-- **Cleaner API**: One decorator per function instead of stacking decorators
-- **Unified Configuration**: Timeout + retry settings in one place
-- **Better Testing**: Test timeout + retry interaction as unit
-- **DRY Principle**: No duplicate error handling logic
-
-**❌ CONS of Separate Modules:**
-- **Decorator Stacking**: `@timeout @retry` creates complex nested behavior
-- **Split Responsibility**: Two modules for related functionality
-- **Integration Complexity**: Ensuring timeout errors are properly retriable
-- **Configuration Spread**: Timeout config separate from retry config
-
-**DECISION: Integrate timeout functionality into retry.py module** ✅
-
-## Refined Implementation Plan
-
-### Phase 1: Enhanced Retry Module Design
-
-**Update `llm_ci_runner/retry.py` with timeout integration:**
-
-```python
-# New timeout configuration constants
-DEFAULT_LLM_API_TIMEOUT = 120      # 2 minutes for LLM API calls
-DEFAULT_CLIENT_TIMEOUT = 30        # 30 seconds for client creation  
-DEFAULT_SERVICE_TIMEOUT = 45       # 45 seconds for service setup
-DEFAULT_AUTH_TIMEOUT = 15          # 15 seconds for authentication
-
-# Enhanced retry decorators with integrated timeout
-@retry_with_timeout_openai_api_call(timeout=DEFAULT_LLM_API_TIMEOUT)
-@retry_with_timeout_azure_api_call(timeout=DEFAULT_LLM_API_TIMEOUT)  
-@retry_with_timeout_network_operation(timeout=DEFAULT_LLM_API_TIMEOUT)
+```
+examples/
+  README.md
+  <usecase-folder>/
+    input.json
+    template.yaml
+    template.j2
+    template.hbs
+    schema.json
+    output.json
+    run.sh
+    run.py
 ```
 
-**New Combined Decorators:**
-1. `retry_with_timeout_openai_api_call` - OpenAI API calls with timeout
-2. `retry_with_timeout_azure_api_call` - Azure API calls with timeout
-3. `retry_with_timeout_network_operation` - General network ops with timeout
-4. `retry_with_timeout_client_creation` - Client creation with timeout
-5. `retry_with_timeout_service_setup` - Service setup with timeout
+- **Each use case folder** is focused on a real-world scenario (e.g., sentiment analysis, code review, PR feedback).
+- **Fixed filenames** in every folder for consistency:
+  - `input.json` — Example input variables
+  - `template.yaml` — Semantic Kernel YAML template
+  - `template.j2` — Jinja2 template
+  - `template.hbs` — Handlebars template
+  - `schema.json` — Output schema for validation
+  - `output.json` — Example output/result
+  - `run.sh` — CLI usage example
+  - `run.py` — Library usage example
 
-### Phase 2: Unified Decorator Implementation
+---
 
-**Pattern: Timeout + Retry in Single Decorator**
+#### Proposed Use Case Folders
 
-```python
-def create_retry_with_timeout_decorator(
-    timeout_seconds: int,
-    retry_condition_func: Callable,
-    max_retries: int = DEFAULT_MAX_RETRIES,
-    min_wait: int = DEFAULT_MIN_WAIT,
-    max_wait: int = DEFAULT_MAX_WAIT,
-):
-    """Create unified retry + timeout decorator."""
-    def decorator(func):
-        @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
-            # Apply timeout wrapper
-            async def timeout_wrapper():
-                return await asyncio.wait_for(
-                    func(*args, **kwargs), 
-                    timeout=timeout_seconds
-                )
-            
-            # Apply retry to timeout wrapper
-            retry_decorator = retry(
-                retry=retry_if_exception(enhanced_retry_condition),
-                stop=stop_after_attempt(max_retries),
-                wait=wait_random_exponential(
-                    multiplier=DEFAULT_EXPONENTIAL_MULTIPLIER,
-                    min=min_wait,
-                    max=max_wait,
-                ),
-                after=after_log(LOGGER, logging.WARNING),
-                reraise=True,
-            )
-            
-            return await retry_decorator(timeout_wrapper)()
-        return wrapper
-    return decorator
+1. **sentiment-analysis/**
+   - Text sentiment classification using all template formats.
+   - Shows CLI and library usage for each format.
 
-def enhanced_retry_condition(exception: BaseException) -> bool:
-    """Enhanced retry condition including timeout errors."""
-    # Add timeout errors as retriable
-    if isinstance(exception, (asyncio.TimeoutError, TimeoutError)):
-        return True
-    
-    # Existing retry logic
-    return retry_condition_func(exception)
+2. **code-review/**
+   - Automated code review comments generation.
+   - Includes templates for YAML, Jinja2, Handlebars.
+   - Schema for expected output structure.
+
+3. **pr-feedback/**
+   - Pull request feedback generation.
+   - Demonstrates template-driven feedback with variable injection.
+
+4. **devops-alerts/**
+   - DevOps incident or alert message generation.
+   - Message-based and template-based examples.
+
+5. **security-audit/**
+   - Security audit report generation.
+   - Template-driven, with schema validation.
+
+6. **basic-chat/**
+   - Simple chat completion (message-based and template-based).
+
+7. **custom-model-selection/**
+   - Example showing YAML template with custom model_id for Azure OpenAI.
+
+---
+
+#### Folder Example: sentiment-analysis/
+
+```
+sentiment-analysis/
+  input.json         # {"text": "I love this product!"}
+  template.yaml      # Semantic Kernel YAML template
+  template.j2        # Jinja2 template
+  template.hbs       # Handlebars template
+  schema.json        # Output schema for validation
+  output.json        # Example output
+  run.sh             # CLI usage: how to run each template
+  run.py             # Library usage: how to run each template
 ```
 
-### Phase 3: High-Priority Function Updates
+---
 
-**1. LLM Execution Functions (Highest Priority - 120s timeout):**
-```python
-# In llm_execution.py - Update LLMExecutor methods
-@retry_with_timeout_network_operation(timeout=120)  # 2 minutes
-async def _execute_semantic_kernel_with_schema(self, chat_history: list):
+### 3. CLI & Library Usage Examples
 
-@retry_with_timeout_network_operation(timeout=120)  # 2 minutes  
-async def _execute_sdk_with_schema(self, client_type: str, chat_history: list):
+- **run.sh**:  
+  - Shows how to run each template format via CLI.
+  - Example:
+    ```sh
+    # Run YAML template
+    llm-ci-runner --template-file template.yaml --input-file input.json --output-file output.json
+
+    # Run Jinja2 template
+    llm-ci-runner --template-file template.j2 --input-file input.json --output-file output.json
+
+    # Run Handlebars template
+    llm-ci-runner --template-file template.hbs --input-file input.json --output-file output.json
+    ```
+
+- **run.py**:  
+  - Shows how to run each template format via library API.
+  - Example:
+    ```python
+    from llm_ci_runner import run_template
+
+    # Run YAML template
+    result = run_template("template.yaml", "input.json")
+    print(result)
+
+    # Run Jinja2 template
+    result = run_template("template.j2", "input.json")
+    print(result)
+
+    # Run Handlebars template
+    result = run_template("template.hbs", "input.json")
+    print(result)
+    ```
+
+---
+
+### 4. Message-Based Examples
+
+- Include a `message-based/` folder for direct prompt/message completions (no template).
+- Example files:
+  - `input.json` — Message payload
+  - `run.sh` — CLI usage for message-based completion
+  - `run.py` — Library usage for message-based completion
+
+---
+
+### 5. README.md Updates
+
+- At the top level and in each use case folder:
+  - Explain the scenario, available templates, and how to run them via CLI and library.
+  - Document expected input/output and schema validation.
+
+---
+
+### 6. Summary Table
+
+| Folder                | Purpose                        | Templates         | CLI & Lib Usage | Schema | Output |
+|-----------------------|-------------------------------|-------------------|-----------------|--------|--------|
+| sentiment-analysis    | Sentiment classification      | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| code-review           | Automated code review         | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| pr-feedback           | PR feedback generation        | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| devops-alerts         | DevOps alert messages         | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| security-audit        | Security audit reports        | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| basic-chat            | Simple chat completion        | yaml, j2, hbs     | Yes             | Yes    | Yes    |
+| custom-model-selection| Model selection via YAML      | yaml              | Yes             | Yes    | Yes    |
+| message-based         | Direct message completion     | none              | Yes             | No     | Yes    |
+
+---
+
+### 7. Next Steps
+
+- **Design folder skeletons and README.md for each use case.**
+- **Draft example templates for each format.**
+- **Write CLI and library usage scripts for each folder.**
+- **Ensure all filenames are consistent across folders.**
+- **Document input/output/schema for each example.**
+
+---
+
+---
+
+## PLAN MODE: Current Examples Use Case Analysis & Preservation Strategy
+
+### Current Use Cases in `examples/` Folder
+
+**01-basic/**
+- simple-chat: Basic text-only LLM interaction (free-form output, message-based).
+- sentiment-analysis: Structured output with schema enforcement (message-based, schema validation).
+- multi-turn-conversation: Multi-turn assistant/user/system message flows, with context and message names.
+
+**02-devops/**
+- pr-description: Automated PR description generation (structured output, schema, YAML/JSON input).
+- code-review: Automated code review with structured findings and quality gates.
+- changelog-generation: AI-generated changelogs.
+
+**03-security/**
+- vulnerability-analysis: Security vulnerability detection with structured findings.
+
+**04-ai-first/**
+- autonomous-development-plan: AI creates comprehensive development plans for features/projects.
+
+**05-templates/**
+- pr-review-template: PR review using Handlebars templates and YAML variables (Semantic Kernel compatible).
+- sem-ker-structured-analysis: SK YAML template with embedded schema for structured output.
+- sem-ker-simple-question: SK YAML template for simple Q&A with variable substitution.
+- release-notes, static-example, advanced-templates, jinja2-example: Various template-driven workflows.
+
+**06-output-showcase/**
+- multi-format-output: Demonstrates output in JSON, YAML, Markdown.
+
+---
+
+### How to Preserve Use Cases with Technical Usage Options
+
+For each use case folder (e.g., `sentiment-analysis/`):
+- Keep the core scenario and input data.
+- Provide 1-2 technical usage options (not all possible options) that best fit the scenario:
+  - Message-based (input.json, schema.json)
+  - Template-based (template.yaml, template.j2, template.hbs, template-vars.yaml)
+  - CLI and/or library usage scripts (run.sh, run.py)
+- Document which technical option is recommended for the scenario.
+
+---
+
+#### Example: sentiment-analysis/
+
+```
+sentiment-analysis/
+  input.json         # Message-based input for CLI/lib
+  template.yaml      # SK YAML template for structured output (optional, if relevant)
+  schema.json        # Output schema for validation
+  output.json        # Example output
+  run.sh             # CLI usage for message-based and/or template-based
+  run.py             # Library usage for message-based and/or template-based
+  README.md          # Explains scenario, technical options, and recommended usage
 ```
 
-**2. Client Creation Functions (High Priority - 30s timeout):**
-```python
-# In llm_execution.py - Update client creation
-@retry_with_timeout_client_creation(timeout=30)
-async def _create_azure_client() -> AsyncAzureOpenAI:
+README.md Example Section:
+```markdown
+## Usage Options
 
-@retry_with_timeout_client_creation(timeout=30)
-async def _create_openai_client() -> AsyncOpenAI:
+- **Message-based (recommended):**
+  - Use `input.json` and `schema.json` for CLI or library.
+  - Command: `llm-ci-runner --input-file input.json --schema-file schema.json --output-file output.json`
+
+- **Template-based (advanced):**
+  - Use `template.yaml` for SK YAML template workflow.
+  - Command: `llm-ci-runner --template-file template.yaml --template-vars input.json --output-file output.json`
 ```
 
-**3. Service Setup Functions (High Priority - 45s timeout):**
-```python
-# In llm_service.py - Update service setup
-@retry_with_timeout_service_setup(timeout=45)
-async def setup_azure_service():
+---
 
-@retry_with_timeout_service_setup(timeout=45)  # Add missing retry
-async def setup_openai_service():
+### Summary Table of Use Cases and Technical Options
+
+| Use Case                    | Message-based | Template-based | CLI Usage | Library Usage | Schema |
+|-----------------------------|:-------------:|:--------------:|:---------:|:-------------:|:------:|
+| simple-chat                 |      ✅       |      ❌        |    ✅     |      ✅       |   ❌   |
+| sentiment-analysis          |      ✅       |     (✅)       |    ✅     |      ✅       |   ✅   |
+| multi-turn-conversation     |      ✅       |      ❌        |    ✅     |      ✅       |   ✅   |
+| pr-description              |      ✅       |     (✅)       |    ✅     |      ✅       |   ✅   |
+| code-review                 |      ✅       |     (✅)       |    ✅     |      ✅       |   ✅   |
+| vulnerability-analysis      |      ✅       |      ❌        |    ✅     |      ✅       |   ✅   |
+| autonomous-dev-plan         |      ✅       |      ❌        |    ✅     |      ✅       |   ✅   |
+| pr-review-template          |      ❌       |      ✅        |    ✅     |      ✅       |   ✅   |
+| sem-ker-structured-analysis |      ❌       |      ✅        |    ✅     |      ✅       |   ✅   |
+| sem-ker-simple-question          |      ❌       |      ✅        |    ✅     |      ✅       |   ❌   |
+
+---
+
+### Key Principle
+
+- Preserve the scenario and input for each use case.
+- Provide 1-2 technical usage options per use case, not all possible options.
+- Document which option is recommended for clarity.
+
+---
+
+#### What You Mean (Example):
+
+> For `sentiment-analysis`, keep the original message-based example, but also add a template-based option (SK YAML) if it fits. In the README, explain both, but recommend the message-based for most users. Do not add every possible template format to every use case—only those that make sense for the scenario.
+
+---
+
+**Ready to append this analysis and example to the scratchpad for implementation planning.**
+
+---
+
+## PLAN MODE: Proposed New Examples Folder Structure (Use Case Driven)
+
+### Principles
+- Each folder = one use case (real-world scenario)
+- Only include template formats that make sense for the scenario
+- Always provide CLI and library usage scripts
+- Schema files only where output is structured
+- README in every folder, with scenario, usage, and recommended options
+
+### Proposed Use Case Folders & Templates
+
+#### 1. sentiment-analysis/
+*Purpose*: Classify text sentiment, structured output
+*Templates*: SK YAML, Jinja2, Handlebars
+
+```
+sentiment-analysis/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-### Phase 4: Environment Variable Configuration
+#### 2. code-review/
+*Purpose*: Automated code review, findings, quality gates
+*Templates*: SK YAML, Jinja2, Handlebars
 
-**Add timeout configuration support:**
-```python
-# In retry.py - Environment variable support
-DEFAULT_LLM_API_TIMEOUT = int(os.getenv("LLM_API_TIMEOUT", "120"))
-DEFAULT_CLIENT_TIMEOUT = int(os.getenv("CLIENT_TIMEOUT", "30"))  
-DEFAULT_SERVICE_TIMEOUT = int(os.getenv("SERVICE_SETUP_TIMEOUT", "45"))
-DEFAULT_AUTH_TIMEOUT = int(os.getenv("AUTH_TIMEOUT", "15"))
-
-# Validation with fallback
-def get_timeout_from_env(env_var: str, default: int) -> int:
-    """Get timeout from environment with validation and fallback."""
-    try:
-        value = os.getenv(env_var)
-        if value is not None:
-            parsed = int(value)
-            if parsed > 0:
-                return parsed
-            else:
-                LOGGER.warning(f"Invalid {env_var} value (must be positive): {parsed}, using default: {default}")
-        return default
-    except (ValueError, TypeError) as e:
-        LOGGER.warning(f"Invalid {env_var} value: {value}, using default: {default}s - {e}")
-        return default
+```
+code-review/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-### Phase 5: Enhanced Error Handling
+#### 3. pr-description/
+*Purpose*: Generate PR descriptions for CI/CD
+*Templates*: SK YAML, Jinja2
 
-**Timeout-specific error messages:**
-```python
-def create_timeout_aware_wrapper(func, timeout_seconds: int):
-    """Create wrapper with timeout-specific error messages."""
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await asyncio.wait_for(func(*args, **kwargs), timeout=timeout_seconds)
-        except asyncio.TimeoutError as e:
-            operation_name = func.__name__.replace('_', ' ').title()
-            raise TimeoutError(
-                f"{operation_name} timed out after {timeout_seconds}s. "
-                f"Consider increasing timeout via environment variables."
-            ) from e
-    return wrapper
+```
+pr-description/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-## Implementation Priority (High Priority Functions)
+#### 4. vulnerability-analysis/
+*Purpose*: Security vulnerability detection
+*Templates*: SK YAML, Jinja2
 
-**PHASE 1 - Critical LLM Operations (120s timeout):**
-1. `_execute_semantic_kernel_with_schema()` - Core LLM inference
-2. `_execute_sdk_with_schema()` - Fallback LLM inference
-
-**PHASE 2 - Client/Service Setup (30-45s timeout):**  
-3. `_create_azure_client()` - Azure client creation
-4. `_create_openai_client()` - OpenAI client creation
-5. `setup_azure_service()` - Azure service setup
-6. `setup_openai_service()` - OpenAI service setup (add missing retry)
-
-**PHASE 3 - Testing & Validation:**
-7. Comprehensive timeout + retry interaction tests
-8. Environment variable configuration tests
-9. Error message validation tests
-
-## Testing Strategy
-
-**Enhanced Unit Tests (Building on 37 existing retry tests):**
-
-```python
-class TestTimeoutWithRetry:
-    """Tests for integrated timeout + retry functionality."""
-    
-    @pytest.mark.asyncio
-    async def test_timeout_then_retry_success(self):
-        """Test timeout on first attempt, success on retry."""
-        # given
-        call_count = 0
-        async def slow_then_fast_operation():
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                await asyncio.sleep(2)  # Will timeout with 1s limit
-            return "success"
-        
-        decorated = retry_with_timeout_network_operation(timeout=1)(slow_then_fast_operation)
-        
-        # when
-        result = await decorated()
-        
-        # then
-        assert result == "success"
-        assert call_count == 2  # First timeout, second success
-    
-    @pytest.mark.asyncio
-    async def test_timeout_configuration_from_env(self):
-        """Test timeout configuration from environment variables."""
-        # given
-        with patch.dict("os.environ", {"LLM_API_TIMEOUT": "5"}):
-            # when
-            timeout_value = get_timeout_from_env("LLM_API_TIMEOUT", 120)
-            
-            # then
-            assert timeout_value == 5
+```
+vulnerability-analysis/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
 ```
 
-## Risk Analysis
+#### 5. autonomous-development-plan/
+*Purpose*: AI-generated development plans
+*Templates*: SK YAML
 
-**Technical Risks:**
+```
+autonomous-development-plan/
+  input.json
+  template.yaml
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-1. **Total Execution Time**: timeout × retry_attempts = potential 6-minute total
-   - **Mitigation**: Conservative 2-minute default with 3 retries = reasonable 6-minute max
-   
-2. **Decorator Complexity**: Nested async decorators can be complex
-   - **Mitigation**: Use established tenacity patterns, comprehensive testing
+#### 6. basic-chat/
+*Purpose*: Simple chat completion, free-form output
+*Templates*: Jinja2, Handlebars
 
-3. **Backward Compatibility**: Changes to existing retry decorators
-   - **Mitigation**: Keep existing decorator names, just enhance functionality
+```
+basic-chat/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**Implementation Risks:**
+#### 7. pr-review-template/
+*Purpose*: PR review with SK-compatible Handlebars
+*Templates*: Handlebars, YAML vars
 
-1. **Testing Complexity**: Timeout + retry testing requires careful timing
-   - **Mitigation**: Use fast timeouts in tests, proper async mocking
+```
+pr-review-template/
+  input.json
+  template.hbs
+  template-vars.yaml
+  schema.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-2. **Error Message Clarity**: Users need clear timeout vs other error types
-   - **Mitigation**: Specific timeout error messages with suggestions
+#### 8. sem-ker-structured-analysis/
+*Purpose*: Structured analysis with embedded schema
+*Templates*: SK YAML
 
-## Success Criteria
+```
+sem-ker-structured-analysis/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**Functional Requirements:**
-✅ All high-priority API functions protected with 2-minute timeout
-✅ Integrated timeout + retry decorators (single decorator per function)
-✅ Environment variable configuration for all timeout values
-✅ Clear timeout error messages with suggestions
-✅ Zero breaking changes to existing functionality
+#### 9. sem-ker-simple-question/
+*Purpose*: Simple Q&A with variable substitution
+*Templates*: SK YAML
 
-**Technical Requirements:**
-✅ <10% performance overhead (timeout checking minimal)
-✅ All existing 245 tests continue to pass
-✅ New timeout tests achieve >90% coverage
-✅ Clean integration in single retry.py module
+```
+sem-ker-simple-question/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-## Questions for Implementation
+#### 10. multi-format-output/
+*Purpose*: Output format comparison (JSON, YAML, Markdown)
+*Templates*: Jinja2, Handlebars
 
-1. **Environment Variables**: Should timeout env vars be documented in CLI help?
+```
+multi-format-output/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  output.yaml
+  output.md
+  run.sh
+  run.py
+  README.md
+```
 
-2. **Error Logging**: Should timeout events be logged at WARNING level like retries?
+#### 11. devops-alerts/
+*Purpose*: DevOps incident/alert message generation
+*Templates*: Jinja2, Handlebars
 
-3. **Fallback Values**: Should invalid timeout env vars use defaults or raise errors?
+```
+devops-alerts/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-4. **Decorator Naming**: Keep existing names (`@retry_network_operation`) or rename (`@retry_with_timeout_network_operation`)?
+#### 12. changelog-generation/
+*Purpose*: Automated changelog creation
+*Templates*: Jinja2
 
-## Confidence Assessment
+```
+changelog-generation/
+  input.json
+  template.j2
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**Current Confidence: 98%** 🎯 **READY FOR AGENT MODE**
+#### 13. custom-model-selection/
+*Purpose*: Demonstrate YAML model_id selection for Azure OpenAI
+*Templates*: SK YAML
 
-**Knowns:**
-✅ Integrated approach is architecturally superior (single responsibility)
-✅ High-priority functions precisely identified (6 functions, only 3 have retry currently)
-✅ 2-minute default timeout is reasonable for LLM operations
-✅ Gap analysis complete: 3 functions need timeout+retry integration
-✅ Existing retry test patterns can be extended for timeout testing
-✅ Environment variable configuration pattern established
-✅ Error handling patterns established in existing retry.py
+```
+custom-model-selection/
+  input.json
+  template.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**Critical Discovery: Incomplete Retry Coverage**
-❌ `_create_azure_client()` and `_create_openai_client()` have NO retry protection  
-❌ `setup_openai_service()` missing retry decorator
-✅ Only 3/6 critical functions currently protected
+#### 14. message-based/
+*Purpose*: Direct message completion (no template)
 
-**Unknowns (2%):**
-❓ Minor: Decorator naming preferences (enhance existing vs create new)
+```
+message-based/
+  input.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**Key Technical Insights:**
-1. **Architecture Decision**: Integrated approach eliminates decorator stacking complexity
-2. **Priority Correction**: 6 functions need timeout protection, 3 need retry+timeout
-3. **Conservative Defaults**: 2-minute timeout for LLM calls, 30s for client creation
-4. **Zero Risk Integration**: Enhancing existing decorators maintains compatibility
-5. **Bonus Discovery**: Will fix incomplete retry coverage while adding timeouts
+#### 15. security-audit/
+*Purpose*: Security audit report generation
+*Templates*: SK YAML, Jinja2
 
-**Implementation Strategy Validated:**
-- ✅ Enhance existing retry.py with timeout functionality
-- ✅ Add missing retry decorators to 3 unprotected functions  
-- ✅ Create unified timeout + retry decorators for all 6 functions
-- ✅ Apply operation-specific timeouts (120s LLM, 30s client, 45s service)
-- ✅ Follow established retry testing patterns
+```
+security-audit/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
 
-**Ready for Agent Mode Implementation** - will deliver both timeout resilience AND complete retry coverage.
+---
+
+**This folder structure is use case driven, with only relevant template formats per scenario, and every folder includes CLI/lib usage and documentation.**
+
+---
+
+## PLAN MODE: Refined Examples Folder Structure (Complexity-Ordered)
+
+### Principles
+- Each folder name starts with a two-digit number (01, 02, ...) indicating complexity (lower = easier)
+- Users can learn step-by-step from simple to advanced scenarios
+- Table maps each folder to supported formats and usage options
+
+### Refined Use Case Folders (Complexity Ordered)
+
+#### 01-basic-chat/
+*Purpose*: Simple chat completion, free-form output
+*Templates*: Jinja2, Handlebars
+```
+01-basic-chat/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 02-sentiment-analysis/
+*Purpose*: Classify text sentiment, structured output
+*Templates*: SK YAML, Jinja2, Handlebars
+```
+02-sentiment-analysis/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 03-message-based/
+*Purpose*: Direct message completion (no template)
+```
+03-message-based/
+  input.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 04-multi-turn-conversation/
+*Purpose*: Multi-turn assistant/user/system message flows
+*Templates*: Jinja2
+```
+04-multi-turn-conversation/
+  input.json
+  template.j2
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 05-devops-alerts/
+*Purpose*: DevOps incident/alert message generation
+*Templates*: Jinja2, Handlebars
+```
+05-devops-alerts/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 06-code-review/
+*Purpose*: Automated code review, findings, quality gates
+*Templates*: SK YAML, Jinja2, Handlebars
+```
+06-code-review/
+  input.json
+  template.yaml
+  template.j2
+  template.hbs
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 07-pr-description/
+*Purpose*: Generate PR descriptions for CI/CD
+*Templates*: SK YAML, Jinja2
+```
+07-pr-description/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 08-vulnerability-analysis/
+*Purpose*: Security vulnerability detection
+*Templates*: SK YAML, Jinja2
+```
+08-vulnerability-analysis/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 09-security-audit/
+*Purpose*: Security audit report generation
+*Templates*: SK YAML, Jinja2
+```
+09-security-audit/
+  input.json
+  template.yaml
+  template.j2
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 10-changelog-generation/
+*Purpose*: Automated changelog creation
+*Templates*: Jinja2
+```
+10-changelog-generation/
+  input.json
+  template.j2
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 11-autonomous-development-plan/
+*Purpose*: AI-generated development plans
+*Templates*: SK YAML
+```
+11-autonomous-development-plan/
+  input.json
+  template.yaml
+  schema.json
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 12-custom-model-selection/
+*Purpose*: Demonstrate YAML model_id selection for Azure OpenAI
+*Templates*: SK YAML
+```
+12-custom-model-selection/
+  input.json
+  template.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 13-pr-review-template/
+*Purpose*: PR review with SK-compatible Handlebars
+*Templates*: Handlebars, YAML vars
+```
+13-pr-review-template/
+  input.json
+  template.hbs
+  template-vars.yaml
+  schema.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 14-sem-ker-structured-analysis/
+*Purpose*: Structured analysis with embedded schema
+*Templates*: SK YAML
+```
+14-sem-ker-structured-analysis/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 15-sem-ker-simple-question/
+*Purpose*: Simple Q&A with variable substitution
+*Templates*: SK YAML
+```
+15-sem-ker-simple-question/
+  template.yaml
+  template-vars.yaml
+  output.json
+  run.sh
+  run.py
+  README.md
+```
+
+#### 16-multi-format-output/
+*Purpose*: Output format comparison (JSON, YAML, Markdown)
+*Templates*: Jinja2, Handlebars
+```
+16-multi-format-output/
+  input.json
+  template.j2
+  template.hbs
+  output.json
+  output.yaml
+  output.md
+  run.sh
+  run.py
+  README.md
+```
+
+---
+
+### Table: Folder, Formats, Usage Options
+
+| Folder                      | Templates         | Message-based | SK YAML | Jinja2 | Handlebars | CLI Usage | Lib Usage | Schema |
+|-----------------------------|-------------------|:-------------:|:-------:|:------:|:----------:|:---------:|:---------:|:------:|
+| 01-basic-chat               | j2, hbs           |      ✅       |   ❌    |   ✅   |     ✅     |    ✅     |    ✅     |   ❌   |
+| 02-sentiment-analysis       | yaml, j2, hbs     |      ✅       |   ✅    |   ✅   |     ✅     |    ✅     |    ✅     |   ✅   |
+| 03-message-based            | none              |      ✅       |   ❌    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 04-multi-turn-conversation  | j2                |      ✅       |   ❌    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 05-devops-alerts            | j2, hbs           |      ✅       |   ❌    |   ✅   |     ✅     |    ✅     |    ✅     |   ❌   |
+| 06-code-review              | yaml, j2, hbs     |      ✅       |   ✅    |   ✅   |     ✅     |    ✅     |    ✅     |   ✅   |
+| 07-pr-description           | yaml, j2          |      ✅       |   ✅    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 08-vulnerability-analysis   | yaml, j2          |      ✅       |   ✅    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 09-security-audit           | yaml, j2          |      ✅       |   ✅    |   ✅   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 10-changelog-generation     | j2                |      ✅       |   ❌    |   ✅   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 11-autonomous-development-plan | yaml           |      ✅       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ✅   |
+| 12-custom-model-selection   | yaml              |      ✅       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 13-pr-review-template       | hbs, yaml-vars    |      ❌       |   ❌    |   ❌   |     ✅     |    ✅     |    ✅     |   ✅   |
+| 14-sem-ker-structured-analysis   | yaml              |      ❌       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 15-sem-ker-simple-question       | yaml              |      ❌       |   ✅    |   ❌   |     ❌     |    ✅     |    ✅     |   ❌   |
+| 16-multi-format-output      | j2, hbs           |      ✅       |   ❌    |   ✅   |     ✅     |    ✅     |    ✅     |   ❌   |
+
+---
+
+**This refined structure enables progressive learning from easy to complex, with clear mapping of formats and usage options per example.**

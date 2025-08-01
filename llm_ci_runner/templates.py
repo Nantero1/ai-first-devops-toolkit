@@ -17,6 +17,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.contents import ChatHistory, ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.functions import KernelArguments
+from semantic_kernel.functions.kernel_function_from_prompt import KernelFunctionFromPrompt
 from semantic_kernel.prompt_template import (
     HandlebarsPromptTemplate,
     Jinja2PromptTemplate,
@@ -31,26 +32,39 @@ LOGGER = logging.getLogger(__name__)
 
 def get_template_format(template_file: Path) -> str:
     """
-    Determine template format based on file extension.
+    Determine template format based on file extension for multi-engine template support.
+
+    PURPOSE: Detects template format to enable unified template loading across
+    Handlebars, Jinja2, and Semantic Kernel YAML templates. Uses simple extension-based
+    detection following KISS principles - trusts Semantic Kernel to validate YAML format.
 
     Args:
         template_file: Path to the template file
 
     Returns:
-        Template format ('handlebars' or 'jinja2')
+        Template format ('handlebars', 'jinja2', or 'semantic-kernel')
 
     Raises:
         InputValidationError: If template format cannot be determined
     """
     extension = template_file.suffix.lower()
 
+    LOGGER.debug(f"🔍 Detecting template format for extension: {extension}")
+
     if extension in [".hbs", ".handlebars"]:
+        LOGGER.debug("📋 Detected Handlebars template format")
         return "handlebars"
     elif extension in [".jinja", ".j2", ".jinja2"]:
+        LOGGER.debug("📋 Detected Jinja2 template format")
         return "jinja2"
+    elif extension in [".yaml", ".yml"]:
+        # Trust SK to validate YAML format - it will raise errors if invalid
+        LOGGER.debug("📋 Detected Semantic Kernel YAML template format")
+        return "semantic-kernel"
     else:
         raise InputValidationError(
-            f"Unsupported template format: {extension}. Supported formats: .hbs, .handlebars, .jinja, .j2, .jinja2"
+            f"Unsupported template format: {extension}. "
+            f"Supported formats: .hbs, .handlebars, .jinja, .j2, .jinja2, .yaml, .yml"
         )
 
 
@@ -176,17 +190,57 @@ def load_jinja2_template(template_file: Path) -> Jinja2PromptTemplate:
         raise InputValidationError(f"Failed to load Jinja2 template: {e}") from e
 
 
+def load_semantic_kernel_yaml_template(template_file: Path) -> KernelFunctionFromPrompt:
+    """
+    Load a Semantic Kernel YAML template using SK's native YAML parser.
+
+    PURPOSE: Loads self-contained YAML templates that include prompt template,
+    input variables, execution settings, and optional schema definitions.
+    Uses Microsoft's official KernelFunctionFromPrompt.from_yaml() to ensure
+    compatibility with SK conventions and automatic validation.
+
+    Args:
+        template_file: Path to the SK YAML template file
+
+    Returns:
+        Configured KernelFunctionFromPrompt ready for execution
+
+    Raises:
+        InputValidationError: If template cannot be loaded or is invalid
+    """
+    LOGGER.debug(f"📂 Loading Semantic Kernel YAML template from: {template_file}")
+
+    try:
+        with open(template_file, encoding="utf-8") as f:
+            yaml_content = f.read()
+
+        # Use SK's native YAML loader - trusts SK to handle all validation
+        function = KernelFunctionFromPrompt.from_yaml(yaml_content)
+
+        LOGGER.debug("✅ SK YAML template loaded successfully")
+        LOGGER.debug(f"   Template function name: {function.name}")
+
+        return function
+
+    except Exception as e:
+        raise InputValidationError(f"Failed to load SK YAML template: {e}") from e
+
+
 def load_template(
     template_file: Path,
-) -> HandlebarsPromptTemplate | Jinja2PromptTemplate:
+) -> HandlebarsPromptTemplate | Jinja2PromptTemplate | KernelFunctionFromPrompt:
     """
-    Load a template from file, automatically detecting the format.
+    Load a template from file with automatic format detection for multi-engine support.
+
+    PURPOSE: Provides unified template loading across Handlebars, Jinja2, and
+    Semantic Kernel YAML templates. Automatically detects format by extension
+    and delegates to appropriate specialized loader function.
 
     Args:
         template_file: Path to the template file
 
     Returns:
-        Configured template (HandlebarsPromptTemplate or Jinja2PromptTemplate)
+        Configured template (HandlebarsPromptTemplate, Jinja2PromptTemplate, or KernelFunctionFromPrompt)
 
     Raises:
         InputValidationError: If template format is unsupported or loading fails
@@ -197,6 +251,8 @@ def load_template(
         return load_handlebars_template(template_file)
     elif template_format == "jinja2":
         return load_jinja2_template(template_file)
+    elif template_format == "semantic-kernel":
+        return load_semantic_kernel_yaml_template(template_file)
     else:
         raise InputValidationError(f"Unsupported template format: {template_format}")
 
