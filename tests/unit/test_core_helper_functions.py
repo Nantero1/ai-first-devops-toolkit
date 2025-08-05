@@ -147,7 +147,9 @@ class TestCreateAzureServiceWithModel:
             result = await _create_azure_service_with_model(model_id)
 
             # then
-            assert result == mock_service
+            service, credential = result
+            assert service == mock_service
+            assert credential is None  # API key auth returns None for credential
             mock_azure_completion.assert_called_once_with(
                 service_id="azure_openai",
                 endpoint="https://test.openai.azure.com/",
@@ -182,7 +184,9 @@ class TestCreateAzureServiceWithModel:
             result = await _create_azure_service_with_model(model_id)
 
             # then
-            assert result == mock_service
+            service, credential = result
+            assert service == mock_service
+            assert credential == mock_cred_instance  # RBAC auth returns the credential instance
             mock_credential.assert_called_once()
             mock_token_provider.assert_called_once_with(
                 mock_cred_instance, "https://cognitiveservices.azure.com/.default"
@@ -226,6 +230,8 @@ class TestCreateAzureServiceWithModel:
             result = await _create_azure_service_with_model(model_id)
 
             # then
+            service, credential = result
+            assert credential is None  # API key auth returns None for credential
             call_args = mock_azure_completion.call_args[1]
             assert call_args["api_version"] == custom_api_version
 
