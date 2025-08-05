@@ -81,7 +81,7 @@ def _extract_model_id_from_yaml(yaml_function: KernelFunctionFromPrompt) -> str 
         return None
 
 
-async def _create_azure_service_with_model(model_id: str) -> Any:
+async def _create_azure_service_with_model(model_id: str) -> tuple[Any, Any]:
     """
     Create Azure OpenAI service with specific model as deployment_name.
 
@@ -92,7 +92,7 @@ async def _create_azure_service_with_model(model_id: str) -> Any:
         model_id: The model/deployment name from YAML
 
     Returns:
-        Configured AzureChatCompletion service
+        Tuple of (Configured AzureChatCompletion service, credential or None)
     """
     import os
 
@@ -116,6 +116,7 @@ async def _create_azure_service_with_model(model_id: str) -> Any:
             deployment_name=model_id,  # Use YAML model_id as deployment_name
             api_version=api_version,
         )
+        return service, None  # No credential to close for API key auth
     else:
         # RBAC authentication
         credential = DefaultAzureCredential()
@@ -127,8 +128,7 @@ async def _create_azure_service_with_model(model_id: str) -> Any:
             api_version=api_version,
             ad_token_provider=token_provider,
         )
-
-    return service
+        return service, credential  # Return credential for proper cleanup
 
 
 async def process_input_file(input_file: str) -> list[dict[str, str]]:
@@ -260,6 +260,7 @@ async def _process_template_unified(
     service: Any,  # LLM service
     schema_result: tuple[Any, dict] | None,  # Schema model + dict
     output_file: str | None,  # Output file path
+    additional_credentials: list[Any] | None = None,  # List to track additional credentials
 ) -> str | dict[str, Any]:
     """
     Unified template processor that handles all template types.
@@ -294,9 +295,13 @@ async def _process_template_unified(
 
             if yaml_model_id:
                 # Create service with YAML model_id as deployment_name
-                dynamic_service = await _create_azure_service_with_model(yaml_model_id)
+                dynamic_service, dynamic_credential = await _create_azure_service_with_model(yaml_model_id)
                 LOGGER.info(f"✅ Using YAML-specified model: {yaml_model_id}")
                 kernel = _create_kernel_with_service(dynamic_service)
+
+                # Track additional credential for cleanup
+                if dynamic_credential and additional_credentials is not None:
+                    additional_credentials.append(dynamic_credential)
             else:
                 # Fallback to environment-configured service
                 LOGGER.info("✅ Using environment model")
@@ -655,6 +660,7 @@ async def run_llm_task(
     setup_logging(log_level)
 
     credential = None
+    additional_credentials: list[Any] = []  # Track all credentials for proper cleanup
     try:
         # Setup LLM service (Azure or OpenAI)
         LOGGER.info("🔐 Setting up LLM service")
@@ -764,6 +770,7 @@ async def run_llm_task(
                 service,
                 schema_result,
                 output_file,
+                additional_credentials,
             )
 
         elif template_content:
@@ -774,7 +781,13 @@ async def run_llm_task(
 
             template = await load_template_from_string(template_content, template_format)
             response = await _process_template_unified(
-                template, template_format, resolved_template_vars, service, schema_result, output_file
+                template,
+                template_format,
+                resolved_template_vars,
+                service,
+                schema_result,
+                output_file,
+                additional_credentials,
             )
 
         else:
@@ -792,6 +805,16 @@ async def run_llm_task(
             except Exception as e:
                 LOGGER.debug(f"Warning: Failed to close Azure credential: {e}")
                 # Don't raise - this is cleanup, not critical
+
+        # Close any additional credentials created during template processing
+        for i, cred in enumerate(additional_credentials):
+            if cred is not None:
+                try:
+                    await cred.close()
+                    LOGGER.debug(f"🔒 Additional Azure credential {i + 1} closed successfully")
+                except Exception as e:
+                    LOGGER.debug(f"Warning: Failed to close additional Azure credential {i + 1}: {e}")
+                    # Don't raise - this is cleanup, not critical
 
 
 async def main() -> None:
