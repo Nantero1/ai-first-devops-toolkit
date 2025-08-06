@@ -380,21 +380,96 @@ LLMs excel at extracting meaning from messy text, logs, documents, and mixed-for
 }
 ```
 
-### YAML Input
+### Microsoft Semantic Kernel YAML Templates
+
+The toolkit supports Microsoft Semantic Kernel YAML templates with embedded schemas and execution settings. See [examples/05-templates/](examples/05-templates/) for comprehensive examples.
+
+**Simple Question Template** (`template.yaml`):
 
 ```yaml
-messages:
-  - role: system
-    content: "You are a helpful assistant."
-  - role: user
-    content: "Your task description here"
-context:
-  session_id: "optional-session-id"
-  metadata:
-    any: "additional context"
+name: SimpleQuestion
+description: Simple semantic kernel template for asking questions
+template_format: semantic-kernel
+template: |
+  You are a helpful {{$role}} assistant. 
+  Please answer this question: {{$question}}
+  
+  Provide a clear and concise response.
+
+input_variables:
+  - name: role
+    description: The role of the assistant (e.g., technical, customer service)
+    default: "technical"
+    is_required: false
+  - name: question  
+    description: The question to be answered
+    is_required: true
+
+execution_settings:
+  azure_openai:
+    temperature: 0.7
+    max_tokens: 500
+    top_p: 1.0
 ```
 
-### Template-Based Input
+**Template Variables** (`template-vars.yaml`):
+
+```yaml
+role: expert DevOps engineer
+question: What is the difference between continuous integration and continuous deployment?
+```
+
+**Structured Analysis Template** with embedded JSON schema:
+
+```yaml
+name: StructuredAnalysis
+description: SK template with embedded JSON schema for structured output
+template_format: semantic-kernel
+template: |
+  Analyze the following text and provide a structured response: {{$text_to_analyze}}
+
+input_variables:
+  - name: text_to_analyze
+    description: The text content to analyze
+    is_required: true
+
+execution_settings:
+  azure_openai:
+    model_id: gpt-4.1-stable
+    temperature: 0.3
+    max_tokens: 800
+    response_format:
+      type: json_schema
+      json_schema:
+        name: analysis_result
+        schema:
+          type: object
+          properties:
+            sentiment:
+              type: string
+              enum: ["positive", "negative", "neutral"]
+              description: Overall sentiment of the text
+            confidence:
+              type: number
+              minimum: 0.0
+              maximum: 1.0
+              description: Confidence score for the sentiment analysis
+            key_themes:
+              type: array
+              items:
+                type: string
+              description: Main themes identified in the text
+            summary:
+              type: string
+              description: Brief summary of the text
+            word_count:
+              type: integer
+              description: Approximate word count
+          required: ["sentiment", "confidence", "summary"]
+          additionalProperties: false
+```
+
+### Template-Based Input (Handlebars & Jinja2)
 
 **Handlebars Template** (`template.hbs`):
 
