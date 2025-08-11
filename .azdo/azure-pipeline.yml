@@ -56,7 +56,7 @@ extends:
               codeCoverage: false
               container:
                 image: cdos-marketplace-docker/llm-runtime:latest
-                endpoint: "sc-generic-docker"
+                endpoint: "sc-cdos-docker"
 
       - stage: build
         displayName: Build
