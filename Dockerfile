@@ -132,8 +132,8 @@ ENV COLORTERM=truecolor
 ENV COLUMNS=140
 
 # Set default Azure OpenAI configuration for POC
-ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-dev-swecen-001.openai.azure.com/
-ENV AZURE_OPENAI_MODEL=gpt-4.1-nano-stable
+ENV AZURE_OPENAI_ENDPOINT=https://ai-openai-prd-swecen-001.openai.azure.com/
+ENV AZURE_OPENAI_MODEL=gpt-5-nano-stable
 ENV AZURE_OPENAI_API_VERSION=2024-12-01-preview
 
 # Copy and configure entrypoint script
