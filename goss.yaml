@@ -115,9 +115,9 @@ command:
 
   echo $AZURE_OPENAI_MODEL:
     exit-status: 0
-    title: AZURE_OPENAI_MODEL is set to gpt-4.1-nano
+    title: AZURE_OPENAI_MODEL is set to gpt-5-nano
     stdout:
-      - "gpt-4.1-nano"
+      - "gpt-5-nano"
 
   # Test AzDevOps_azpcontainer user exists
   id AzDevOps_azpcontainer:
