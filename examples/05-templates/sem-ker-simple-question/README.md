@@ -15,6 +15,21 @@ This example demonstrates a basic Semantic Kernel YAML template that asks questi
 - **Embedded Settings**: Temperature and token limits defined in template
 - **No External Schema**: SK YAML templates embed their own schema
 
+## How It Works
+
+```mermaid
+graph LR
+    A[📦 template.yaml<br/>• Template<br/>• Schema<br/>• Model Settings] --> C[✨ Rendered Prompt]
+    B[⚙️ template-vars.yaml] --> C
+    C --> D[🤖 LLM Processing]
+    D --> E[📋 Structured Output]
+    
+    style A stroke:#01579b,stroke-width:2px
+    style E stroke:#4a148c,stroke-width:2px
+```
+
+*Semantic Kernel templates are self-contained - combining prompt template, schema, and model configuration in a single YAML file.*
+
 ## Usage
 
 ```bash

@@ -17,10 +17,6 @@ uv run pip-audit                        # Security scan
 uv run pytest tests/                    # Unit tests (70+ tests)
 uv run pytest acceptance/ -s -v --smoke-test  # Acceptance tests
 
-# Build and publish
-uv build                                # Build package
-uv run twine upload dist/*              # Publish to PyPI
-
 # Coverage (85% minimum required)
 pytest tests/ --cov=llm_ci_runner --cov-report=html
 ```
@@ -119,7 +115,7 @@ llm-ci-runner \
 ### Cursor Rules Integration
 - **Plan Mode**: Requirements gathering, 95%+ confidence before execution
 - **Agent Mode**: Code modifications with system changes
-- **Documentation**: Update `.cursor/memories.md` and lessons learned `.cursor/rules/lessons-learned.mdc` when asked
+- **Documentation**: Update `.cursor/memories.md` and lessons learned `.cursor/rules/lessons-learned.mdc` when you find a solution after many try and errors to not repeat mistakes.
 
 ### Code Style
 - Google Python Style Guide + PEP 8, 120 char lines

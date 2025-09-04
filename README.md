@@ -38,6 +38,21 @@ llm-ci-runner --input-file examples/02-devops/pr-description/input.json --schema
 
 ![Structured output of the PR review example](https://github.com/Nantero1/ai-first-devops-toolkit/raw/main/examples/02-devops/pr-description/output.png)
 
+### How Templates Work
+
+```mermaid
+graph LR
+    A[📦 template.yaml<br/>• Template<br/>• Schema<br/>• Model Settings] --> C[✨ Rendered Prompt]
+    B[⚙️ template-vars.yaml] --> C
+    C --> D[🤖 LLM Processing]
+    D --> E[📋 Structured Output]
+    
+    style A stroke:#01579b,stroke-width:2px
+    style E stroke:#4a148c,stroke-width:2px
+```
+
+*With Semantic Kernel templates, everything is self-contained - prompt template, JSON schema, and model configuration in a single YAML file.*
+
 ## The AI-First Development Revolution
 
 This toolkit embodies the principles outlined
