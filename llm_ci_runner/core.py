@@ -474,7 +474,7 @@ async def load_template_from_string(template_content: str, template_format: str)
             template=template_content,
             template_format="handlebars",
         )
-        return HandlebarsPromptTemplate(prompt_template_config=config)
+        return HandlebarsPromptTemplate(prompt_template_config=config, allow_dangerously_set_content=True)
 
     elif template_format == "jinja2":
         from semantic_kernel.prompt_template import Jinja2PromptTemplate, PromptTemplateConfig
@@ -483,7 +483,7 @@ async def load_template_from_string(template_content: str, template_format: str)
             template=template_content,
             template_format="jinja2",
         )
-        return Jinja2PromptTemplate(prompt_template_config=config)
+        return Jinja2PromptTemplate(prompt_template_config=config, allow_dangerously_set_content=True)
 
     elif template_format == "semantic-kernel":
         from semantic_kernel.functions.kernel_function_from_prompt import KernelFunctionFromPrompt

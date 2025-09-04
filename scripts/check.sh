@@ -3,7 +3,7 @@
 echo -e "\033[32mChecking for errors...\033[0m"
 
 echo -e "\033[32mInstalling dependencies...\033[0m"
-uv sync --group dev
+uv sync --group dev --upgrade
 
 echo -e "\033[32mChecking for formatting errors...\033[0m"
 uv run ruff format .
