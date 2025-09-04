@@ -66,8 +66,8 @@
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a id="nextFileLink" class="nav" href="z_f86363723bc93fa9_exceptions_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.10.0">coverage.py v7.10.0</a>,
-            created at 2025-08-06 07:05 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.10.5">coverage.py v7.10.5</a>,
+            created at 2025-09-04 21:43 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -558,7 +558,7 @@
     <p class="run run2"><span class="n"><a id="t474" href="#t474">474</a></span><span class="t">            <span class="nam">template</span><span class="op">=</span><span class="nam">template_content</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t475" href="#t475">475</a></span><span class="t">            <span class="nam">template_format</span><span class="op">=</span><span class="str">"handlebars"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t476" href="#t476">476</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">        <span class="key">return</span> <span class="nam">HandlebarsPromptTemplate</span><span class="op">(</span><span class="nam">prompt_template_config</span><span class="op">=</span><span class="nam">config</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t477" href="#t477">477</a></span><span class="t">        <span class="key">return</span> <span class="nam">HandlebarsPromptTemplate</span><span class="op">(</span><span class="nam">prompt_template_config</span><span class="op">=</span><span class="nam">config</span><span class="op">,</span> <span class="nam">allow_dangerously_set_content</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t478" href="#t478">478</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t479" href="#t479">479</a></span><span class="t">    <span class="key">elif</span> <span class="nam">template_format</span> <span class="op">==</span> <span class="str">"jinja2"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t480" href="#t480">480</a></span><span class="t">        <span class="key">from</span> <span class="nam">semantic_kernel</span><span class="op">.</span><span class="nam">prompt_template</span> <span class="key">import</span> <span class="nam">Jinja2PromptTemplate</span><span class="op">,</span> <span class="nam">PromptTemplateConfig</span>&nbsp;</span><span class="r"></span></p>
@@ -567,7 +567,7 @@
     <p class="run run2"><span class="n"><a id="t483" href="#t483">483</a></span><span class="t">            <span class="nam">template</span><span class="op">=</span><span class="nam">template_content</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t484" href="#t484">484</a></span><span class="t">            <span class="nam">template_format</span><span class="op">=</span><span class="str">"jinja2"</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t485" href="#t485">485</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t486" href="#t486">486</a></span><span class="t">        <span class="key">return</span> <span class="nam">Jinja2PromptTemplate</span><span class="op">(</span><span class="nam">prompt_template_config</span><span class="op">=</span><span class="nam">config</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t486" href="#t486">486</a></span><span class="t">        <span class="key">return</span> <span class="nam">Jinja2PromptTemplate</span><span class="op">(</span><span class="nam">prompt_template_config</span><span class="op">=</span><span class="nam">config</span><span class="op">,</span> <span class="nam">allow_dangerously_set_content</span><span class="op">=</span><span class="key">True</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t487" href="#t487">487</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t488" href="#t488">488</a></span><span class="t">    <span class="key">elif</span> <span class="nam">template_format</span> <span class="op">==</span> <span class="str">"semantic-kernel"</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t489" href="#t489">489</a></span><span class="t">        <span class="key">from</span> <span class="nam">semantic_kernel</span><span class="op">.</span><span class="nam">functions</span><span class="op">.</span><span class="nam">kernel_function_from_prompt</span> <span class="key">import</span> <span class="nam">KernelFunctionFromPrompt</span>&nbsp;</span><span class="r"></span></p>
@@ -990,8 +990,8 @@
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
             <a class="nav" href="z_f86363723bc93fa9_exceptions_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
-            <a class="nav" href="https://coverage.readthedocs.io/en/7.10.0">coverage.py v7.10.0</a>,
-            created at 2025-08-06 07:05 +0000
+            <a class="nav" href="https://coverage.readthedocs.io/en/7.10.5">coverage.py v7.10.5</a>,
+            created at 2025-09-04 21:43 +0000
         </p>
     </div>
 </footer>
