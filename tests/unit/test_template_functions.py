@@ -189,7 +189,9 @@ Customer: {{customer.first_name}} {{customer.last_name}}
             template=template_content,
             template_format="handlebars",
         )
-        mock_template_class.assert_called_once_with(prompt_template_config=mock_config)
+        mock_template_class.assert_called_once_with(
+            prompt_template_config=mock_config, allow_dangerously_set_content=True
+        )
         assert result == mock_template
 
     def test_load_nonexistent_template_raises_error(self):
@@ -355,7 +357,9 @@ Customer: {{ customer.first_name }} {{ customer.last_name }}
             template=template_content,
             template_format="jinja2",
         )
-        mock_template_class.assert_called_once_with(prompt_template_config=mock_config)
+        mock_template_class.assert_called_once_with(
+            prompt_template_config=mock_config, allow_dangerously_set_content=True
+        )
         assert result == mock_template
 
     def test_load_jinja2_template_with_j2_extension(self, temp_dir):

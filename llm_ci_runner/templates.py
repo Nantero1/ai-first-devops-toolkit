@@ -143,7 +143,7 @@ def load_handlebars_template(template_file: Path) -> HandlebarsPromptTemplate:
             template_format="handlebars",
         )
 
-        template = HandlebarsPromptTemplate(prompt_template_config=config)
+        template = HandlebarsPromptTemplate(prompt_template_config=config, allow_dangerously_set_content=True)
 
         LOGGER.debug("✅ Handlebars template loaded successfully")
         LOGGER.debug(f"   Template length: {len(template_content)} characters")
@@ -179,7 +179,7 @@ def load_jinja2_template(template_file: Path) -> Jinja2PromptTemplate:
             template_format="jinja2",
         )
 
-        template = Jinja2PromptTemplate(prompt_template_config=config)
+        template = Jinja2PromptTemplate(prompt_template_config=config, allow_dangerously_set_content=True)
 
         LOGGER.info("✅ Jinja2 template loaded successfully")
         LOGGER.debug(f"   Template length: {len(template_content)} characters")
