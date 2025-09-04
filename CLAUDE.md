@@ -162,7 +162,7 @@ AZURE_OPENAI_API_KEY="key"              # Optional (uses RBAC if not set)
 
 ### OpenAI (Fallback)
 ```bash
-OPENAI_API_KEY="sk-..."
+OPENAI_API_KEY="your-api-key"
 OPENAI_CHAT_MODEL_ID="gpt-4"
 ```
 
