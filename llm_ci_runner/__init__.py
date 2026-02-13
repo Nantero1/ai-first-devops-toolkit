@@ -62,7 +62,7 @@ execution_settings:
 Environment Variables:
     AZURE_OPENAI_ENDPOINT: Azure OpenAI endpoint URL
     AZURE_OPENAI_MODEL: Your custom model deployment name
-    AZURE_OPENAI_API_VERSION: API version (default: 2024-12-01-preview)
+    AZURE_OPENAI_API_VERSION: API version (default: 2025-01-01-preview)
     AZURE_OPENAI_API_KEY: API key (optional, uses RBAC if not provided)
 """
 

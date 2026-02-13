@@ -155,7 +155,7 @@ class TestCreateAzureServiceWithModel:
                 endpoint="https://test.openai.azure.com/",
                 api_key="test-api-key",
                 deployment_name=model_id,
-                api_version="2024-12-01-preview",
+                api_version="2025-01-01-preview",
             )
 
     @pytest.mark.asyncio
@@ -195,7 +195,7 @@ class TestCreateAzureServiceWithModel:
                 service_id="azure_openai",
                 endpoint="https://test.openai.azure.com/",
                 deployment_name=model_id,
-                api_version="2024-12-01-preview",
+                api_version="2025-01-01-preview",
                 ad_token_provider=mock_token_prov_instance,
             )
 
