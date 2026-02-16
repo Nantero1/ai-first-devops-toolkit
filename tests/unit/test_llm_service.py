@@ -25,7 +25,7 @@ def test_setup_azure_service_uses_ad_token_provider(monkeypatch):
     monkeypatch.delenv("AZURE_OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com/")
     monkeypatch.setenv("AZURE_OPENAI_MODEL", "gpt-4-test")
-    monkeypatch.setenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    monkeypatch.setenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 
     # Patch DefaultAzureCredential and get_bearer_token_provider
     with (
@@ -71,7 +71,7 @@ class TestSetupAzureService:
             {
                 "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
                 "AZURE_OPENAI_MODEL": "gpt-4-test",
-                "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+                "AZURE_OPENAI_API_VERSION": "2025-01-01-preview",
             },
             clear=True,
         ):
@@ -98,7 +98,7 @@ class TestSetupAzureService:
             {
                 "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
                 "AZURE_OPENAI_MODEL": "gpt-4-test",
-                "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+                "AZURE_OPENAI_API_VERSION": "2025-01-01-preview",
             },
             clear=True,
         ):

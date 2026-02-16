@@ -101,7 +101,7 @@ async def _create_azure_service_with_model(model_id: str) -> tuple[Any, Any]:
 
     # Get Azure configuration from environment
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
 
     if not endpoint:
