@@ -82,7 +82,7 @@ def mock_environment_variables(monkeypatch):
     env_vars = {
         "AZURE_OPENAI_ENDPOINT": "https://test.openai.azure.com/",
         "AZURE_OPENAI_MODEL": "gpt-4-test",
-        "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+        "AZURE_OPENAI_API_VERSION": "2025-01-01-preview",
         "AZURE_OPENAI_API_KEY": "test-api-key",
     }
 

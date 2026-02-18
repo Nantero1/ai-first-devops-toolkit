@@ -44,7 +44,7 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
     # Get required environment variables
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     model = os.getenv("AZURE_OPENAI_MODEL")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
 
     if not endpoint:
         raise AuthenticationError("AZURE_OPENAI_ENDPOINT environment variable is required")
