@@ -6,9 +6,7 @@ _load_template_variables, _detect_template_format, _template_requires_json_outpu
 and cli_main functions with heavy mocking following the Given-When-Then pattern.
 """
 
-import asyncio
 import os
-import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -23,7 +21,7 @@ from llm_ci_runner.core import (
     _template_requires_json_output,
     cli_main,
 )
-from llm_ci_runner.exceptions import SchemaValidationError
+from llm_ci_runner.exceptions import LLMExecutionError, SchemaValidationError
 
 
 class TestExtractModelIdFromYaml:
@@ -144,12 +142,16 @@ class TestCreateAzureServiceWithModel:
             mock_azure_completion.return_value = mock_service
 
             # when
-            result = await _create_azure_service_with_model(model_id)
+            with patch("llm_ci_runner.core.LOGGER") as mock_logger:
+                result = await _create_azure_service_with_model(model_id)
 
             # then
             service, credential = result
             assert service == mock_service
             assert credential is None  # API key auth returns None for credential
+            mock_logger.info.assert_called_with(
+                "🎯 Dynamic Azure target: endpoint=test.openai.azure.com, deployment=gpt-4.1-stable, api_version=2025-01-01-preview"
+            )
             mock_azure_completion.assert_called_once_with(
                 service_id="azure_openai",
                 endpoint="https://test.openai.azure.com/",
@@ -234,6 +236,39 @@ class TestCreateAzureServiceWithModel:
             assert credential is None  # API key auth returns None for credential
             call_args = mock_azure_completion.call_args[1]
             assert call_args["api_version"] == custom_api_version
+
+    @pytest.mark.asyncio
+    async def test_sk_template_deployment_not_found_includes_target_details(self):
+        """Test DeploymentNotFound includes endpoint, deployment, and API version."""
+        # given
+        mock_template = AsyncMock()
+        mock_service = Mock()
+        template_vars = {"key": "value"}
+
+        with (
+            patch("llm_ci_runner.core._extract_model_id_from_yaml", return_value="gpt-5.5-stable"),
+            patch("llm_ci_runner.core._create_azure_service_with_model", return_value=(mock_service, None)),
+            patch("llm_ci_runner.core._create_kernel_with_service") as mock_create_kernel,
+            patch("llm_ci_runner.core.isinstance", return_value=True),
+            patch.dict(
+                os.environ,
+                {
+                    "AZURE_OPENAI_ENDPOINT": "https://ai-openai-dev-swecen-001.openai.azure.com/",
+                    "AZURE_OPENAI_API_VERSION": "2025-01-01-preview",
+                },
+                clear=False,
+            ),
+        ):
+            mock_kernel = MagicMock()
+            mock_kernel.invoke = AsyncMock(side_effect=Exception("DeploymentNotFound"))
+            mock_create_kernel.return_value = mock_kernel
+
+            # when / then
+            with pytest.raises(
+                LLMExecutionError,
+                match="endpoint=ai-openai-dev-swecen-001.openai.azure.com, deployment=gpt-5.5-stable, api_version=2025-01-01-preview",
+            ):
+                await _process_template_unified(mock_template, "semantic-kernel", template_vars, mock_service, None, None)
 
 
 class TestTemplateUtilities:
@@ -600,7 +635,7 @@ class TestProcessTemplateUnified:
             patch("llm_ci_runner.core._template_requires_json_output") as mock_requires_json,
             patch("llm_ci_runner.core.render_template") as mock_render_template,
             patch("llm_ci_runner.core.isinstance") as mock_isinstance,  # Mock isinstance check
-            patch("llm_ci_runner.core.LOGGER") as mock_logger,
+            patch("llm_ci_runner.core.LOGGER"),
         ):
             # Mock isinstance to return True for KernelFunctionFromPrompt check
             mock_isinstance.return_value = True
@@ -620,6 +655,6 @@ class TestProcessTemplateUnified:
             # when
             with pytest.raises(SchemaValidationError, match="Schema enforcement failed: Invalid JSON response"):
                 # Should raise SchemaValidationError due to invalid JSON
-                result = await _process_template_unified(
+                await _process_template_unified(
                     mock_template, "semantic-kernel", template_vars, mock_service, None, None
                 )

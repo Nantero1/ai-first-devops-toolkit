@@ -6,6 +6,7 @@ Supports both Azure OpenAI (API key or RBAC) and OpenAI (API key required).
 
 import logging
 import os
+from urllib.parse import urlparse
 
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity.aio import (
@@ -51,9 +52,10 @@ async def setup_azure_service() -> tuple[AzureChatCompletion, DefaultAzureCreden
     if not model:
         raise AuthenticationError("AZURE_OPENAI_MODEL environment variable is required")
 
-    LOGGER.debug(f"🎯 Using Azure OpenAI endpoint: {endpoint}")
+    endpoint_host = urlparse(endpoint).netloc or endpoint
+    LOGGER.info(f"🎯 Using Azure OpenAI endpoint: {endpoint_host}")
     LOGGER.info(f"🎯 Using model: {model}")
-    LOGGER.debug(f"🎯 Using API version: {api_version}")
+    LOGGER.info(f"🎯 Using API version: {api_version}")
 
     # Check for API key authentication
     api_key = os.getenv("AZURE_OPENAI_API_KEY")

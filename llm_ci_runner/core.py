@@ -12,9 +12,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from rich.panel import Panel
 from rich.traceback import install as install_rich_traceback
@@ -24,6 +26,7 @@ from semantic_kernel.functions.kernel_function_from_prompt import KernelFunction
 
 from .exceptions import (
     InputValidationError,
+    LLMExecutionError,
     LLMRunnerError,
     SchemaValidationError,
 )
@@ -48,6 +51,12 @@ from .templates import (
 install_rich_traceback()
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _format_azure_target(endpoint: str, deployment_name: str, api_version: str) -> str:
+    """Format Azure target details for safe diagnostics."""
+    host = urlparse(endpoint).netloc or endpoint
+    return f"endpoint={host}, deployment={deployment_name}, api_version={api_version}"
 
 
 def _extract_model_id_from_yaml(yaml_function: KernelFunctionFromPrompt) -> str | None:
@@ -94,8 +103,6 @@ async def _create_azure_service_with_model(model_id: str) -> tuple[Any, Any]:
     Returns:
         Tuple of (Configured AzureChatCompletion service, credential or None)
     """
-    import os
-
     from azure.identity.aio import DefaultAzureCredential, get_bearer_token_provider
     from semantic_kernel.connectors.ai.open_ai.services.azure_chat_completion import AzureChatCompletion
 
@@ -106,6 +113,8 @@ async def _create_azure_service_with_model(model_id: str) -> tuple[Any, Any]:
 
     if not endpoint:
         raise ValueError("AZURE_OPENAI_ENDPOINT environment variable is required")
+
+    LOGGER.info(f"🎯 Dynamic Azure target: {_format_azure_target(endpoint, model_id, api_version)}")
 
     if api_key:
         # API key authentication
@@ -335,6 +344,17 @@ async def _process_template_unified(
                 LOGGER.info(f"✅ SK template executed successfully - string response: {len(response)} chars")
 
         except Exception as e:
+            if yaml_model_id and "DeploymentNotFound" in str(e):
+                endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+                api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-01-01-preview")
+                target = _format_azure_target(endpoint, yaml_model_id, api_version)
+                message = (
+                    f"Azure deployment lookup failed for dynamic YAML model ({target}). "
+                    "Verify that the deployment exists on this exact Azure OpenAI endpoint."
+                )
+                LOGGER.error(f"❌ SK template execution failed: {message}. Original error: {e}")
+                raise LLMExecutionError(message) from e
+
             LOGGER.error(f"❌ SK template execution failed: {e}")
             raise
 
@@ -362,7 +382,6 @@ async def _process_template_unified(
         if schema_result:
             # Create temporary schema file for execute_llm_task function
             import json
-            import os
             import tempfile
 
             schema_model, schema_dict = schema_result
