@@ -7,7 +7,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Benjamin Linnik", email = "Benjamin@Linnik.IT"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "semantic-kernel>=1.39.3",
     "rich>=14.0.0",
